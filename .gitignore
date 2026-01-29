@@ -1,0 +1,8 @@
+/build/
+/install/
+/log/
+/.pytest_cache/
+/.vscode/
+/frames*
+**/build/
+*.code-workspace
