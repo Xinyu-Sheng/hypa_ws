@@ -4,13 +4,20 @@
       <max_step_size>0.001</max_step_size>
       <real_time_factor>1</real_time_factor>
       <real_time_update_rate>1000</real_time_update_rate>
+      <dart>
+        <solver>
+          <solver_type>dantzig</solver_type>
+          <!-- <solver_type>pgs</solver_type> -->
+        </solver>
+        <collision_detector>ode</collision_detector>
+      </dart>
     </physics>
     <plugin name='gz::sim::systems::Physics' filename='gz-sim-physics-system' />
     <plugin name='gz::sim::systems::UserCommands' filename='gz-sim-user-commands-system' />
     <plugin name='gz::sim::systems::SceneBroadcaster' filename='gz-sim-scene-broadcaster-system' />
     <plugin name='gz::sim::systems::Contact' filename='gz-sim-contact-system' />
     <plugin name='gz::sim::systems::Sensors' filename='gz-sim-sensors-system' />
-    <gravity>0 0 0</gravity>
+    <!-- <gravity>0 0 -9.8</gravity> -->
     <magnetic_field>5.5644999999999998e-06 2.2875799999999999e-05 -4.2388400000000002e-05</magnetic_field>
     <atmosphere type='adiabatic' />
     <scene>
@@ -39,5 +46,929 @@
         <falloff>0</falloff>
       </spot>
     </light>
+
+    <!-- 地面 -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <pose>0 0 -0.5 0 0 0</pose>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>100 100 1</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>100</mu>
+                <mu2>50</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <cast_shadows>false</cast_shadows>
+          <geometry>
+            <box>
+              <size>100 100 1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.5 0.5 0.5 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="crane">
+      <pose>0 0 0 0 0 0</pose>
+      <link name="crane_hook">
+        <pose>0 0 30 0 0 0</pose>
+        <visual name="crane_hook_visual">
+          <geometry>
+            <sphere>
+              <radius>0.1</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>1 1 0 1</ambient>
+            <diffuse>1 1 0 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+          <cast_shadows>false</cast_shadows>
+        </visual>
+        <pose>0 0 0 0 0 0</pose>
+        <inertial>
+          <!-- <mass>0.01</mass> -->
+          <mass>10000</mass>
+          <inertia>
+            <ixx>0.001</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.001</iyy>
+            <iyz>0</iyz>
+            <izz>0.001</izz>
+          </inertia>
+        </inertial>
+      </link>
+      <joint name="foundation" type="fixed">
+        <parent>world</parent>
+        <child>crane_hook</child>
+      </joint>
+      <plugin
+        filename="gz-sim-detachable-joint-system"
+        name="gz::sim::systems::DetachableJoint">
+        <parent_link>crane_hook</parent_link>
+        <child_model>hypa</child_model>
+        <child_link>hypa_base</child_link>
+        <detach_topic>/crane/detach</detach_topic>
+        <attach_topic>/crane/attach</attach_topic>
+        <output_topic>/crane/state</output_topic>
+      </plugin>
+    </model>
+
+    <!-- 四绳索吊装系统 -->
+    <model name="hypa">
+      <pose relative_to="crane::crane_hook">0 0 0 0 0 0</pose>
+      <link name="hypa_base">
+        <pose>0 0 0 0 0 0</pose>
+      </link>
+      <!-- 四个吊点初始位置的中央位置 -->
+      <link name="init_container_top_center">
+        <!-- 初始化时往下的位置 -->
+        <pose>0 0 -10 0 0 0</pose>
+        <inertial>
+          <mass>1000</mass>
+          <inertia>
+            <ixx>500</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>800</iyy>
+            <iyz>0</iyz>
+            <izz>1000</izz>
+          </inertia>
+        </inertial>
+        <visual name="init_container_top_center_visual">
+          <geometry>
+            <sphere>
+              <radius>0.1</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.2 0.2 0.4 1</ambient>
+            <diffuse>0.2 0.2 0.4 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+          <cast_shadows>false</cast_shadows>
+        </visual>
+      </link>
+      <joint name="dummy_joint_for_initial_container_top_center" type="fixed">
+        <parent>world</parent>
+        <child>init_container_top_center</child>
+      </joint>
+
+      <!-- 四个虚拟连接点（用于绳索关节） -->
+      <link name="lifting_hook_1_fl">
+        <pose relative_to="ball_lifting_hook_1_fl">0 0 0 0 0 0</pose>
+        <inertial>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>0.001</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.001</iyy>
+            <iyz>0</iyz>
+            <izz>0.001</izz>
+          </inertia>
+        </inertial>
+        <visual name="prismatic_marker">
+          <cast_shadows>false</cast_shadows>
+          <pose>0 0 0 -3.022164 0.289495 -2.363151</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.1</radius>
+              <length>1.0</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>1 0 0 1</ambient>
+            <diffuse>1 0 0 1</diffuse>
+            <specular>1 0 0 1</specular>
+          </material>
+        </visual>
+        <visual name="visual">
+          <pose>0 0 0 -3.022164 0.289495 -2.363151</pose>
+          <geometry>
+            <box>
+              <size>0.25 0.25 0.25</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0 0 1</ambient>
+            <diffuse>1 0 0 1</diffuse>
+            <specular>1 0 0 1</specular>
+          </material>
+        </visual>
+      </link>
+
+      <link name="lifting_hook_1_fr">
+        <pose relative_to="ball_lifting_hook_1_fr">0 0 0 0 0 0</pose>
+        <inertial>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>0.001</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.001</iyy>
+            <iyz>0</iyz>
+            <izz>0.001</izz>
+          </inertia>
+        </inertial>
+        <visual name="prismatic_marker">
+          <cast_shadows>false</cast_shadows>
+          <pose>0 0 0 3.022164 0.289495 2.363151</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.1</radius>
+              <length>1.0</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>1 0.5 0 1</ambient>
+            <diffuse>1 0.5 0 1</diffuse>
+            <specular>1 0.5 0 1</specular>
+          </material>
+        </visual>
+        <visual name="visual">
+          <pose>0 0 0 3.022164 0.289495 2.363151</pose>
+          <geometry>
+            <box>
+              <size>0.25 0.25 0.25</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.5 0 1</ambient>
+            <diffuse>1 0.5 0 1</diffuse>
+            <specular>1 0.5 0 1</specular>
+          </material>
+        </visual>
+      </link>
+
+      <link name="lifting_hook_1_bl">
+        <pose relative_to="ball_lifting_hook_1_bl">0 0 0 0 0 0</pose>
+        <inertial>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>0.001</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.001</iyy>
+            <iyz>0</iyz>
+            <izz>0.001</izz>
+          </inertia>
+        </inertial>
+        <visual name="prismatic_marker">
+          <cast_shadows>false</cast_shadows>
+          <pose>0 0 0 -3.022164 -0.289495 2.363151</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.1</radius>
+              <length>1.0</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>1 0.5 0 1</ambient>
+            <diffuse>1 0.5 0 1</diffuse>
+            <specular>1 0.5 0 1</specular>
+          </material>
+        </visual>
+        <visual name="visual">
+          <pose>0 0 0 -3.022164 -0.289495 2.363151</pose>
+          <geometry>
+            <box>
+              <size>0.25 0.25 0.25</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.5 0 1</ambient>
+            <diffuse>1 0.5 0 1</diffuse>
+            <specular>1 0.5 0 1</specular>
+          </material>
+        </visual>
+      </link>
+
+      <link name="lifting_hook_1_br">
+        <pose relative_to="ball_lifting_hook_1_br">0 0 0 0 0 0</pose>
+        <inertial>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>0.001</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.001</iyy>
+            <iyz>0</iyz>
+            <izz>0.001</izz>
+          </inertia>
+        </inertial>
+        <visual name="prismatic_marker">
+          <cast_shadows>false</cast_shadows>
+          <pose>0 0 0 3.022164 -0.289495 -2.363151</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.1</radius>
+              <length>1.0</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>1 0.5 0 1</ambient>
+            <diffuse>1 0.5 0 1</diffuse>
+            <specular>1 0.5 0 1</specular>
+          </material>
+        </visual>
+        <visual name="visual">
+          <pose>0 0 0 3.022164 -0.289495 -2.363151</pose>
+          <geometry>
+            <box>
+              <size>0.25 0.25 0.25</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.5 0 1</ambient>
+            <diffuse>1 0.5 0 1</diffuse>
+            <specular>1 0.5 0 1</specular>
+          </material>
+        </visual>
+      </link>
+      <!-- 连接点到集装箱的固定关节 -->
+      <joint name="ball_lifting_hook_1_fl" type="ball">
+        <!-- 防止四个球型关节都在同一位置导致可旋转 -->
+        <pose relative_to="hypa_base">0.1 0.1 0 0 0 0</pose>
+        <parent>hypa_base</parent>
+        <child>lifting_hook_1_fl</child>
+      </joint>
+
+      <joint name="ball_lifting_hook_1_fr" type="ball">
+        <pose relative_to="hypa_base">0.1 -0.1 0 0 0 0</pose>
+        <parent>hypa_base</parent>
+        <child>lifting_hook_1_fr</child>
+      </joint>
+
+      <joint name="ball_lifting_hook_1_bl" type="ball">
+        <pose relative_to="hypa_base">-0.1 0.1 0 0 0 0</pose>
+        <parent>hypa_base</parent>
+        <child>lifting_hook_1_bl</child>
+      </joint>
+
+      <joint name="ball_lifting_hook_1_br" type="ball">
+        <pose relative_to="hypa_base">-0.1 -0.1 0 0 0 0</pose>
+        <parent>hypa_base</parent>
+        <child>lifting_hook_1_br</child>
+      </joint>
+      <!-- 四个虚拟连接点（用于绳索关节） -->
+      <link name="lifting_hook_2_fl">
+        <pose relative_to="init_container_top_center">3.0 1.2 0 0 0 0</pose>
+        <inertial>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>0.001</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.001</iyy>
+            <iyz>0</iyz>
+            <izz>0.001</izz>
+          </inertia>
+        </inertial>
+        <visual name="prismatic_marker">
+          <pose>0 0 0 -3.022164 0.289495 -2.363151</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.1</radius>
+              <length>1.0</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>1 0 0 1</ambient>
+            <diffuse>1 0 0 1</diffuse>
+            <specular>1 0 0 1</specular>
+          </material>
+        </visual>
+        <visual name="visual">
+          <pose>0 0 0 -3.022164 0.289495 -2.363151</pose>
+          <geometry>
+            <box>
+              <size>0.25 0.25 0.25</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0 0 1</ambient>
+            <diffuse>1 0 0 1</diffuse>
+            <specular>1 0 0 1</specular>
+          </material>
+        </visual>
+      </link>
+
+      <link name="lifting_hook_2_fr">
+        <pose relative_to="init_container_top_center">3.0 -1.2 0 0 0 0</pose>
+        <inertial>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>0.001</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.001</iyy>
+            <iyz>0</iyz>
+            <izz>0.001</izz>
+          </inertia>
+        </inertial>
+        <visual name="prismatic_marker">
+          <pose>0 0 0 3.022164 0.289495 2.363151</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.1</radius>
+              <length>1.0</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>1 1 0 1</ambient>
+            <diffuse>1 1 0 1</diffuse>
+            <specular>1 1 0 1</specular>
+          </material>
+        </visual>
+        <visual name="visual">
+          <pose>0 0 0 3.022164 0.289495 2.363151</pose>
+          <geometry>
+            <box>
+              <size>0.25 0.25 0.25</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 1 0 1</ambient>
+            <diffuse>1 1 0 1</diffuse>
+            <specular>1 1 0 1</specular>
+          </material>
+        </visual>
+      </link>
+
+      <link name="lifting_hook_2_bl">
+        <pose relative_to="init_container_top_center">-3.0 1.2 0 0 0 0</pose>
+        <inertial>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>0.001</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.001</iyy>
+            <iyz>0</iyz>
+            <izz>0.001</izz>
+          </inertia>
+        </inertial>
+        <visual name="prismatic_marker">
+          <pose>0 0 0 -3.022164 -0.289495 2.363151</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.1</radius>
+              <length>1.0</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>1 1 0 1</ambient>
+            <diffuse>1 1 0 1</diffuse>
+            <specular>1 1 0 1</specular>
+          </material>
+        </visual>
+        <visual name="visual">
+          <pose>0 0 0 -3.022164 -0.289495 2.363151</pose>
+          <geometry>
+            <box>
+              <size>0.25 0.25 0.25</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 1 0 1</ambient>
+            <diffuse>1 1 0 1</diffuse>
+            <specular>1 1 0 1</specular>
+          </material>
+        </visual>
+      </link>
+
+      <link name="lifting_hook_2_br">
+        <pose relative_to="init_container_top_center">-3.0 -1.2 0 0 0 0</pose>
+        <inertial>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>0.001</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.001</iyy>
+            <iyz>0</iyz>
+            <izz>0.001</izz>
+          </inertia>
+        </inertial>
+        <visual name="prismatic_marker">
+          <pose>0 0 0 3.022164 -0.289495 -2.363151</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.1</radius>
+              <length>1.0</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>1 1 0 1</ambient>
+            <diffuse>1 1 0 1</diffuse>
+            <specular>1 1 0 1</specular>
+          </material>
+        </visual>
+        <visual name="visual">
+          <pose>0 0 0 3.022164 -0.289495 -2.363151</pose>
+          <geometry>
+            <box>
+              <size>0.25 0.25 0.25</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 1 0 1</ambient>
+            <diffuse>1 1 0 1</diffuse>
+            <specular>1 1 0 1</specular>
+          </material>
+        </visual>
+      </link>
+
+      <joint name="prismatic_lifting_hook_fl" type="prismatic">
+        <parent>lifting_hook_1_fl</parent>
+        <child>lifting_hook_2_fl</child>
+        <pose>0 0 0 0 0 0</pose>
+        <axis>
+          <xyz>3.0 1.2 -10</xyz>
+          <limit>
+            <lower>0.0</lower>
+            <upper>50.0</upper>
+            <effort>50000</effort>
+            <velocity>0.5</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="prismatic_lifting_hook_fr" type="prismatic">
+        <parent>lifting_hook_1_fr</parent>
+        <child>lifting_hook_2_fr</child>
+        <pose>0 0 0 0 0 0</pose>
+        <axis>
+          <xyz>3.0 -1.2 -10</xyz>
+          <limit>
+            <lower>0.0</lower>
+            <upper>50.0</upper>
+            <effort>50000</effort>
+            <velocity>0.5</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="prismatic_lifting_hook_bl" type="prismatic">
+        <parent>lifting_hook_1_bl</parent>
+        <child>lifting_hook_2_bl</child>
+        <pose>0 0 0 0 0 0</pose>
+        <axis>
+          <xyz>-3.0 1.2 -10</xyz>
+          <limit>
+            <lower>0.0</lower>
+            <upper>50.0</upper>
+            <effort>50000</effort>
+            <velocity>0.5</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="prismatic_lifting_hook_br" type="prismatic">
+        <parent>lifting_hook_1_br</parent>
+        <child>lifting_hook_2_br</child>
+        <pose>0 0 0 0 0 0</pose>
+        <axis>
+          <xyz>-3.0 -1.2 -10</xyz>
+          <limit>
+            <lower>0.0</lower>
+            <upper>50.0</upper>
+            <effort>50000</effort>
+            <velocity>0.5</velocity>
+          </limit>
+        </axis>
+      </joint>
+
+      <plugin
+        filename="gz-sim-joint-state-publisher-system"
+        name="gz::sim::systems::JointStatePublisher">
+        <!-- 发布所有关节状态 -->
+      </plugin>
+
+
+      <link name="lifting_ring_2_fl">
+        <pose relative_to="lifting_hook_2_fl">0 0 0 0 0 0</pose>
+        <inertial>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>0.001</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.001</iyy>
+            <iyz>0</iyz>
+            <izz>0.001</izz>
+          </inertia>
+        </inertial>
+      </link>
+
+      <link name="lifting_ring_2_fr">
+        <pose relative_to="lifting_hook_2_fr">0 0 0 0 0 0</pose>
+        <inertial>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>0.001</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.001</iyy>
+            <iyz>0</iyz>
+            <izz>0.001</izz>
+          </inertia>
+        </inertial>
+      </link>
+
+      <link name="lifting_ring_2_bl">
+        <pose relative_to="lifting_hook_2_bl">0 0 0 0 0 0</pose>
+        <inertial>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>0.001</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.001</iyy>
+            <iyz>0</iyz>
+            <izz>0.001</izz>
+          </inertia>
+        </inertial>
+      </link>
+
+      <link name="lifting_ring_2_br">
+        <pose relative_to="lifting_hook_2_br">0 0 0 0 0 0</pose>
+        <inertial>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>0.001</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.001</iyy>
+            <iyz>0</iyz>
+            <izz>0.001</izz>
+          </inertia>
+        </inertial>
+      </link>
+
+
+      <!-- 连接点到集装箱的固定关节 -->
+      <joint name="ball_lifting_hook_2_fl" type="ball">
+        <pose relative_to="lifting_hook_2_fl">0 0 0 0 0 0</pose>
+        <parent>lifting_hook_2_fl</parent>
+        <child>lifting_ring_2_fl</child>
+      </joint>
+
+      <joint name="ball_lifting_hook_2_fr" type="ball">
+        <pose relative_to="lifting_hook_2_fr">0 0 0 0 0 0</pose>
+        <parent>lifting_hook_2_fr</parent>
+        <child>lifting_ring_2_fr</child>
+      </joint>
+
+      <joint name="ball_lifting_hook_2_bl" type="ball">
+        <pose relative_to="lifting_hook_2_bl">0 0 0 0 0 0</pose>
+        <parent>lifting_hook_2_bl</parent>
+        <child>lifting_ring_2_bl</child>
+      </joint>
+
+      <joint name="ball_lifting_hook_2_br" type="ball">
+        <pose relative_to="lifting_hook_2_br">0 0 0 0 0 0</pose>
+        <parent>lifting_hook_2_br</parent>
+        <child>lifting_ring_2_br</child>
+      </joint>
+
+
+      <plugin
+        filename="gz-sim-joint-position-controller-system"
+        name="gz::sim::systems::JointPositionController">
+        <joint_name>prismatic_lifting_hook_fl</joint_name>
+        <p_gain>5000000</p_gain>
+        <i_gain>0.1</i_gain>
+        <d_gain>100000</d_gain>
+        <cmd_min>-1000000</cmd_min>
+        <cmd_max>1000000</cmd_max>
+        <initial_position>0</initial_position>
+        <use_velocity_commands>false</use_velocity_commands>
+        <!-- use_velocity_commands 控制模式：
+        Topic 发送：始终是 position（位置）
+        内部处理：
+        false：position → PID → force（力矩控制）
+        true：position → 绕过PID → velocity（直接速度控制）
+        cmd_min和cmd_max标签就针对的是两种底层cmd的限制 -->
+      </plugin>
+
+      <plugin
+        filename="gz-sim-joint-position-controller-system"
+        name="gz::sim::systems::JointPositionController">
+        <joint_name>prismatic_lifting_hook_fr</joint_name>
+        <p_gain>5000000</p_gain>
+        <i_gain>0.1</i_gain>
+        <d_gain>100000</d_gain>
+        <cmd_min>-1000000</cmd_min>
+        <cmd_max>1000000</cmd_max>
+        <initial_position>0</initial_position>
+        <use_velocity_commands>false</use_velocity_commands>
+      </plugin>
+
+      <plugin
+        filename="gz-sim-joint-position-controller-system"
+        name="gz::sim::systems::JointPositionController">
+        <joint_name>prismatic_lifting_hook_bl</joint_name>
+        <p_gain>5000000</p_gain>
+        <i_gain>0.1</i_gain>
+        <d_gain>100000</d_gain>
+        <cmd_min>-1000000</cmd_min>
+        <cmd_max>1000000</cmd_max>
+        <initial_position>0</initial_position>
+        <use_velocity_commands>false</use_velocity_commands>
+      </plugin>
+
+      <plugin
+        filename="gz-sim-joint-position-controller-system"
+        name="gz::sim::systems::JointPositionController">
+        <joint_name>prismatic_lifting_hook_br</joint_name>
+        <p_gain>5000000</p_gain>
+        <i_gain>0.1</i_gain>
+        <d_gain>100000</d_gain>
+        <cmd_min>-1000000</cmd_min>
+        <cmd_max>1000000</cmd_max>
+        <initial_position>0</initial_position>
+        <use_velocity_commands>false</use_velocity_commands>
+      </plugin>
+
+      <plugin
+        filename="gz-sim-detachable-joint-system"
+        name="gz::sim::systems::DetachableJoint">
+        <parent_link>lifting_ring_2_fl</parent_link>
+        <child_model>container</child_model>
+        <child_link>container_hook_fl</child_link>
+        <detach_topic>/hypa/fl/detach</detach_topic>
+        <attach_topic>/hypa/fl/attach</attach_topic>
+        <output_topic>/hypa/fl/state</output_topic>
+      </plugin>
+      <plugin
+        filename="gz-sim-detachable-joint-system"
+        name="gz::sim::systems::DetachableJoint">
+        <parent_link>lifting_ring_2_fr</parent_link>
+        <child_model>container</child_model>
+        <child_link>container_hook_fr</child_link>
+        <detach_topic>/hypa/fr/detach</detach_topic>
+        <attach_topic>/hypa/fr/attach</attach_topic>
+        <output_topic>/hypa/fr/state</output_topic>
+      </plugin>
+      <plugin
+        filename="gz-sim-detachable-joint-system"
+        name="gz::sim::systems::DetachableJoint">
+        <parent_link>lifting_ring_2_bl</parent_link>
+        <child_model>container</child_model>
+        <child_link>container_hook_bl</child_link>
+        <detach_topic>/hypa/bl/detach</detach_topic>
+        <attach_topic>/hypa/bl/attach</attach_topic>
+        <output_topic>/hypa/bl/state</output_topic>
+      </plugin>
+      <plugin
+        filename="gz-sim-detachable-joint-system"
+        name="gz::sim::systems::DetachableJoint">
+        <parent_link>lifting_ring_2_br</parent_link>
+        <child_model>container</child_model>
+        <child_link>container_hook_br</child_link>
+        <detach_topic>/hypa/br/detach</detach_topic>
+        <attach_topic>/hypa/br/attach</attach_topic>
+        <output_topic>/hypa/br/state</output_topic>
+      </plugin>
+    </model>
+
+    <!-- 集装箱模型 -->
+    <model name="container">
+      <pose relative_to="hypa::init_container_top_center">0 0 -2.5 0 0 0</pose>
+      <!-- 集装箱主体 -->
+      <link name="container_base">
+        <pose>0 0 0 0 0 0</pose>
+        <inertial>
+          <mass>2000</mass> <!-- 2吨集装箱 -->
+          <inertia>
+            <ixx>500</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>800</iyy>
+            <iyz>0</iyz>
+            <izz>1000</izz>
+          </inertia>
+          <pose>0 0 1.25 0 0 0</pose>
+        </inertial>
+
+        <!-- 集装箱主体 -->
+        <collision name="container_collision">
+          <pose>0 0 1.25 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>6.0 2.4 2.5</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.8</mu>
+                <mu2>0.6</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name="container_visual">
+          <pose>0 0 1.25 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>6.0 2.4 2.5</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.2 0.2 0.8 1</ambient>
+            <diffuse>0.2 0.2 0.8 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+
+      </link>
+
+      <!-- 四个虚拟连接点 -->
+      <link name="container_hook_fl">
+        <pose>3.0 1.2 2.5 0 0 0</pose>
+        <inertial>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>0.001</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.001</iyy>
+            <iyz>0</iyz>
+            <izz>0.001</izz>
+          </inertia>
+        </inertial>
+        <visual name="container_hook_fl_visual">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.1</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>1 1 0 1</ambient>
+            <diffuse>1 1 0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+
+      <link name="container_hook_fr">
+        <pose>3.0 -1.2 2.5 0 0 0</pose>
+        <inertial>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>0.001</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.001</iyy>
+            <iyz>0</iyz>
+            <izz>0.001</izz>
+          </inertia>
+        </inertial>
+        <visual name="container_hook_fr_visual">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.1</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>1 1 0 1</ambient>
+            <diffuse>1 1 0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+
+      <link name="container_hook_bl">
+        <pose>-3.0 1.2 2.5 0 0 0</pose>
+        <inertial>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>0.001</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.001</iyy>
+            <iyz>0</iyz>
+            <izz>0.001</izz>
+          </inertia>
+        </inertial>
+        <visual name="container_hook_bl_visual">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.1</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>1 1 0 1</ambient>
+            <diffuse>1 1 0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+
+      <link name="container_hook_br">
+        <pose>-3.0 -1.2 2.5 0 0 0</pose>
+        <inertial>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>0.001</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.001</iyy>
+            <iyz>0</iyz>
+            <izz>0.001</izz>
+          </inertia>
+        </inertial>
+        <visual name="container_hook_br_visual">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.1</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>1 1 0 1</ambient>
+            <diffuse>1 1 0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+
+
+      <!-- 连接点到集装箱的固定关节 -->
+      <joint name="fixed_container_hook_fl" type="fixed">
+        <parent>container_base</parent>
+        <child>container_hook_fl</child>
+      </joint>
+
+      <joint name="fixed_container_hook_fr" type="fixed">
+        <parent>container_base</parent>
+        <child>container_hook_fr</child>
+      </joint>
+
+      <joint name="fixed_container_hook_bl" type="fixed">
+        <parent>container_base</parent>
+        <child>container_hook_bl</child>
+      </joint>
+
+      <joint name="fixed_container_hook_br" type="fixed">
+        <parent>container_base</parent>
+        <child>container_hook_br</child>
+      </joint>
+
+    </model>
   </world>
 </sdf>

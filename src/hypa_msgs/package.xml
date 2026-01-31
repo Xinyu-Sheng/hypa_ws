@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>hypa_application_interfaces</name>
+  <name>hypa_msgs</name>
   <version>2.0.0</version>
-  <description>医用无纺布生产车间应用GUI接口定义 - 提供GUI相关的消息和服务接口</description>
+  <description>hypa消息定义</description>
   <maintainer email="maintainer@example.com">Hypa Team</maintainer>
   <license>Apache-2.0</license>
 
@@ -25,5 +25,3 @@
     <build_type>ament_cmake</build_type>
   </export>
 </package>
-
-

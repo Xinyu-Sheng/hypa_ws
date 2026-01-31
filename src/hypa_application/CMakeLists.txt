@@ -15,7 +15,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
-find_package(hypa_application_interfaces REQUIRED)
+find_package(hypa_msgs REQUIRED)
 
 # Find external dependencies
 find_package(PkgConfig REQUIRED)
@@ -33,52 +33,52 @@ include_directories(
   ${PROTOBUF_INCLUDE_DIRS}
 )
 
-# Interfaces are now in hypa_application_interfaces package
+# Interfaces are now in hypa_msgs package
 
 # Create library targets (TODO: Uncomment when source files are created)
 # add_library(${PROJECT_NAME}_core SHARED
-#   src/core/DataTypes.cpp
+# src/core/DataTypes.cpp
 # )
 
 # add_library(${PROJECT_NAME}_data SHARED
-#   src/data/GazeboDataProvider.cpp
-#   src/data/IDataProvider.cpp
+# src/data/GazeboDataProvider.cpp
+# src/data/IDataProvider.cpp
 # )
 
 # Executable targets (暂时注释，稍后添加)
 # add_executable(hypa_application_node
-#   src/nodes/hypa_application_node.cpp
+# src/nodes/hypa_application_node.cpp
 # )
 
 # Component targets (暂时注释，稍后添加)
 # add_library(hypa_application_component SHARED
-#   src/components/HypaApplicationComponent.cpp
+# src/components/HypaApplicationComponent.cpp
 # )
 
 # Link libraries (TODO: Uncomment when libraries are created)
 # target_link_libraries(${PROJECT_NAME}_core
-#   ${ament_LIBRARIES}
+# ${ament_LIBRARIES}
 # )
 
 # target_link_libraries(${PROJECT_NAME}_data
-#   ${PROJECT_NAME}_core
-#   gz-transport13::gz-transport13
-#   gz-msgs10::gz-msgs10
-#   ${ament_LIBRARIES}
+# ${PROJECT_NAME}_core
+# gz-transport13::gz-transport13
+# gz-msgs10::gz-msgs10
+# ${ament_LIBRARIES}
 # )
 
 # Register component
 # rclcpp_components_register_nodes(hypa_application_component
-#   "hypa_application::HypaApplicationComponent"
+# "hypa_application::HypaApplicationComponent"
 # )
 
 # Install targets (TODO: Uncomment when libraries are created)
 # install(TARGETS
-#   ${PROJECT_NAME}_core
-#   ${PROJECT_NAME}_data
-#   ARCHIVE DESTINATION lib
-#   LIBRARY DESTINATION lib
-#   RUNTIME DESTINATION lib/${PROJECT_NAME}
+# ${PROJECT_NAME}_core
+# ${PROJECT_NAME}_data
+# ARCHIVE DESTINATION lib
+# LIBRARY DESTINATION lib
+# RUNTIME DESTINATION lib/${PROJECT_NAME}
 # )
 
 # Install headers

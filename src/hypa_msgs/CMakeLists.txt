@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(hypa_application_interfaces)
+project(hypa_msgs)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -12,10 +12,10 @@ find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 
 # Generate ROS 2 interfaces
-#rosidl_generate_interfaces(${PROJECT_NAME}
-#  "msg/Empty.msg"
-#  DEPENDENCIES std_msgs geometry_msgs builtin_interfaces
-#)
+# rosidl_generate_interfaces(${PROJECT_NAME}
+# "msg/Empty.msg"
+# DEPENDENCIES std_msgs geometry_msgs builtin_interfaces
+# )
 
 # Testing
 if(BUILD_TESTING)
