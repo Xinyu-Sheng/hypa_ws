@@ -1,25 +1,17 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>hypa_robot</name>
+  <name>hypa_launch</name>
   <version>2.0.0</version>
-  <description>HYPA机器人元包</description>
+  <description>HYPA功能模块启动包 - 提供功能级启动配置</description>
   <maintainer email="maintainer@example.com">Hypa Team</maintainer>
   <license>Apache-2.0</license>
 
-  <!-- 元包只需要ament_cmake作为构建工具 -->
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <!-- 元包依赖：使用exec_depend而不是depend -->
-  <exec_depend>hypa_description</exec_depend>
   <exec_depend>hypa_bringup</exec_depend>
   <exec_depend>hypa_msgs</exec_depend>
-  <exec_depend>hypa_application</exec_depend>
-  <exec_depend>hypa_hardware</exec_depend>
-  <exec_depend>hypa_gazebo</exec_depend>
-  <exec_depend>hypa_launch</exec_depend>
 
-  <!-- 元包标识 -->
   <export>
     <build_type>ament_cmake</build_type>
   </export>

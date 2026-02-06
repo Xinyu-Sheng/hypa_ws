@@ -1,38 +1,5 @@
-# factory_gazebo
+# hypa_gazebo
 
-This subfolder holds example source files and a corresponding `CMakeLists.txt` file, as a starting point for compiling Gazebo implementations in a personal repository (i.e. not part of the official Gazebo source repositories).
+**定位**: HYPA仿真环境包 - 提供Gazebo仿真支持和虚拟传感器。
 
-The provided `CMakeLists.txt` file contains the directives to compile two example Gazebo systems: `BasicSystem` and `FullSystem`.
-
-For more information on Gazebo Sim systems, see following [Gazebo Sim tutorials](https://gazebosim.org/api/sim/7/tutorials.html):
-
-- [Create System Plugins](https://gazebosim.org/api/sim/7/createsystemplugins.html)
-- [Migration from Gazebo Classic: Plugins](https://gazebosim.org/api/sim/7/migrationplugins.html)
-
-## `BasicSystem` and `FullSystem`
-
-`BasicSystem` is an example system that implements only the `ISystemPostUpdate` interface:
-
-```c++
- class BasicSystem:
-    public gz::sim::System,
-    public gz::sim::ISystemPostUpdate
-```
-
-`FullSystem` is an example system that implements all of the system interfaces:
-
-```c++
-class FullSystem:
-    public gz::sim::System,
-    public gz::sim::ISystemConfigure,
-    public gz::sim::ISystemPreUpdate,
-    public gz::sim::ISystemUpdate,
-    public gz::sim::ISystemPostUpdate,
-    public gz::sim::ISystemReset
-```
-
-See the comments in the source files for further documentation.
-
-## `CMakeLists.txt`
-
-The provided `CMakeLists.txt` file contains comments that clarify the different sections and commands, and how to apply these to your project.
+实现机器人仿真模型、物理参数配置和仿真环境。
