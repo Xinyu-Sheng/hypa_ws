@@ -55,9 +55,8 @@ find_package(Qt5
 # target_link_libraries(FullSystem PRIVATE
 # gz-sim${GZ_SIM_VER}::gz-sim${GZ_SIM_VER})
 
-# TODO: Add plugin subdirectories when CMakeLists.txt files are created
-# add_subdirectory(plugins/gui/hypa-gui-plugin)
-# add_subdirectory(plugins/production-line-plugin)
+# Add plugin subdirectories
+add_subdirectory(plugins/rope_visualizer)
 
 # 注释掉不存在的库目标的安装
 # install(

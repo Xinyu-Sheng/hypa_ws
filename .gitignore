@@ -6,3 +6,4 @@
 /frames*
 **/build/
 *.code-workspace
+.cache
