@@ -35,6 +35,7 @@
 #include <gz/sim/components/Model.hh>
 #include <gz/sim/components/Name.hh>
 #include <gz/sim/components/Pose.hh>
+#include <gz/sim/Util.hh>
 #include <gz/transport/Node.hh>
 #include <sdf/Element.hh>
 
@@ -233,8 +234,8 @@ class RopeVisualizer : public System,
       return;
     }
 
-    math::Vector3d newStart = startPoseComp->Data().Pos();
-    math::Vector3d newEnd = endPoseComp->Data().Pos();
+    math::Vector3d newStart = gz::sim::worldPose(startLinks[0], _ecm).Pos();
+    math::Vector3d newEnd = gz::sim::worldPose(endLinks[0], _ecm).Pos();
 
     // Check if positions have changed
     const double threshold = 1e-6;
