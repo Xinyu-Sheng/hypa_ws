@@ -178,6 +178,9 @@ class RopeVisualizer : public System,
 
     this->dataPtr->initialized = true;
 
+    this->dataPtr->ns = "rope_" + this->dataPtr->startLinkName + "_" +
+                        this->dataPtr->endLinkName;
+
     gzmsg << "RopeVisualizer configured for model: " << this->dataPtr->modelName
           << ", start_link: " << this->dataPtr->startLinkName
           << ", end_link: " << this->dataPtr->endLinkName << "\n";
