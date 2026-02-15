@@ -47,6 +47,7 @@ source install/setup.bash
       <a>1.0</a>
     </color>
     <show_endpoints>true</show_endpoints>
+    <update_interval>5</update_interval>
   </plugin>
 </model>
 ```
@@ -61,6 +62,7 @@ source install/setup.bash
   - `b`: 蓝色分量 (0.0-1.0，默认: 0.0)
   - `a`: 透明度 (0.0-1.0，默认: 1.0)
 - `show_endpoints`: 是否显示端点球体标记（默认: true）
+- `update_interval`: 更新间隔（帧数，默认: 5）
 
 ### 4. 运行仿真
 ```bash
@@ -89,6 +91,25 @@ gz sim your_world.sdf
 - 确保指定的链节名称在模型中存在
 - 如果链节未找到，会在控制台输出警告信息
 - **圆柱体**为纯视觉效果，不影响物理仿真
+
+## 性能优化
+当使用多个 RopeVisualizer 插件时，可能遇到性能瓶颈。建议：
+
+### update_interval 参数
+`update_interval` 控制视觉更新频率，减少不必要的 marker 请求：
+
+- **默认值**: 5（每 5 帧更新一次）
+- **推荐设置**:
+  - 单个插件: 1-3（流畅视觉效果）
+  - 2-3 个插件: 3-5（平衡性能）
+  - 4+ 个插件: 5-10（优先性能）
+
+```xml
+<!-- 4 个绳索时的推荐配置 -->
+<update_interval>5</update_interval>
+```
+
+**效果**: 1000Hz 仿真 + `update_interval=5` = 200Hz 视觉更新，人眼基本看不出延迟，但显著减少 marker 服务负载。
 
 ## 适用场景
 - 起重机缆绳可视化

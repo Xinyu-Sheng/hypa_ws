@@ -52,6 +52,14 @@ class RopeVisualizerPrivate
  public:
   transport::Node node;
 
+  /// \brief Cached entity ID for start link
+ public:
+  Entity startLinkEntity{kNullEntity};
+
+  /// \brief Cached entity ID for end link
+ public:
+  Entity endLinkEntity{kNullEntity};
+
   /// \brief Name of the model this plugin is attached to
  public:
   std::string modelName;
@@ -99,6 +107,14 @@ class RopeVisualizerPrivate
   /// \brief Width of the line
  public:
   double lineWidth{0.02};
+
+  /// \brief Frame counter for throttling updates
+ public:
+  int frameCounter{0};
+
+  /// \brief Update every N frames (configurable)
+ public:
+  int updateInterval{5};
 
   /// \brief True if initialized
  public:
@@ -176,10 +192,19 @@ class RopeVisualizer : public System,
       this->dataPtr->showEndpoints = _sdf->Get<bool>("show_endpoints");
     }
 
+    if (_sdf->HasElement("update_interval"))
+    {
+      this->dataPtr->updateInterval = _sdf->Get<int>("update_interval");
+      if (this->dataPtr->updateInterval < 1) this->dataPtr->updateInterval = 1;
+    }
+
     this->dataPtr->initialized = true;
 
     this->dataPtr->ns = "rope_" + this->dataPtr->startLinkName + "_" +
                         this->dataPtr->endLinkName;
+
+    // Cache entity IDs for faster lookup in PreUpdate
+    this->CacheEntities(_ecm);
 
     gzmsg << "RopeVisualizer configured for model: " << this->dataPtr->modelName
           << ", start_link: " << this->dataPtr->startLinkName
@@ -198,50 +223,46 @@ class RopeVisualizer : public System,
       return;
     }
 
-    // Find start link entity
-    std::vector<Entity> startLinks = _ecm.EntitiesByComponents(
-        components::Name(this->dataPtr->startLinkName), components::Link());
-    if (startLinks.empty())
+    // Throttle updates - only update every N frames
+    if (++this->dataPtr->frameCounter % this->dataPtr->updateInterval != 0)
+    {
+      return;
+    }
+
+    // Use cached entity IDs instead of searching every update
+    if (this->dataPtr->startLinkEntity == kNullEntity ||
+        this->dataPtr->endLinkEntity == kNullEntity)
     {
       static bool warned = false;
       if (!warned)
       {
-        gzwarn << "RopeVisualizer: Start link '" << this->dataPtr->startLinkName
-               << "' not found in model '" << this->dataPtr->modelName << "'\n";
+        gzwarn << "RopeVisualizer: Cached entities not valid, attempting to "
+                  "re-cache\n";
         warned = true;
       }
       return;
     }
 
-    // Find end link entity
-    std::vector<Entity> endLinks = _ecm.EntitiesByComponents(
-        components::Name(this->dataPtr->endLinkName), components::Link());
-    if (endLinks.empty())
-    {
-      static bool warned = false;
-      if (!warned)
-      {
-        gzwarn << "RopeVisualizer: End link '" << this->dataPtr->endLinkName
-               << "' not found in model '" << this->dataPtr->modelName << "'\n";
-        warned = true;
-      }
-      return;
-    }
-
-    // Get current poses
-    auto startPoseComp = _ecm.Component<components::Pose>(startLinks[0]);
-    auto endPoseComp = _ecm.Component<components::Pose>(endLinks[0]);
+    // Get current poses using cached entities
+    auto startPoseComp =
+        _ecm.Component<components::Pose>(this->dataPtr->startLinkEntity);
+    auto endPoseComp =
+        _ecm.Component<components::Pose>(this->dataPtr->endLinkEntity);
 
     if (!startPoseComp || !endPoseComp)
     {
       return;
     }
 
-    math::Vector3d newStart = gz::sim::worldPose(startLinks[0], _ecm).Pos();
-    math::Vector3d newEnd = gz::sim::worldPose(endLinks[0], _ecm).Pos();
+    math::Vector3d newStart =
+        gz::sim::worldPose(this->dataPtr->startLinkEntity, _ecm).Pos();
+    math::Vector3d newEnd =
+        gz::sim::worldPose(this->dataPtr->endLinkEntity, _ecm).Pos();
 
     // Check if positions have changed
-    const double threshold = 1e-6;
+    // const double threshold = 1e-6;//
+    // 四根绳子时太卡了，由于仿真时高频微小振动，导致四个绳子都在频繁更新marker
+    const double threshold = 1e-3;
     bool changed =
         (newStart - this->dataPtr->startPoint).Length() > threshold ||
         (newEnd - this->dataPtr->endPoint).Length() > threshold;
@@ -270,6 +291,37 @@ class RopeVisualizer : public System,
     _markerMsg.set_action(gz::msgs::Marker::ADD_MODIFY);
     gz::msgs::Set(_markerMsg.mutable_material()->mutable_ambient(), _color);
     gz::msgs::Set(_markerMsg.mutable_material()->mutable_diffuse(), _color);
+  }
+
+  /// \brief Cache entity IDs for start and end links
+  /// \param[in] _ecm Entity component manager
+  void CacheEntities(EntityComponentManager& _ecm)
+  {
+    // Find and cache start link entity
+    std::vector<Entity> startLinks = _ecm.EntitiesByComponents(
+        components::Name(this->dataPtr->startLinkName), components::Link());
+    if (!startLinks.empty())
+    {
+      this->dataPtr->startLinkEntity = startLinks[0];
+    }
+    else
+    {
+      gzerr << "RopeVisualizer: Start link '" << this->dataPtr->startLinkName
+            << "' not found in model '" << this->dataPtr->modelName << "'\n";
+    }
+
+    // Find and cache end link entity
+    std::vector<Entity> endLinks = _ecm.EntitiesByComponents(
+        components::Name(this->dataPtr->endLinkName), components::Link());
+    if (!endLinks.empty())
+    {
+      this->dataPtr->endLinkEntity = endLinks[0];
+    }
+    else
+    {
+      gzerr << "RopeVisualizer: End link '" << this->dataPtr->endLinkName
+            << "' not found in model '" << this->dataPtr->modelName << "'\n";
+    }
   }
 
   /// \brief Update the visualization

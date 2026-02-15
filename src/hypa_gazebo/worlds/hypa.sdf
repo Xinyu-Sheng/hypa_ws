@@ -17,7 +17,8 @@
     <plugin name='gz::sim::systems::SceneBroadcaster' filename='gz-sim-scene-broadcaster-system' />
     <plugin name='gz::sim::systems::Contact' filename='gz-sim-contact-system' />
     <plugin name='gz::sim::systems::Sensors' filename='gz-sim-sensors-system' />
-    <!-- <gravity>0 0 -9.8</gravity> -->
+    <plugin filename="gz-sim-forcetorque-system" name="gz::sim::systems::ForceTorque" />
+    <!-- <gravity>0 0 -9.81</gravity> -->
     <magnetic_field>5.5644999999999998e-06 2.2875799999999999e-05 -4.2388400000000002e-05</magnetic_field>
     <atmosphere type='adiabatic' />
     <scene>
@@ -102,15 +103,15 @@
         <pose>0 0 0 0 0 0</pose>
         <inertial>
           <!-- <mass>0.01</mass> -->
-          <mass>10000</mass>
-          <inertia>
+          <mass>0</mass>
+          <!-- <inertia>
             <ixx>0.001</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
             <iyy>0.001</iyy>
             <iyz>0</iyz>
             <izz>0.001</izz>
-          </inertia>
+          </inertia> -->
         </inertial>
       </link>
       <joint name="foundation" type="fixed">
@@ -140,15 +141,15 @@
         <!-- 初始化时往下的位置 -->
         <pose>0 0 -10 0 0 0</pose>
         <inertial>
-          <mass>1000</mass>
-          <inertia>
+          <mass>0</mass>
+          <!-- <inertia>
             <ixx>500</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
             <iyy>800</iyy>
             <iyz>0</iyz>
             <izz>1000</izz>
-          </inertia>
+          </inertia> -->
         </inertial>
         <visual name="init_container_top_center_visual">
           <geometry>
@@ -548,7 +549,19 @@
             <velocity>0.5</velocity>
           </limit>
         </axis>
+        <sensor name="force_torque_sensor" type="force_torque">
+          <update_rate>100</update_rate>
+          <always_on>true</always_on>
+          <visualize>true</visualize>
+          <topic>joint_force_torque/prismatic_lifting_hook_fl</topic>
+          <force_torque>
+            <frame>sensor</frame>
+            <!-- <measure_direction>child_to_parent</measure_direction> -->
+            <measure_direction>parent_to_child</measure_direction>
+          </force_torque>
+        </sensor>
       </joint>
+
       <joint name="prismatic_lifting_hook_fr" type="prismatic">
         <parent>lifting_hook_1_fr</parent>
         <child>lifting_hook_2_fr</child>
@@ -562,7 +575,19 @@
             <velocity>0.5</velocity>
           </limit>
         </axis>
+        <sensor name="force_torque_sensor" type="force_torque">
+          <update_rate>100</update_rate>
+          <always_on>true</always_on>
+          <visualize>true</visualize>
+          <topic>joint_force_torque/prismatic_lifting_hook_fr</topic>
+          <force_torque>
+            <frame>sensor</frame>
+            <!-- <measure_direction>child_to_parent</measure_direction> -->
+            <measure_direction>parent_to_child</measure_direction>
+          </force_torque>
+        </sensor>
       </joint>
+
       <joint name="prismatic_lifting_hook_bl" type="prismatic">
         <parent>lifting_hook_1_bl</parent>
         <child>lifting_hook_2_bl</child>
@@ -576,7 +601,19 @@
             <velocity>0.5</velocity>
           </limit>
         </axis>
+        <sensor name="force_torque_sensor" type="force_torque">
+          <update_rate>100</update_rate>
+          <always_on>true</always_on>
+          <visualize>true</visualize>
+          <topic>joint_force_torque/prismatic_lifting_hook_bl</topic>
+          <force_torque>
+            <frame>sensor</frame>
+            <!-- <measure_direction>child_to_parent</measure_direction> -->
+            <measure_direction>parent_to_child</measure_direction>
+          </force_torque>
+        </sensor>
       </joint>
+
       <joint name="prismatic_lifting_hook_br" type="prismatic">
         <parent>lifting_hook_1_br</parent>
         <child>lifting_hook_2_br</child>
@@ -590,14 +627,91 @@
             <velocity>0.5</velocity>
           </limit>
         </axis>
+        <sensor name="force_torque_sensor" type="force_torque">
+          <update_rate>100</update_rate>
+          <always_on>true</always_on>
+          <visualize>true</visualize>
+          <topic>joint_force_torque/prismatic_lifting_hook_br</topic>
+          <force_torque>
+            <frame>sensor</frame>
+            <!-- <measure_direction>child_to_parent</measure_direction> -->
+            <measure_direction>parent_to_child</measure_direction>
+          </force_torque>
+        </sensor>
       </joint>
+      <plugin
+        filename="libRopeVisualizer.so"
+        name="hypa_gazebo::RopeVisualizer">
+        <start_link>lifting_hook_1_fl</start_link>
+        <end_link>lifting_hook_2_fl</end_link>
+        <line_width>0.05</line_width>
+        <color>
+          <r>0.2</r>
+          <g>0.8</g>
+          <b>0.2</b>
+          <a>1.0</a>
+        </color>
+        <show_endpoints>true</show_endpoints>
+        <update_interval>5</update_interval>
+      </plugin>
+      <plugin
+        filename="libRopeVisualizer.so"
+        name="hypa_gazebo::RopeVisualizer">
+        <start_link>lifting_hook_1_fr</start_link>
+        <end_link>lifting_hook_2_fr</end_link>
+        <line_width>0.05</line_width>
+        <color>
+          <r>0.2</r>
+          <g>0.8</g>
+          <b>0.2</b>
+          <a>1.0</a>
+        </color>
+        <show_endpoints>true</show_endpoints>
+        <update_interval>5</update_interval>
+      </plugin>
+      <plugin
+        filename="libRopeVisualizer.so"
+        name="hypa_gazebo::RopeVisualizer">
+        <start_link>lifting_hook_1_bl</start_link>
+        <end_link>lifting_hook_2_bl</end_link>
+        <line_width>0.05</line_width>
+        <color>
+          <r>0.2</r>
+          <g>0.8</g>
+          <b>0.2</b>
+          <a>1.0</a>
+        </color>
+        <show_endpoints>true</show_endpoints>
+        <update_interval>5</update_interval>
+      </plugin>
+      <plugin
+        filename="libRopeVisualizer.so"
+        name="hypa_gazebo::RopeVisualizer">
+        <start_link>lifting_hook_1_br</start_link>
+        <end_link>lifting_hook_2_br</end_link>
+        <line_width>0.05</line_width>
+        <color>
+          <r>0.2</r>
+          <g>0.8</g>
+          <b>0.2</b>
+          <a>1.0</a>
+        </color>
+        <show_endpoints>true</show_endpoints>
+        <update_interval>5</update_interval>
+      </plugin>
 
+      <!-- <plugin
+        filename="gz-sim-joint-state-publisher-system"
+        name="gz::sim::systems::JointStatePublisher">
+      </plugin> -->
       <plugin
         filename="gz-sim-joint-state-publisher-system"
         name="gz::sim::systems::JointStatePublisher">
-        <!-- 发布所有关节状态 -->
+        <joint_name>prismatic_lifting_hook_fl</joint_name>
+        <joint_name>prismatic_lifting_hook_fr</joint_name>
+        <joint_name>prismatic_lifting_hook_bl</joint_name>
+        <joint_name>prismatic_lifting_hook_br</joint_name>
       </plugin>
-
 
       <link name="lifting_ring_2_fl">
         <pose relative_to="lifting_hook_2_fl">0 0 0 0 0 0</pose>
@@ -700,9 +814,9 @@
         <!-- use_velocity_commands 控制模式：
         Topic 发送：始终是 position（位置）
         内部处理：
-        false：position → PID → force（力矩控制）
-        true：position → 绕过PID → velocity（直接速度控制）
-        cmd_min和cmd_max标签就针对的是两种底层cmd的限制 -->
+        false：position → PID → force_cmd（力矩控制）
+        true：position → 绕过PID → velocity_cmd（基于误差的速度控制，P控制器，Kp=1/dt）
+        cmd_min和cmd_max针对底层cmd：false时力，true时速度 -->
       </plugin>
 
       <plugin
@@ -743,6 +857,7 @@
         <initial_position>0</initial_position>
         <use_velocity_commands>false</use_velocity_commands>
       </plugin>
+
 
       <plugin
         filename="gz-sim-detachable-joint-system"
@@ -794,13 +909,30 @@
         <pose>0 0 0 0 0 0</pose>
         <inertial>
           <mass>2000</mass> <!-- 2吨集装箱 -->
+          <!-- 
+          惯量矩阵理论计算公式（均匀密度长方体）：
+          Ixx = (1/12) * m * (h² + w²)
+          Iyy = (1/12) * m * (l² + h²)  
+          Izz = (1/12) * m * (l² + w²)
+          
+          其中：
+          m = 2000 kg（质量）
+          l = 6.0 m（长度）
+          w = 2.4 m（宽度）
+          h = 2.5 m（高度）
+          
+          计算结果：
+          Ixx = 2500 kg⋅m²
+          Iyy = 10417 kg⋅m²
+          Izz = 8320 kg⋅m²
+          -->
           <inertia>
-            <ixx>500</ixx>
+            <ixx>2500</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>800</iyy>
+            <iyy>10417</iyy>
             <iyz>0</iyz>
-            <izz>1000</izz>
+            <izz>8320</izz>
           </inertia>
           <pose>0 0 1.25 0 0 0</pose>
         </inertial>
