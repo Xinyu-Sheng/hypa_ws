@@ -27,9 +27,9 @@ using GoalHandleMultiAxisMotion =
 class MotionActionServer
 {
  public:
-  MotionActionServer(const std::shared_ptr<rclcpp::Node>& node,
-                     const std::string& action_name,
-                     std::shared_ptr<MotionController> controller);
+  MotionActionServer(const std::shared_ptr<rclcpp::Node>& _node,
+                     const std::string& _action_name,
+                     std::shared_ptr<MotionController> _controller);
 
   ~MotionActionServer();
 

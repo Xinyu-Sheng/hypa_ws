@@ -16,12 +16,12 @@ MotionController::MotionController()
 MotionController::~MotionController() { stop(); }
 
 std::optional<std::string> MotionController::initialize(
-    const std::string& controller_ip)
+    const std::string& _controller_ip)
 {
   zmotion_ = std::make_unique<ZMotionWrapper>();
 
   // 连接控制器
-  auto connect_result = zmotion_->connect(controller_ip);
+  auto connect_result = zmotion_->connect(_controller_ip);
   if (connect_result)
   {
     return connect_result;
@@ -34,7 +34,7 @@ std::optional<std::string> MotionController::initialize(
 }
 
 std::optional<std::string> MotionController::configure_axis(
-    int axis, double units, double speed, double accel, double decel)
+    int _axis, double _units, double _speed, double _accel, double _decel)
 {
   if (!zmotion_ || !zmotion_->is_connected())
   {
@@ -42,27 +42,27 @@ std::optional<std::string> MotionController::configure_axis(
   }
 
   // 设置 units
-  auto result = zmotion_->set_units(axis, units);
+  auto result = zmotion_->set_units(_axis, _units);
   if (result) return result;
 
   // 设置速度、加速度、减速度
-  result = zmotion_->set_speed(axis, speed);
+  result = zmotion_->set_speed(_axis, _speed);
   if (result) return result;
 
-  result = zmotion_->set_acceleration(axis, accel);
+  result = zmotion_->set_acceleration(_axis, _accel);
   if (result) return result;
 
-  result = zmotion_->set_deceleration(axis, decel);
+  result = zmotion_->set_deceleration(_axis, _decel);
   if (result) return result;
 
   // 缓存配置
   AxisConfig config;
-  config.units = units;
-  config.speed = speed;
-  config.acceleration = accel;
-  config.deceleration = decel;
+  config.units = _units;
+  config.speed = _speed;
+  config.acceleration = _accel;
+  config.deceleration = _decel;
   config.configured = true;
-  axis_configs_[axis] = config;
+  axis_configs_[_axis] = config;
 
   return std::nullopt;
 }
@@ -182,10 +182,10 @@ MotionController::ControllerStatus MotionController::get_current_status() const
 
     if (zmotion_)
     {
-      axis_status.position = zmotion_->get_position(axis).value_or(0.0);
-      axis_status.feedback = zmotion_->get_feedback(axis).value_or(0.0);
-      axis_status.speed = zmotion_->get_speed(axis).value_or(0.0);
-      auto status_opt = zmotion_->get_axis_status(axis);
+      axis_status.position = zmotion_->Position(axis).value_or(0.0);
+      axis_status.feedback = zmotion_->Feedback(axis).value_or(0.0);
+      axis_status.speed = zmotion_->Speed(axis).value_or(0.0);
+      auto status_opt = zmotion_->AxisStatus(axis);
       if (status_opt)
       {
         axis_status.status_word = status_opt.value();
@@ -219,7 +219,7 @@ void MotionController::cancel_current_motion()
   }
 }
 
-bool MotionController::wait_for_completion(int timeout_ms)
+bool MotionController::wait_for_completion(int _timeout_ms)
 {
   auto start_time = std::chrono::steady_clock::now();
 
@@ -230,12 +230,12 @@ bool MotionController::wait_for_completion(int timeout_ms)
       return false;
     }
 
-    if (timeout_ms > 0)
+    if (_timeout_ms > 0)
     {
       auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                          std::chrono::steady_clock::now() - start_time)
                          .count();
-      if (elapsed >= timeout_ms)
+      if (elapsed >= _timeout_ms)
       {
         return false;  // 超时
       }
@@ -512,7 +512,7 @@ double MotionController::calculate_progress(const MotionCommand& cmd) const
     double current = 0.0;
     if (zmotion_)
     {
-      auto pos_opt = zmotion_->get_position(axis);
+      auto pos_opt = zmotion_->Position(axis);
       if (pos_opt)
       {
         current = pos_opt.value();
@@ -543,7 +543,7 @@ bool MotionController::is_motion_complete(const MotionCommand& cmd) const
     double current = 0.0;
     if (zmotion_)
     {
-      auto pos_opt = zmotion_->get_position(axis);
+      auto pos_opt = zmotion_->Position(axis);
       if (pos_opt)
       {
         current = pos_opt.value();

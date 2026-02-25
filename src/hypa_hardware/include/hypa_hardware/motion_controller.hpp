@@ -83,7 +83,7 @@ class MotionController
    * @param controller_ip 控制器 IP 地址
    * @return 成功返回 true，失败返回错误信息
    */
-  std::optional<std::string> initialize(const std::string& controller_ip);
+  std::optional<std::string> initialize(const std::string& _controller_ip);
 
   /**
    * @brief 配置轴参数
@@ -94,9 +94,9 @@ class MotionController
    * @param decel 减速度
    * @return
    */
-  std::optional<std::string> configure_axis(int axis, double units,
-                                            double speed, double accel,
-                                            double decel);
+  std::optional<std::string> configure_axis(int _axis, double _units,
+                                            double _speed, double _accel,
+                                            double _decel);
 
   /**
    * @brief 启动执行线程
@@ -139,7 +139,7 @@ class MotionController
    * @param timeout_ms 超时时间（毫秒），0 表示无限等待
    * @return 成功完成返回 true，超时或取消返回 false
    */
-  bool wait_for_completion(int timeout_ms = 0);
+  bool wait_for_completion(int _timeout_ms = 0);
 
  private:
   std::unique_ptr<ZMotionWrapper> zmotion_;

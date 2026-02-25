@@ -9,6 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(hypa_msgs REQUIRED)
@@ -40,6 +41,7 @@ target_link_libraries(motion_node
 ament_target_dependencies(motion_node
   rclcpp
   rclcpp_action
+  rclcpp_lifecycle
   hypa_msgs
 )
 

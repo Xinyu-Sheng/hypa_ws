@@ -6,9 +6,9 @@ namespace hypa_hardware
 {
 
 MotionActionServer::MotionActionServer(
-    const std::shared_ptr<rclcpp::Node>& node, const std::string& action_name,
-    std::shared_ptr<MotionController> controller)
-    : node_(node), action_name_(action_name), controller_(controller)
+    const std::shared_ptr<rclcpp::Node>& _node, const std::string& _action_name,
+    std::shared_ptr<MotionController> _controller)
+    : node_(_node), action_name_(_action_name), controller_(_controller)
 {
 }
 

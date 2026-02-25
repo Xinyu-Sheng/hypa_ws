@@ -13,7 +13,7 @@ ZMotionWrapper::ZMotionWrapper() : axis_configs_(32)
 
 ZMotionWrapper::~ZMotionWrapper() { disconnect(); }
 
-std::optional<std::string> ZMotionWrapper::connect(const std::string& ip)
+std::optional<std::string> ZMotionWrapper::connect(const std::string& _ip)
 {
   if (handle_ != nullptr)
   {
@@ -21,10 +21,10 @@ std::optional<std::string> ZMotionWrapper::connect(const std::string& ip)
   }
 
   // 调用 ZMotion API 连接
-  int32_t ret = ZMC_OpenEth(const_cast<char*>(ip.c_str()), &handle_);
+  int32_t ret = ZMC_OpenEth(const_cast<char*>(_ip.c_str()), &handle_);
   if (ret != ERR_OK || handle_ == nullptr)
   {
-    last_error_ = "Failed to connect to ZMC432 at " + ip +
+    last_error_ = "Failed to connect to ZMC432 at " + _ip +
                   " (error code: " + std::to_string(ret) + ")";
     return last_error_;
   }
@@ -44,79 +44,83 @@ void ZMotionWrapper::disconnect()
   }
 }
 
-std::optional<std::string> ZMotionWrapper::set_units(int axis, double units)
+std::optional<std::string> ZMotionWrapper::set_units(int _axis, double _units)
 {
-  if (!ensure_axis_configured(axis))
+  if (!ensure_axis_configured(_axis))
   {
-    return "Axis " + std::to_string(axis) + " not configured";
+    return "Axis " + std::to_string(_axis) + " not configured";
   }
 
   // 使用 ZAux_Direct_SetUnits 设置 units
-  int32_t ret = ZAux_Direct_SetUnits(handle_, axis, static_cast<float>(units));
+  int32_t ret =
+      ZAux_Direct_SetUnits(handle_, _axis, static_cast<float>(_units));
   if (ret != ERR_OK)
   {
-    last_error_ = "Set units failed for axis " + std::to_string(axis) +
+    last_error_ = "Set units failed for axis " + std::to_string(_axis) +
                   " (error: " + std::to_string(ret) + ")";
     return last_error_;
   }
 
-  axis_configs_[axis].units = units;
+  axis_configs_[_axis].units = _units;
   return std::nullopt;
 }
 
-std::optional<std::string> ZMotionWrapper::set_speed(int axis, double speed)
+std::optional<std::string> ZMotionWrapper::set_speed(int _axis, double _speed)
 {
-  int32_t ret = ZAux_Direct_SetSpeed(handle_, axis, static_cast<float>(speed));
+  int32_t ret =
+      ZAux_Direct_SetSpeed(handle_, _axis, static_cast<float>(_speed));
   if (ret != ERR_OK)
   {
-    last_error_ = "Set speed failed for axis " + std::to_string(axis) +
-                  " (error: " + std::to_string(ret) + ")";
-    return last_error_;
-  }
-  return std::nullopt;
-}
-
-std::optional<std::string> ZMotionWrapper::set_acceleration(int axis,
-                                                            double accel)
-{
-  int32_t ret = ZAux_Direct_SetAccel(handle_, axis, static_cast<float>(accel));
-  if (ret != ERR_OK)
-  {
-    last_error_ = "Set acceleration failed for axis " + std::to_string(axis) +
+    last_error_ = "Set speed failed for axis " + std::to_string(_axis) +
                   " (error: " + std::to_string(ret) + ")";
     return last_error_;
   }
   return std::nullopt;
 }
 
-std::optional<std::string> ZMotionWrapper::set_deceleration(int axis,
-                                                            double decel)
+std::optional<std::string> ZMotionWrapper::set_acceleration(int _axis,
+                                                            double _accel)
 {
-  int32_t ret = ZAux_Direct_SetDecel(handle_, axis, static_cast<float>(decel));
+  int32_t ret =
+      ZAux_Direct_SetAccel(handle_, _axis, static_cast<float>(_accel));
   if (ret != ERR_OK)
   {
-    last_error_ = "Set deceleration failed for axis " + std::to_string(axis) +
+    last_error_ = "Set acceleration failed for axis " + std::to_string(_axis) +
                   " (error: " + std::to_string(ret) + ")";
     return last_error_;
   }
   return std::nullopt;
 }
 
-std::optional<std::string> ZMotionWrapper::move_absolute(int axis,
-                                                         double position)
+std::optional<std::string> ZMotionWrapper::set_deceleration(int _axis,
+                                                            double _decel)
 {
-  if (!ensure_axis_configured(axis))
+  int32_t ret =
+      ZAux_Direct_SetDecel(handle_, _axis, static_cast<float>(_decel));
+  if (ret != ERR_OK)
   {
-    return "Axis " + std::to_string(axis) + " not configured";
+    last_error_ = "Set deceleration failed for axis " + std::to_string(_axis) +
+                  " (error: " + std::to_string(ret) + ")";
+    return last_error_;
+  }
+  return std::nullopt;
+}
+
+std::optional<std::string> ZMotionWrapper::move_absolute(int _axis,
+                                                         double _position)
+{
+  if (!ensure_axis_configured(_axis))
+  {
+    return "Axis " + std::to_string(_axis) + " not configured";
   }
 
-  int64_t pulses = physical_to_pulses(axis, position);
-  int axis_list[1] = {axis};
+  int64_t pulses = physical_to_pulses(_axis, _position);
+  int axis_list[1] = {_axis};
   float distance_list[1] = {static_cast<float>(pulses)};
   int32_t ret = ZAux_Direct_MoveAbs(handle_, 1, axis_list, distance_list);
   if (ret != ERR_OK)
   {
-    last_error_ = "Move absolute failed for axis " + std::to_string(axis) +
+    last_error_ = "Move absolute failed for axis " + std::to_string(_axis) +
                   " (error: " + std::to_string(ret) + ")";
     return last_error_;
   }
@@ -124,21 +128,21 @@ std::optional<std::string> ZMotionWrapper::move_absolute(int axis,
   return std::nullopt;
 }
 
-std::optional<std::string> ZMotionWrapper::move_relative(int axis,
-                                                         double distance)
+std::optional<std::string> ZMotionWrapper::move_relative(int _axis,
+                                                         double _distance)
 {
-  if (!ensure_axis_configured(axis))
+  if (!ensure_axis_configured(_axis))
   {
-    return "Axis " + std::to_string(axis) + " not configured";
+    return "Axis " + std::to_string(_axis) + " not configured";
   }
 
-  int64_t pulses = physical_to_pulses(axis, distance);
-  int axis_list[1] = {axis};
+  int64_t pulses = physical_to_pulses(_axis, _distance);
+  int axis_list[1] = {_axis};
   float distance_list[1] = {static_cast<float>(pulses)};
   int32_t ret = ZAux_Direct_Move(handle_, 1, axis_list, distance_list);
   if (ret != ERR_OK)
   {
-    last_error_ = "Move relative failed for axis " + std::to_string(axis) +
+    last_error_ = "Move relative failed for axis " + std::to_string(_axis) +
                   " (error: " + std::to_string(ret) + ")";
     return last_error_;
   }
@@ -146,33 +150,33 @@ std::optional<std::string> ZMotionWrapper::move_relative(int axis,
   return std::nullopt;
 }
 
-std::optional<std::string> ZMotionWrapper::move_velocity(int axis,
-                                                         double velocity)
+std::optional<std::string> ZMotionWrapper::move_velocity(int _axis,
+                                                         double _velocity)
 {
-  if (!ensure_axis_configured(axis))
+  if (!ensure_axis_configured(_axis))
   {
-    return "Axis " + std::to_string(axis) + " not configured";
+    return "Axis " + std::to_string(_axis) + " not configured";
   }
 
   // 使用连续运动模式 - ZAux_Direct_Single_Vmove
   // 注意：这个函数使用方向参数，正数为正向，负数为反向
-  int64_t pulses_per_sec = physical_to_pulses(axis, std::abs(velocity));
-  int direction = (velocity >= 0) ? 1 : -1;
-  int32_t ret = ZAux_Direct_Single_Vmove(handle_, axis, direction);
+  int64_t pulses_per_sec = physical_to_pulses(_axis, std::abs(_velocity));
+  int direction = (_velocity >= 0) ? 1 : -1;
+  int32_t ret = ZAux_Direct_Single_Vmove(handle_, _axis, direction);
   if (ret != ERR_OK)
   {
-    last_error_ = "Move velocity failed for axis " + std::to_string(axis) +
+    last_error_ = "Move velocity failed for axis " + std::to_string(_axis) +
                   " (error: " + std::to_string(ret) + ")";
     return last_error_;
   }
 
   // 还需要设置速度参数
-  ret = ZAux_Direct_SetSpeed(handle_, axis,
-                             static_cast<float>(std::abs(velocity)));
+  ret = ZAux_Direct_SetSpeed(handle_, _axis,
+                             static_cast<float>(std::abs(_velocity)));
   if (ret != ERR_OK)
   {
     last_error_ = "Set speed failed for velocity move on axis " +
-                  std::to_string(axis) + " (error: " + std::to_string(ret) +
+                  std::to_string(_axis) + " (error: " + std::to_string(ret) +
                   ")";
     return last_error_;
   }
@@ -181,15 +185,15 @@ std::optional<std::string> ZMotionWrapper::move_velocity(int axis,
 }
 
 std::optional<std::string> ZMotionWrapper::move_line_absolute(
-    const std::vector<int>& axes, const std::vector<double>& positions)
+    const std::vector<int>& _axes, const std::vector<double>& _positions)
 {
-  if (axes.empty() || positions.size() != axes.size())
+  if (_axes.empty() || _positions.size() != _axes.size())
   {
     return "Invalid axes/positions size mismatch";
   }
 
   // 检查所有轴是否已配置
-  for (int axis : axes)
+  for (int axis : _axes)
   {
     if (!ensure_axis_configured(axis))
     {
@@ -200,11 +204,11 @@ std::optional<std::string> ZMotionWrapper::move_line_absolute(
   // 构建命令字符串: "MOVEABS(axis0, pos0, axis1, pos1, ...)"
   std::stringstream cmd;
   cmd << "MOVEABS(";
-  for (size_t i = 0; i < axes.size(); ++i)
+  for (size_t i = 0; i < _axes.size(); ++i)
   {
     if (i > 0) cmd << ",";
-    int64_t pulses = physical_to_pulses(axes[i], positions[i]);
-    cmd << axes[i] << "," << pulses;
+    int64_t pulses = physical_to_pulses(_axes[i], _positions[i]);
+    cmd << _axes[i] << "," << pulses;
   }
   cmd << ")";
 
@@ -222,14 +226,14 @@ std::optional<std::string> ZMotionWrapper::move_line_absolute(
 }
 
 std::optional<std::string> ZMotionWrapper::move_line_relative(
-    const std::vector<int>& axes, const std::vector<double>& distances)
+    const std::vector<int>& _axes, const std::vector<double>& _distances)
 {
-  if (axes.empty() || distances.size() != axes.size())
+  if (_axes.empty() || _distances.size() != _axes.size())
   {
     return "Invalid axes/distances size mismatch";
   }
 
-  for (int axis : axes)
+  for (int axis : _axes)
   {
     if (!ensure_axis_configured(axis))
     {
@@ -239,11 +243,11 @@ std::optional<std::string> ZMotionWrapper::move_line_relative(
 
   std::stringstream cmd;
   cmd << "MOVE(";
-  for (size_t i = 0; i < axes.size(); ++i)
+  for (size_t i = 0; i < _axes.size(); ++i)
   {
     if (i > 0) cmd << ",";
-    int64_t pulses = physical_to_pulses(axes[i], distances[i]);
-    cmd << axes[i] << "," << pulses;
+    int64_t pulses = physical_to_pulses(_axes[i], _distances[i]);
+    cmd << _axes[i] << "," << pulses;
   }
   cmd << ")";
 
@@ -261,20 +265,20 @@ std::optional<std::string> ZMotionWrapper::move_line_relative(
 }
 
 std::optional<std::string> ZMotionWrapper::move_circular_absolute(
-    const std::vector<int>& axes, const std::vector<double>& positions,
-    const std::vector<double>& circular_params)
+    const std::vector<int>& _axes, const std::vector<double>& _positions,
+    const std::vector<double>& _circular_params)
 {
-  if (axes.size() < 2 || axes.size() > 3)
+  if (_axes.size() < 2 || _axes.size() > 3)
   {
     return "Circular interpolation requires 2 or 3 axes";
   }
-  if (positions.size() != axes.size())
+  if (_positions.size() != _axes.size())
   {
     return "Positions size mismatch with axes";
   }
 
   // 检查所有轴已配置
-  for (int axis : axes)
+  for (int axis : _axes)
   {
     if (!ensure_axis_configured(axis))
     {
@@ -285,27 +289,27 @@ std::optional<std::string> ZMotionWrapper::move_circular_absolute(
   // 构建命令: MOVECIRCABS(axes..., positions..., circular_params...)
   std::stringstream cmd;
   cmd << "MOVECIRCABS(";
-  for (size_t i = 0; i < axes.size(); ++i)
+  for (size_t i = 0; i < _axes.size(); ++i)
   {
     if (i > 0) cmd << ",";
-    int64_t pulses = physical_to_pulses(axes[i], positions[i]);
-    cmd << axes[i] << "," << pulses;
+    int64_t pulses = physical_to_pulses(_axes[i], _positions[i]);
+    cmd << _axes[i] << "," << pulses;
   }
   // 添加圆心参数（已为物理单位）
-  for (size_t i = 0; i < circular_params.size(); ++i)
+  for (size_t i = 0; i < _circular_params.size(); ++i)
   {
-    if (i < axes.size())
+    if (i < _axes.size())
       cmd << ",";  // 继续用逗号分隔
     else
       cmd << ",";
     // 圆心坐标不需要转换为脉冲（已经是物理单位，但 ZMotion 可能也需要转换）
     // 假设圆心也是物理单位，需要转换为脉冲
-    if (i < circular_params.size())
+    if (i < _circular_params.size())
     {
       // 圆心参数对应前几个轴
-      int axis_idx = i % axes.size();
-      double param_val = circular_params[i];
-      int64_t pulses = physical_to_pulses(axes[axis_idx], param_val);
+      int axis_idx = i % _axes.size();
+      double param_val = _circular_params[i];
+      int64_t pulses = physical_to_pulses(_axes[axis_idx], param_val);
       cmd << pulses;
     }
   }
@@ -325,24 +329,24 @@ std::optional<std::string> ZMotionWrapper::move_circular_absolute(
 }
 
 std::optional<std::string> ZMotionWrapper::move_spiral_absolute(
-    const std::vector<int>& axes, const std::vector<double>& positions,
-    const std::vector<double>& spiral_params)
+    const std::vector<int>& _axes, const std::vector<double>& _positions,
+    const std::vector<double>& _spiral_params)
 {
-  if (axes.size() != 3)
+  if (_axes.size() != 3)
   {
     return "Spiral interpolation requires exactly 3 axes";
   }
-  if (positions.size() != 3)
+  if (_positions.size() != 3)
   {
     return "Spiral positions must have 3 values";
   }
-  if (spiral_params.size() < 4)
+  if (_spiral_params.size() < 4)
   {
     return "Spiral requires at least 4 parameters: [radius, pitch, turns, "
            "end_angle]";
   }
 
-  for (int axis : axes)
+  for (int axis : _axes)
   {
     if (!ensure_axis_configured(axis))
     {
@@ -354,32 +358,32 @@ std::optional<std::string> ZMotionWrapper::move_spiral_absolute(
   // end_angle)
   std::stringstream cmd;
   cmd << "MOVESPIRALABS(";
-  for (size_t i = 0; i < axes.size(); ++i)
+  for (size_t i = 0; i < _axes.size(); ++i)
   {
     if (i > 0) cmd << ",";
-    cmd << axes[i];
+    cmd << _axes[i];
   }
-  for (size_t i = 0; i < positions.size(); ++i)
+  for (size_t i = 0; i < _positions.size(); ++i)
   {
     cmd << ",";
-    int64_t pulses = physical_to_pulses(axes[i], positions[i]);
+    int64_t pulses = physical_to_pulses(_axes[i], _positions[i]);
     cmd << pulses;
   }
   // 螺旋参数: radius, pitch, turns, end_angle
   // radius 和 pitch 需要转换为脉冲单位
-  for (size_t i = 0; i < spiral_params.size(); ++i)
+  for (size_t i = 0; i < _spiral_params.size(); ++i)
   {
     cmd << ",";
     if (i < 2)
     {  // radius, pitch 需要单位转换
-      int64_t pulses =
-          physical_to_pulses(axes[0], spiral_params[i]);  // 使用第一个轴的单位
+      int64_t pulses = physical_to_pulses(
+          _axes[0], _spiral_params[i]);  // 使用第一个轴的单位
       cmd << pulses;
     }
     else
     {
       // turns 和 end_angle 是纯数值，不转换
-      cmd << spiral_params[i];
+      cmd << _spiral_params[i];
     }
   }
   cmd << ")";
@@ -398,24 +402,24 @@ std::optional<std::string> ZMotionWrapper::move_spiral_absolute(
 }
 
 std::optional<std::string> ZMotionWrapper::move_eclipse_absolute(
-    const std::vector<int>& axes, const std::vector<double>& positions,
-    const std::vector<double>& eclipse_params)
+    const std::vector<int>& _axes, const std::vector<double>& _positions,
+    const std::vector<double>& _eclipse_params)
 {
-  if (axes.size() != 2)
+  if (_axes.size() != 2)
   {
     return "Eclipse interpolation requires exactly 2 axes";
   }
-  if (positions.size() != 2)
+  if (_positions.size() != 2)
   {
     return "Eclipse positions must have 2 values";
   }
-  if (eclipse_params.size() < 6)
+  if (_eclipse_params.size() < 6)
   {
     return "Eclipse requires 6 parameters: [center_x, center_y, major_axis, "
            "minor_axis, start_angle, end_angle]";
   }
 
-  for (int axis : axes)
+  for (int axis : _axes)
   {
     if (!ensure_axis_configured(axis))
     {
@@ -427,14 +431,14 @@ std::optional<std::string> ZMotionWrapper::move_eclipse_absolute(
   // minor_axis, start_angle, end_angle)
   std::stringstream cmd;
   cmd << "MOVECLIPSEABS(";
-  cmd << axes[0] << "," << axes[1] << ",";
-  int64_t pulses_x = physical_to_pulses(axes[0], positions[0]);
-  int64_t pulses_y = physical_to_pulses(axes[1], positions[1]);
+  cmd << _axes[0] << "," << _axes[1] << ",";
+  int64_t pulses_x = physical_to_pulses(_axes[0], _positions[0]);
+  int64_t pulses_y = physical_to_pulses(_axes[1], _positions[1]);
   cmd << pulses_x << "," << pulses_y << ",";
 
   // 椭圆参数: center_x, center_y, major_axis, minor_axis, start_angle,
   // end_angle 位置参数需要转换为脉冲
-  for (size_t i = 0; i < eclipse_params.size(); ++i)
+  for (size_t i = 0; i < _eclipse_params.size(); ++i)
   {
     if (i > 0) cmd << ",";
     if (i < 4)
@@ -442,13 +446,13 @@ std::optional<std::string> ZMotionWrapper::move_eclipse_absolute(
       int axis_idx =
           (i < 2) ? i
                   : 0;  // center_x->axis0, center_y->axis1, major/minor->axis0
-      int64_t pulses = physical_to_pulses(axes[axis_idx], eclipse_params[i]);
+      int64_t pulses = physical_to_pulses(_axes[axis_idx], _eclipse_params[i]);
       cmd << pulses;
     }
     else
     {
       // 角度参数不转换
-      cmd << eclipse_params[i];
+      cmd << _eclipse_params[i];
     }
   }
   cmd << ")";
@@ -467,24 +471,24 @@ std::optional<std::string> ZMotionWrapper::move_eclipse_absolute(
 }
 
 std::optional<std::string> ZMotionWrapper::move_spherical_absolute(
-    const std::vector<int>& axes, const std::vector<double>& positions,
-    const std::vector<double>& spherical_params)
+    const std::vector<int>& _axes, const std::vector<double>& _positions,
+    const std::vector<double>& _spherical_params)
 {
-  if (axes.size() != 3)
+  if (_axes.size() != 3)
   {
     return "Spherical interpolation requires exactly 3 axes";
   }
-  if (positions.size() != 3)
+  if (_positions.size() != 3)
   {
     return "Spherical positions must have 3 values";
   }
-  if (spherical_params.size() < 8)
+  if (_spherical_params.size() < 8)
   {
     return "Spherical requires 8 parameters: [center_x, center_y, center_z, "
            "radius, start_theta, end_theta, start_phi, end_phi]";
   }
 
-  for (int axis : axes)
+  for (int axis : _axes)
   {
     if (!ensure_axis_configured(axis))
     {
@@ -496,32 +500,33 @@ std::optional<std::string> ZMotionWrapper::move_spherical_absolute(
   // center_y, center_z, radius, start_theta, end_theta, start_phi, end_phi)
   std::stringstream cmd;
   cmd << "MOVESPHERICALABS(";
-  for (size_t i = 0; i < axes.size(); ++i)
+  for (size_t i = 0; i < _axes.size(); ++i)
   {
     if (i > 0) cmd << ",";
-    cmd << axes[i];
+    cmd << _axes[i];
   }
-  for (size_t i = 0; i < positions.size(); ++i)
+  for (size_t i = 0; i < _positions.size(); ++i)
   {
     cmd << ",";
-    int64_t pulses = physical_to_pulses(axes[i], positions[i]);
+    int64_t pulses = physical_to_pulses(_axes[i], _positions[i]);
     cmd << pulses;
   }
   // 空间圆弧参数: center_x, center_y, center_z, radius, start_theta, end_theta,
   // start_phi, end_phi
-  for (size_t i = 0; i < spherical_params.size(); ++i)
+  for (size_t i = 0; i < _spherical_params.size(); ++i)
   {
     cmd << ",";
     if (i < 4)
     {  // center_x, center_y, center_z, radius 需要转换
       int axis_idx = (i < 3) ? i : 0;  // radius 使用 axis0 的单位
-      int64_t pulses = physical_to_pulses(axes[axis_idx], spherical_params[i]);
+      int64_t pulses =
+          physical_to_pulses(_axes[axis_idx], _spherical_params[i]);
       cmd << pulses;
     }
     else
     {
       // 角度参数不转换
-      cmd << spherical_params[i];
+      cmd << _spherical_params[i];
     }
   }
   cmd << ")";
@@ -540,14 +545,14 @@ std::optional<std::string> ZMotionWrapper::move_spherical_absolute(
 }
 
 std::optional<std::string> ZMotionWrapper::buffer_move(
-    const std::vector<int>& axes, const std::vector<double>& positions)
+    const std::vector<int>& _axes, const std::vector<double>& _positions)
 {
-  if (axes.empty() || positions.size() != axes.size())
+  if (_axes.empty() || _positions.size() != _axes.size())
   {
     return "Invalid axes/positions size mismatch";
   }
 
-  for (int axis : axes)
+  for (int axis : _axes)
   {
     if (!ensure_axis_configured(axis))
     {
@@ -558,11 +563,11 @@ std::optional<std::string> ZMotionWrapper::buffer_move(
   // 使用 BUFFERMOVE 命令
   std::stringstream cmd;
   cmd << "BUFFERMOVE(";
-  for (size_t i = 0; i < axes.size(); ++i)
+  for (size_t i = 0; i < _axes.size(); ++i)
   {
     if (i > 0) cmd << ",";
-    int64_t pulses = physical_to_pulses(axes[i], positions[i]);
-    cmd << axes[i] << "," << pulses;
+    int64_t pulses = physical_to_pulses(_axes[i], _positions[i]);
+    cmd << _axes[i] << "," << pulses;
   }
   cmd << ")";
 
@@ -607,61 +612,61 @@ std::optional<std::string> ZMotionWrapper::stop_continuous()
   return std::nullopt;
 }
 
-std::optional<double> ZMotionWrapper::get_position(int axis)
+std::optional<double> ZMotionWrapper::Position(int _axis) const
 {
   float dpos = 0.0f;
-  int32_t ret = ZAux_Direct_GetDpos(handle_, axis, &dpos);
+  int32_t ret = ZAux_Direct_GetDpos(handle_, _axis, &dpos);
   if (ret != ERR_OK)
   {
-    last_error_ = "Get position failed for axis " + std::to_string(axis) +
+    last_error_ = "Get position failed for axis " + std::to_string(_axis) +
                   " (error: " + std::to_string(ret) + ")";
     return std::nullopt;
   }
   return static_cast<double>(dpos);  // DPOS 已经是物理单位
 }
 
-std::optional<double> ZMotionWrapper::get_feedback(int axis)
+std::optional<double> ZMotionWrapper::Feedback(int _axis) const
 {
   float mpos = 0.0f;
-  int32_t ret = ZAux_Direct_GetMpos(handle_, axis, &mpos);
+  int32_t ret = ZAux_Direct_GetMpos(handle_, _axis, &mpos);
   if (ret != ERR_OK)
   {
-    last_error_ = "Get feedback failed for axis " + std::to_string(axis) +
+    last_error_ = "Get feedback failed for axis " + std::to_string(_axis) +
                   " (error: " + std::to_string(ret) + ")";
     return std::nullopt;
   }
   return static_cast<double>(mpos);  // MPOS 已经是物理单位
 }
 
-std::optional<double> ZMotionWrapper::get_speed(int axis)
+std::optional<double> ZMotionWrapper::Speed(int _axis) const
 {
   float mspeed = 0.0f;
-  int32_t ret = ZAux_Direct_GetMspeed(handle_, axis, &mspeed);
+  int32_t ret = ZAux_Direct_GetMspeed(handle_, _axis, &mspeed);
   if (ret != ERR_OK)
   {
-    last_error_ = "Get speed failed for axis " + std::to_string(axis) +
+    last_error_ = "Get speed failed for axis " + std::to_string(_axis) +
                   " (error: " + std::to_string(ret) + ")";
     return std::nullopt;
   }
   return static_cast<double>(mspeed);  // MSpeed 已经是物理单位
 }
 
-std::optional<uint32_t> ZMotionWrapper::get_axis_status(int axis)
+std::optional<uint32_t> ZMotionWrapper::AxisStatus(int _axis) const
 {
   int32_t status = 0;  // ZAux_Direct_GetAxisStatus 使用 int32_t 指针
-  int32_t ret = ZAux_Direct_GetAxisStatus(handle_, axis, &status);
+  int32_t ret = ZAux_Direct_GetAxisStatus(handle_, _axis, &status);
   if (ret != ERR_OK)
   {
-    last_error_ = "Get axis status failed for axis " + std::to_string(axis) +
+    last_error_ = "Get axis status failed for axis " + std::to_string(_axis) +
                   " (error: " + std::to_string(ret) + ")";
     return std::nullopt;
   }
   return static_cast<uint32_t>(status);
 }
 
-bool ZMotionWrapper::is_axis_moving(int axis)
+bool ZMotionWrapper::is_axis_moving(int _axis)
 {
-  auto status_opt = get_axis_status(axis);
+  auto status_opt = AxisStatus(_axis);
   if (!status_opt) return false;
 
   // 根据 zmotion.h 中的 AXISSTATUS 位定义判断
@@ -698,27 +703,27 @@ std::optional<std::string> ZMotionWrapper::emergency_stop()
 
 // Private methods
 
-int64_t ZMotionWrapper::physical_to_pulses(int axis, double physical_position)
+int64_t ZMotionWrapper::physical_to_pulses(int _axis, double _physical_position)
 {
-  double units = get_current_units(axis);
-  return static_cast<int64_t>(physical_position / units);
+  double units = get_current_units(_axis);
+  return static_cast<int64_t>(_physical_position / units);
 }
 
-double ZMotionWrapper::pulses_to_physical(int axis, int64_t pulses)
+double ZMotionWrapper::pulses_to_physical(int _axis, int64_t _pulses)
 {
-  double units = get_current_units(axis);
-  return pulses * units;
+  double units = get_current_units(_axis);
+  return _pulses * units;
 }
 
-std::optional<std::string> ZMotionWrapper::ensure_axis_configured(int axis)
+std::optional<std::string> ZMotionWrapper::ensure_axis_configured(int _axis)
 {
-  if (axis < 0 || axis >= 32)
+  if (_axis < 0 || _axis >= 32)
   {
     return "Axis number out of range (0-31)";
   }
 
   // 如果已经配置过，直接返回成功
-  if (axis_configs_[axis].configured)
+  if (axis_configs_[_axis].configured)
   {
     return std::nullopt;
   }
@@ -726,26 +731,26 @@ std::optional<std::string> ZMotionWrapper::ensure_axis_configured(int axis)
   // 尝试读取当前 units 值
   // 使用 ZAux_Direct_GetUnits 查询
   float units_val = 0.0f;
-  int32_t ret = ZAux_Direct_GetUnits(handle_, axis, &units_val);
+  int32_t ret = ZAux_Direct_GetUnits(handle_, _axis, &units_val);
   if (ret != ERR_OK)
   {
     // 如果查询失败，设置默认值 1.0
-    axis_configs_[axis].units = 1.0;
-    axis_configs_[axis].configured = true;
+    axis_configs_[_axis].units = 1.0;
+    axis_configs_[_axis].configured = true;
     // 不返回错误，允许继续
     return std::nullopt;
   }
 
-  axis_configs_[axis].units = static_cast<double>(units_val);
-  axis_configs_[axis].configured = true;
+  axis_configs_[_axis].units = static_cast<double>(units_val);
+  axis_configs_[_axis].configured = true;
   return std::nullopt;
 }
 
-double ZMotionWrapper::get_current_units(int axis)
+double ZMotionWrapper::get_current_units(int _axis)
 {
-  if (axis >= 0 && axis < 32 && axis_configs_[axis].configured)
+  if (_axis >= 0 && _axis < 32 && axis_configs_[_axis].configured)
   {
-    return axis_configs_[axis].units;
+    return axis_configs_[_axis].units;
   }
   return 1.0;  // 默认值
 }

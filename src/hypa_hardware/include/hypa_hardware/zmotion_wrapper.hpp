@@ -31,7 +31,7 @@ class ZMotionWrapper
    * @param ip 控制器 IP 地址
    * @return 成功返回 true，失败返回错误信息
    */
-  std::optional<std::string> connect(const std::string& ip);
+  std::optional<std::string> connect(const std::string& _ip);
 
   /**
    * @brief 断开连接
@@ -50,7 +50,7 @@ class ZMotionWrapper
    * @param units 脉冲当量（物理单位/脉冲），例如 0.001 表示 1 脉冲 = 0.001mm
    * @return 成功返回空，失败返回错误信息
    */
-  std::optional<std::string> set_units(int axis, double units);
+  std::optional<std::string> set_units(int _axis, double _units);
 
   /**
    * @brief 设置轴速度
@@ -58,7 +58,7 @@ class ZMotionWrapper
    * @param speed 速度（物理单位/秒）
    * @return
    */
-  std::optional<std::string> set_speed(int axis, double speed);
+  std::optional<std::string> set_speed(int _axis, double _speed);
 
   /**
    * @brief 设置轴加速度
@@ -66,7 +66,7 @@ class ZMotionWrapper
    * @param accel 加速度（物理单位/秒²）
    * @return
    */
-  std::optional<std::string> set_acceleration(int axis, double accel);
+  std::optional<std::string> set_acceleration(int _axis, double _accel);
 
   /**
    * @brief 设置轴减速度
@@ -74,7 +74,7 @@ class ZMotionWrapper
    * @param decel 减速度（物理单位/秒²）
    * @return
    */
-  std::optional<std::string> set_deceleration(int axis, double decel);
+  std::optional<std::string> set_deceleration(int _axis, double _decel);
 
   /**
    * @brief 单轴绝对位置运动
@@ -82,7 +82,7 @@ class ZMotionWrapper
    * @param position 目标位置（物理单位）
    * @return
    */
-  std::optional<std::string> move_absolute(int axis, double position);
+  std::optional<std::string> move_absolute(int _axis, double _position);
 
   /**
    * @brief 单轴相对位置运动
@@ -90,7 +90,7 @@ class ZMotionWrapper
    * @param distance 相对距离（物理单位）
    * @return
    */
-  std::optional<std::string> move_relative(int axis, double distance);
+  std::optional<std::string> move_relative(int _axis, double _distance);
 
   /**
    * @brief 单轴连续速度运动（JOG）
@@ -98,7 +98,7 @@ class ZMotionWrapper
    * @param velocity 速度（物理单位/秒），正负方向
    * @return
    */
-  std::optional<std::string> move_velocity(int axis, double velocity);
+  std::optional<std::string> move_velocity(int _axis, double _velocity);
 
   /**
    * @brief 多轴直线插补绝对运动
@@ -107,7 +107,7 @@ class ZMotionWrapper
    * @return
    */
   std::optional<std::string> move_line_absolute(
-      const std::vector<int>& axes, const std::vector<double>& positions);
+      const std::vector<int>& _axes, const std::vector<double>& _positions);
 
   /**
    * @brief 多轴直线插补相对运动
@@ -116,7 +116,7 @@ class ZMotionWrapper
    * @return
    */
   std::optional<std::string> move_line_relative(
-      const std::vector<int>& axes, const std::vector<double>& distances);
+      const std::vector<int>& _axes, const std::vector<double>& _distances);
 
   /**
    * @brief 多轴圆弧插补绝对运动（3点定圆）
@@ -128,8 +128,8 @@ class ZMotionWrapper
    * @return
    */
   std::optional<std::string> move_circular_absolute(
-      const std::vector<int>& axes, const std::vector<double>& positions,
-      const std::vector<double>& circular_params);
+      const std::vector<int>& _axes, const std::vector<double>& _positions,
+      const std::vector<double>& _circular_params);
 
   /**
    * @brief 多轴螺旋插补绝对运动（3轴）
@@ -139,8 +139,8 @@ class ZMotionWrapper
    * @return
    */
   std::optional<std::string> move_spiral_absolute(
-      const std::vector<int>& axes, const std::vector<double>& positions,
-      const std::vector<double>& spiral_params);
+      const std::vector<int>& _axes, const std::vector<double>& _positions,
+      const std::vector<double>& _spiral_params);
 
   /**
    * @brief 椭圆插补绝对运动（2轴）
@@ -151,8 +151,8 @@ class ZMotionWrapper
    * @return
    */
   std::optional<std::string> move_eclipse_absolute(
-      const std::vector<int>& axes, const std::vector<double>& positions,
-      const std::vector<double>& eclipse_params);
+      const std::vector<int>& _axes, const std::vector<double>& _positions,
+      const std::vector<double>& _eclipse_params);
 
   /**
    * @brief 空间圆弧+螺旋插补绝对运动（3轴）
@@ -163,8 +163,8 @@ class ZMotionWrapper
    * @return
    */
   std::optional<std::string> move_spherical_absolute(
-      const std::vector<int>& axes, const std::vector<double>& positions,
-      const std::vector<double>& spherical_params);
+      const std::vector<int>& _axes, const std::vector<double>& _positions,
+      const std::vector<double>& _spherical_params);
 
   /**
    * @brief 缓冲一个运动点（用于连续轨迹流式执行）
@@ -172,8 +172,8 @@ class ZMotionWrapper
    * @param positions 各轴目标位置
    * @return
    */
-  std::optional<std::string> buffer_move(const std::vector<int>& axes,
-                                         const std::vector<double>& positions);
+  std::optional<std::string> buffer_move(const std::vector<int>& _axes,
+                                         const std::vector<double>& _positions);
 
   /**
    * @brief 启动连续轨迹模式
@@ -192,35 +192,35 @@ class ZMotionWrapper
    * @param axis 轴号
    * @return 位置（物理单位），失败返回 optional 空值
    */
-  std::optional<double> get_position(int axis);
+  std::optional<double> Position(int _axis) const;
 
   /**
    * @brief 读取轴的反馈位置（MPOS）
    * @param axis 轴号
    * @return 位置（物理单位），失败返回 optional 空值
    */
-  std::optional<double> get_feedback(int axis);
+  std::optional<double> Feedback(int _axis) const;
 
   /**
    * @brief 读取轴的当前速度
    * @param axis 轴号
    * @return 速度（物理单位/秒），失败返回 optional 空值
    */
-  std::optional<double> get_speed(int axis);
+  std::optional<double> Speed(int _axis) const;
 
   /**
    * @brief 读取轴状态字
    * @param axis 轴号
    * @return 状态字（AXISSTATUS 位域），失败返回 optional 空值
    */
-  std::optional<uint32_t> get_axis_status(int axis);
+  std::optional<uint32_t> AxisStatus(int _axis) const;
 
   /**
    * @brief 检查轴是否在运动
    * @param axis 轴号
    * @return true 如果轴正在运动
    */
-  bool is_axis_moving(int axis);
+  bool is_axis_moving(int _axis);
 
   /**
    * @brief 停止所有轴运动
@@ -236,7 +236,7 @@ class ZMotionWrapper
 
  private:
   ZMC_HANDLE handle_{nullptr};
-  std::string last_error_;
+  mutable std::string last_error_;
 
   /**
    * @brief 将物理单位位置转换为脉冲单位
@@ -244,7 +244,7 @@ class ZMotionWrapper
    * @param physical_position 物理位置
    * @return 脉冲位置（整数）
    */
-  int64_t physical_to_pulses(int axis, double physical_position);
+  int64_t physical_to_pulses(int _axis, double _physical_position);
 
   /**
    * @brief 将脉冲单位位置转换为物理单位
@@ -252,21 +252,21 @@ class ZMotionWrapper
    * @param pulses 脉冲位置
    * @return 物理位置
    */
-  double pulses_to_physical(int axis, int64_t pulses);
+  double pulses_to_physical(int _axis, int64_t _pulses);
 
   /**
    * @brief 检查并更新轴配置缓存
    * @param axis 轴号
    * @return
    */
-  std::optional<std::string> ensure_axis_configured(int axis);
+  std::optional<std::string> ensure_axis_configured(int _axis);
 
   /**
    * @brief 获取轴当前 units 参数
    * @param axis 轴号
    * @return units 值
    */
-  double get_current_units(int axis);
+  double get_current_units(int _axis);
 
  private:
   // 轴配置缓存
