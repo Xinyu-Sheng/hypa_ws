@@ -12,10 +12,13 @@ find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 
 # Generate ROS 2 interfaces
-# rosidl_generate_interfaces(${PROJECT_NAME}
-# "msg/Empty.msg"
-# DEPENDENCIES std_msgs geometry_msgs builtin_interfaces
-# )
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "action/MultiAxisMotion.action"
+  DEPENDENCIES std_msgs geometry_msgs builtin_interfaces
+)
+
+# Ensure C++ and Python symbols are exported
+ament_export_dependencies(rosidl_default_runtime)
 
 # Testing
 if(BUILD_TESTING)
