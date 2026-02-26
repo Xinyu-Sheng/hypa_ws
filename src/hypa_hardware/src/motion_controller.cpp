@@ -4,13 +4,66 @@
 #include <cmath>
 #include <chrono>
 #include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <deque>
+#include <atomic>
 
 namespace hypa_hardware
 {
 
-MotionController::MotionController()
+// Private implementation class
+class MotionController::MotionControllerPrivate
 {
-  // 初始化执行线程为未运行状态
+ public:
+  MotionControllerPrivate() = default;
+  ~MotionControllerPrivate() = default;
+
+  // 禁止拷贝
+  MotionControllerPrivate(const MotionControllerPrivate&) = delete;
+  MotionControllerPrivate& operator=(const MotionControllerPrivate&) = delete;
+
+  std::unique_ptr<ZMotionWrapper> zmotion;
+  std::thread execution_thread;
+  std::mutex buffer_mutex;
+  std::condition_variable buffer_cv;
+  std::deque<MotionController::MotionCommand> command_buffer;
+  std::atomic<bool> running{false};
+  std::atomic<bool> executing{false};
+  std::atomic<bool> cancel_requested{false};
+
+  // 轴配置
+  struct AxisConfig
+  {
+    double units = 1.0;
+    double speed = 10.0;
+    double acceleration = 100.0;
+    double deceleration = 100.0;
+    bool configured = false;
+  };
+  std::map<int, AxisConfig> axis_configs;
+
+  // 执行线程主循环
+  void execution_loop(MotionController* _public_interface);
+
+  // 执行方法
+  std::optional<std::string> execute_single_axis(
+      const MotionController::MotionCommand& _cmd);
+  std::optional<std::string> execute_interpolated(
+      const MotionController::MotionCommand& _cmd);
+  std::optional<std::string> execute_continuous_trajectory(
+      const MotionController::MotionCommand& _cmd);
+
+  // 辅助方法
+  void update_status();
+  double calculate_progress(const MotionController::MotionCommand& _cmd) const;
+  bool is_motion_complete(const MotionController::MotionCommand& _cmd) const;
+};
+
+// Public interface implementations
+MotionController::MotionController()
+    : pimpl_(std::make_unique<MotionControllerPrivate>())
+{
 }
 
 MotionController::~MotionController() { stop(); }
@@ -18,10 +71,10 @@ MotionController::~MotionController() { stop(); }
 std::optional<std::string> MotionController::initialize(
     const std::string& _controller_ip)
 {
-  zmotion_ = std::make_unique<ZMotionWrapper>();
+  pimpl_->zmotion = std::make_unique<ZMotionWrapper>();
 
   // 连接控制器
-  auto connect_result = zmotion_->connect(_controller_ip);
+  auto connect_result = pimpl_->zmotion->connect(_controller_ip);
   if (connect_result)
   {
     return connect_result;
@@ -36,156 +89,159 @@ std::optional<std::string> MotionController::initialize(
 std::optional<std::string> MotionController::configure_axis(
     int _axis, double _units, double _speed, double _accel, double _decel)
 {
-  if (!zmotion_ || !zmotion_->is_connected())
+  if (!pimpl_->zmotion || !pimpl_->zmotion->is_connected())
   {
     return "Controller not connected";
   }
 
   // 设置 units
-  auto result = zmotion_->set_units(_axis, _units);
+  auto result = pimpl_->zmotion->set_units(_axis, _units);
   if (result) return result;
 
   // 设置速度、加速度、减速度
-  result = zmotion_->set_speed(_axis, _speed);
+  result = pimpl_->zmotion->set_speed(_axis, _speed);
   if (result) return result;
 
-  result = zmotion_->set_acceleration(_axis, _accel);
+  result = pimpl_->zmotion->set_acceleration(_axis, _accel);
   if (result) return result;
 
-  result = zmotion_->set_deceleration(_axis, _decel);
+  result = pimpl_->zmotion->set_deceleration(_axis, _decel);
   if (result) return result;
 
   // 缓存配置
-  AxisConfig config;
+  MotionControllerPrivate::AxisConfig config;
   config.units = _units;
   config.speed = _speed;
   config.acceleration = _accel;
   config.deceleration = _decel;
   config.configured = true;
-  axis_configs_[_axis] = config;
+  pimpl_->axis_configs[_axis] = config;
 
   return std::nullopt;
 }
 
 bool MotionController::start()
 {
-  if (running_)
+  if (pimpl_->running)
   {
     return true;  // 已经在运行
   }
 
-  if (!zmotion_ || !zmotion_->is_connected())
+  if (!pimpl_->zmotion || !pimpl_->zmotion->is_connected())
   {
     return false;
   }
 
-  running_ = true;
-  executing_ = false;
-  cancel_requested_ = false;
+  pimpl_->running = true;
+  pimpl_->executing = false;
+  pimpl_->cancel_requested = false;
 
   // 启动执行线程
-  execution_thread_ = std::thread(&MotionController::execution_loop, this);
+  pimpl_->execution_thread =
+      std::thread(&MotionControllerPrivate::execution_loop, pimpl_.get(), this);
 
   return true;
 }
 
 void MotionController::stop()
 {
-  if (!running_)
+  if (!pimpl_->running)
   {
     return;
   }
 
-  running_ = false;
-  cancel_requested_ = true;
+  pimpl_->running = false;
+  pimpl_->cancel_requested = true;
 
   // 唤醒执行线程
-  buffer_cv_.notify_all();
+  pimpl_->buffer_cv.notify_all();
 
   // 等待线程结束
-  if (execution_thread_.joinable())
+  if (pimpl_->execution_thread.joinable())
   {
-    execution_thread_.join();
+    pimpl_->execution_thread.join();
   }
 
   // 断开连接
-  if (zmotion_)
+  if (pimpl_->zmotion)
   {
-    zmotion_->disconnect();
+    pimpl_->zmotion->disconnect();
   }
 }
 
-bool MotionController::queue_motion(const MotionCommand& cmd)
+bool MotionController::queue_motion(const MotionCommand& _cmd)
 {
-  std::lock_guard<std::mutex> lock(buffer_mutex_);
+  std::lock_guard<std::mutex> lock(pimpl_->buffer_mutex);
 
   // 检查命令有效性
-  if (cmd.axes.empty())
+  if (_cmd.axes.empty())
   {
     return false;
   }
-  if (cmd.positions.size() != cmd.axes.size())
+  if (_cmd.positions.size() != _cmd.axes.size())
   {
     return false;
   }
-  if (!cmd.velocities.empty() && cmd.velocities.size() != cmd.axes.size())
+  if (!_cmd.velocities.empty() && _cmd.velocities.size() != _cmd.axes.size())
   {
     return false;
   }
-  if (!cmd.accelerations.empty() && cmd.accelerations.size() != cmd.axes.size())
+  if (!_cmd.accelerations.empty() &&
+      _cmd.accelerations.size() != _cmd.axes.size())
   {
     return false;
   }
-  if (!cmd.decelerations.empty() && cmd.decelerations.size() != cmd.axes.size())
+  if (!_cmd.decelerations.empty() &&
+      _cmd.decelerations.size() != _cmd.axes.size())
   {
     return false;
   }
 
   // 检查所有轴是否已配置
-  for (int axis : cmd.axes)
+  for (int axis : _cmd.axes)
   {
-    if (axis_configs_.find(axis) == axis_configs_.end())
+    if (pimpl_->axis_configs.find(axis) == pimpl_->axis_configs.end())
     {
       return false;
     }
   }
 
   // 检查连续轨迹模式下的参数
-  if (cmd.motion_type == CONTINUOUS_TRAJECTORY)
+  if (_cmd.motion_type == CONTINUOUS_TRAJECTORY)
   {
     // 连续轨迹需要至少一个速度参数
-    if (cmd.velocities.empty())
+    if (_cmd.velocities.empty())
     {
       return false;
     }
   }
 
   // 入队
-  command_buffer_.push_back(cmd);
+  pimpl_->command_buffer.push_back(_cmd);
 
   // 唤醒执行线程
-  buffer_cv_.notify_one();
+  pimpl_->buffer_cv.notify_one();
 
   return true;
 }
 
-MotionController::ControllerStatus MotionController::get_current_status() const
+MotionController::ControllerStatus MotionController::CurrentStatus() const
 {
   ControllerStatus status;
-  status.executing = executing_;
-  status.stop_requested = cancel_requested_;
+  status.executing = pimpl_->executing;
+  status.stop_requested = pimpl_->cancel_requested;
 
   // 读取所有已配置轴的状态
-  for (const auto& [axis, config] : axis_configs_)
+  for (const auto& [axis, config] : pimpl_->axis_configs)
   {
     AxisStatus axis_status;
 
-    if (zmotion_)
+    if (pimpl_->zmotion)
     {
-      axis_status.position = zmotion_->Position(axis).value_or(0.0);
-      axis_status.feedback = zmotion_->Feedback(axis).value_or(0.0);
-      axis_status.speed = zmotion_->Speed(axis).value_or(0.0);
-      auto status_opt = zmotion_->AxisStatus(axis);
+      axis_status.position = pimpl_->zmotion->Position(axis).value_or(0.0);
+      axis_status.feedback = pimpl_->zmotion->Feedback(axis).value_or(0.0);
+      axis_status.speed = pimpl_->zmotion->Speed(axis).value_or(0.0);
+      auto status_opt = pimpl_->zmotion->AxisStatus(axis);
       if (status_opt)
       {
         axis_status.status_word = status_opt.value();
@@ -210,12 +266,12 @@ MotionController::ControllerStatus MotionController::get_current_status() const
 
 void MotionController::cancel_current_motion()
 {
-  cancel_requested_ = true;
+  pimpl_->cancel_requested = true;
 
   // 立即停止所有轴
-  if (zmotion_)
+  if (pimpl_->zmotion)
   {
-    zmotion_->stop_all();
+    pimpl_->zmotion->stop_all();
   }
 }
 
@@ -225,7 +281,7 @@ bool MotionController::wait_for_completion(int _timeout_ms)
 
   while (is_executing())
   {
-    if (cancel_requested_)
+    if (pimpl_->cancel_requested)
     {
       return false;
     }
@@ -247,32 +303,72 @@ bool MotionController::wait_for_completion(int _timeout_ms)
   return true;
 }
 
-void MotionController::execution_loop()
+bool MotionController::is_executing() const
 {
-  while (running_)
+  return pimpl_ && pimpl_->executing;
+}
+
+// Private method implementations (delegated to pimpl)
+void MotionController::execution_loop() { pimpl_->execution_loop(this); }
+
+std::optional<std::string> MotionController::execute_single_axis(
+    const MotionCommand& _cmd)
+{
+  return pimpl_->execute_single_axis(_cmd);
+}
+
+std::optional<std::string> MotionController::execute_interpolated(
+    const MotionCommand& _cmd)
+{
+  return pimpl_->execute_interpolated(_cmd);
+}
+
+std::optional<std::string> MotionController::execute_continuous_trajectory(
+    const MotionCommand& _cmd)
+{
+  return pimpl_->execute_continuous_trajectory(_cmd);
+}
+
+void MotionController::update_status() { pimpl_->update_status(); }
+
+double MotionController::calculate_progress(const MotionCommand& _cmd) const
+{
+  return pimpl_->calculate_progress(_cmd);
+}
+
+bool MotionController::is_motion_complete(const MotionCommand& _cmd) const
+{
+  return pimpl_->is_motion_complete(_cmd);
+}
+
+// MotionControllerPrivate method implementations
+void MotionController::MotionControllerPrivate::execution_loop(
+    MotionController* _public_interface)
+{
+  while (running)
   {
-    MotionCommand cmd;
+    MotionController::MotionCommand cmd;
 
     // 等待命令或停止信号
     {
-      std::unique_lock<std::mutex> lock(buffer_mutex_);
-      buffer_cv_.wait(
-          lock, [this]() { return !command_buffer_.empty() || !running_; });
+      std::unique_lock<std::mutex> lock(buffer_mutex);
+      buffer_cv.wait(lock,
+                     [this]() { return !command_buffer.empty() || !running; });
 
-      if (!running_)
+      if (!running)
       {
         break;
       }
 
-      if (command_buffer_.empty())
+      if (command_buffer.empty())
       {
         continue;
       }
 
-      cmd = command_buffer_.front();
-      command_buffer_.pop_front();
-      executing_ = true;
-      cancel_requested_ = false;
+      cmd = command_buffer.front();
+      command_buffer.pop_front();
+      executing = true;
+      cancel_requested = false;
     }
 
     // 执行命令
@@ -280,15 +376,15 @@ void MotionController::execution_loop()
 
     switch (cmd.motion_type)
     {
-      case SINGLE_AXIS:
+      case MotionController::SINGLE_AXIS:
         result = execute_single_axis(cmd);
         break;
 
-      case INTERPOLATED:
+      case MotionController::INTERPOLATED:
         result = execute_interpolated(cmd);
         break;
 
-      case CONTINUOUS_TRAJECTORY:
+      case MotionController::CONTINUOUS_TRAJECTORY:
         result = execute_continuous_trajectory(cmd);
         break;
 
@@ -305,143 +401,138 @@ void MotionController::execution_loop()
 
     // 标记执行完成
     {
-      std::lock_guard<std::mutex> lock(buffer_mutex_);
-      executing_ = false;
+      std::lock_guard<std::mutex> lock(buffer_mutex);
+      executing = false;
     }
   }
 }
 
-std::optional<std::string> MotionController::execute_single_axis(
-    const MotionCommand& cmd)
+std::optional<std::string>
+MotionController::MotionControllerPrivate::execute_single_axis(
+    const MotionController::MotionCommand& _cmd)
 {
-  if (cmd.axes.size() != 1)
+  if (_cmd.axes.size() != 1)
   {
     return "SINGLE_AXIS requires exactly 1 axis";
   }
 
-  int axis = cmd.axes[0];
-  double target_position = cmd.positions[0];
+  int axis = _cmd.axes[0];
+  double target_position = _cmd.positions[0];
 
   // 如果提供了速度，先设置
-  if (!cmd.velocities.empty())
+  if (!_cmd.velocities.empty())
   {
-    auto speed_result = zmotion_->set_speed(axis, cmd.velocities[0]);
+    auto speed_result = zmotion->set_speed(axis, _cmd.velocities[0]);
     if (speed_result) return speed_result;
   }
 
   // 如果提供了加速度/减速度，先设置
-  if (!cmd.accelerations.empty())
+  if (!_cmd.accelerations.empty())
   {
-    auto accel_result = zmotion_->set_acceleration(axis, cmd.accelerations[0]);
+    auto accel_result = zmotion->set_acceleration(axis, _cmd.accelerations[0]);
     if (accel_result) return accel_result;
   }
-  if (!cmd.decelerations.empty())
+  if (!_cmd.decelerations.empty())
   {
-    auto decel_result = zmotion_->set_deceleration(axis, cmd.decelerations[0]);
+    auto decel_result = zmotion->set_deceleration(axis, _cmd.decelerations[0]);
     if (decel_result) return decel_result;
   }
 
   // 执行绝对运动
-  return zmotion_->move_absolute(axis, target_position);
+  return zmotion->move_absolute(axis, target_position);
 }
 
-std::optional<std::string> MotionController::execute_interpolated(
-    const MotionCommand& cmd)
+std::optional<std::string>
+MotionController::MotionControllerPrivate::execute_interpolated(
+    const MotionController::MotionCommand& _cmd)
 {
   // 先设置各轴的速度和加速度（如果提供）
-  for (size_t i = 0; i < cmd.axes.size(); ++i)
+  for (size_t i = 0; i < _cmd.axes.size(); ++i)
   {
-    int axis = cmd.axes[i];
+    int axis = _cmd.axes[i];
 
-    if (!cmd.velocities.empty())
+    if (!_cmd.velocities.empty())
     {
-      auto result = zmotion_->set_speed(axis, cmd.velocities[i]);
+      auto result = zmotion->set_speed(axis, _cmd.velocities[i]);
       if (result) return result;
     }
-    if (!cmd.accelerations.empty())
+    if (!_cmd.accelerations.empty())
     {
-      auto result = zmotion_->set_acceleration(axis, cmd.accelerations[i]);
+      auto result = zmotion->set_acceleration(axis, _cmd.accelerations[i]);
       if (result) return result;
     }
-    if (!cmd.decelerations.empty())
+    if (!_cmd.decelerations.empty())
     {
-      auto result = zmotion_->set_deceleration(axis, cmd.decelerations[i]);
+      auto result = zmotion->set_deceleration(axis, _cmd.decelerations[i]);
       if (result) return result;
     }
   }
 
   // 根据插补模式调用相应的函数
-  switch (cmd.interpolation_mode)
+  switch (_cmd.interpolation_mode)
   {
-    case LINEAR:
-      return zmotion_->move_line_absolute(cmd.axes, cmd.positions);
+    case MotionController::LINEAR:
+      return zmotion->move_line_absolute(_cmd.axes, _cmd.positions);
 
-    case CIRCULAR:
-      return zmotion_->move_circular_absolute(cmd.axes, cmd.positions,
-                                              cmd.circular_params);
+    case MotionController::CIRCULAR:
+      return zmotion->move_circular_absolute(_cmd.axes, _cmd.positions,
+                                             _cmd.circular_params);
 
-    case SPIRAL:
-      return zmotion_->move_spiral_absolute(cmd.axes, cmd.positions,
-                                            cmd.circular_params);
+    case MotionController::SPIRAL:
+      return zmotion->move_spiral_absolute(_cmd.axes, _cmd.positions,
+                                           _cmd.circular_params);
 
-    case ECLIPSE:
-      return zmotion_->move_eclipse_absolute(cmd.axes, cmd.positions,
-                                             cmd.circular_params);
+    case MotionController::ECLIPSE:
+      return zmotion->move_eclipse_absolute(_cmd.axes, _cmd.positions,
+                                            _cmd.circular_params);
 
-    case SPHERICAL:
-      return zmotion_->move_spherical_absolute(cmd.axes, cmd.positions,
-                                               cmd.circular_params);
+    case MotionController::SPHERICAL:
+      return zmotion->move_spherical_absolute(_cmd.axes, _cmd.positions,
+                                              _cmd.circular_params);
 
     default:
       return "Unsupported interpolation mode: " +
-             std::to_string(static_cast<int>(cmd.interpolation_mode));
+             std::to_string(static_cast<int>(_cmd.interpolation_mode));
   }
 }
 
-std::optional<std::string> MotionController::execute_continuous_trajectory(
-    const MotionCommand& cmd)
+std::optional<std::string>
+MotionController::MotionControllerPrivate::execute_continuous_trajectory(
+    const MotionController::MotionCommand& _cmd)
 {
   // 连续轨迹模式：先启动连续模式，然后缓冲所有点
 
   // 1. 设置各轴速度（如果提供）
-  for (size_t i = 0; i < cmd.axes.size(); ++i)
+  for (size_t i = 0; i < _cmd.axes.size(); ++i)
   {
-    int axis = cmd.axes[i];
-    if (!cmd.velocities.empty())
+    int axis = _cmd.axes[i];
+    if (!_cmd.velocities.empty())
     {
-      auto result = zmotion_->set_speed(axis, cmd.velocities[i]);
+      auto result = zmotion->set_speed(axis, _cmd.velocities[i]);
       if (result) return result;
     }
     // 连续轨迹通常使用默认加速度
   }
 
   // 2. 启动连续插补模式
-  auto start_result = zmotion_->start_continuous();
+  auto start_result = zmotion->start_continuous();
   if (start_result) return start_result;
 
   // 3. 缓冲第一个点（起始点）
-  auto buffer_result = zmotion_->buffer_move(cmd.axes, cmd.positions);
+  auto buffer_result = zmotion->buffer_move(_cmd.axes, _cmd.positions);
   if (buffer_result)
   {
-    zmotion_->stop_continuous();
+    zmotion->stop_continuous();
     return buffer_result;
   }
 
   // 4. 等待运动开始并监控
-  // 注意：这里需要等待用户后续继续缓冲点，或者等待一段时间后自动停止
-  // 实际上，连续轨迹应该由外部持续调用 buffer_move 来添加点
-  // 当命令队列空时，执行线程应该等待新的 buffer_move 命令
-
-  // 由于我们是从 command_buffer_ 取出的这个命令，我们需要保持连续模式
-  // 直到收到停止信号或新的命令
-
-  // 这里我们等待，直到 cancel_requested_ 为 true 或 running_ 为 false
-  while (running_ && !cancel_requested_)
+  while (running && !cancel_requested)
   {
     // 检查是否还有后续命令在缓冲中
     {
-      std::lock_guard<std::mutex> lock(buffer_mutex_);
-      if (command_buffer_.empty())
+      std::lock_guard<std::mutex> lock(buffer_mutex);
+      if (command_buffer.empty())
       {
         // 没有更多命令，可以停止连续模式
         // 但为了支持流式缓冲，我们等待一段时间看是否有新命令
@@ -450,22 +541,22 @@ std::optional<std::string> MotionController::execute_continuous_trajectory(
       else
       {
         // 有后续命令，取出并缓冲
-        MotionCommand next_cmd = command_buffer_.front();
-        command_buffer_.pop_front();
+        MotionController::MotionCommand next_cmd = command_buffer.front();
+        command_buffer.pop_front();
 
         // 验证新命令是否与当前连续轨迹兼容（相同轴、相同模式）
-        if (next_cmd.motion_type == CONTINUOUS_TRAJECTORY &&
-            next_cmd.axes == cmd.axes &&
-            next_cmd.interpolation_mode == cmd.interpolation_mode)
+        if (next_cmd.motion_type == MotionController::CONTINUOUS_TRAJECTORY &&
+            next_cmd.axes == _cmd.axes &&
+            next_cmd.interpolation_mode == _cmd.interpolation_mode)
         {
           // 缓冲这个点
           auto next_result =
-              zmotion_->buffer_move(next_cmd.axes, next_cmd.positions);
+              zmotion->buffer_move(next_cmd.axes, next_cmd.positions);
           if (next_result)
           {
             std::cerr << "Buffer move failed in continuous trajectory: "
                       << next_result.value() << std::endl;
-            zmotion_->stop_continuous();
+            zmotion->stop_continuous();
             return next_result;
           }
           continue;  // 继续循环检查下一个命令
@@ -473,9 +564,9 @@ std::optional<std::string> MotionController::execute_continuous_trajectory(
         else
         {
           // 遇到不同类型的命令，停止连续模式并处理新命令
-          zmotion_->stop_continuous();
+          zmotion->stop_continuous();
           // 将新命令重新放回队列头部
-          command_buffer_.push_front(next_cmd);
+          command_buffer.push_front(next_cmd);
           break;
         }
       }
@@ -485,34 +576,35 @@ std::optional<std::string> MotionController::execute_continuous_trajectory(
   }
 
   // 停止连续模式
-  zmotion_->stop_continuous();
+  zmotion->stop_continuous();
 
   return std::nullopt;
 }
 
-void MotionController::update_status()
+void MotionController::MotionControllerPrivate::update_status()
 {
   // 这个函数可以由外部定时调用，或者由 execute_goal 调用
-  // 目前我们不自动更新，而是按需从 zmotion_ 读取
+  // 目前我们不自动更新，而是按需从 zmotion 读取
 }
 
-double MotionController::calculate_progress(const MotionCommand& cmd) const
+double MotionController::MotionControllerPrivate::calculate_progress(
+    const MotionController::MotionCommand& _cmd) const
 {
-  if (cmd.axes.empty()) return 0.0;
+  if (_cmd.axes.empty()) return 0.0;
 
   double total_distance = 0.0;
   double remaining_distance = 0.0;
 
-  for (size_t i = 0; i < cmd.axes.size(); ++i)
+  for (size_t i = 0; i < _cmd.axes.size(); ++i)
   {
-    int axis = cmd.axes[i];
-    double target = cmd.positions[i];
+    int axis = _cmd.axes[i];
+    double target = _cmd.positions[i];
 
     // 获取当前位置
     double current = 0.0;
-    if (zmotion_)
+    if (zmotion)
     {
-      auto pos_opt = zmotion_->Position(axis);
+      auto pos_opt = zmotion->Position(axis);
       if (pos_opt)
       {
         current = pos_opt.value();
@@ -532,18 +624,19 @@ double MotionController::calculate_progress(const MotionCommand& cmd) const
   return (total_distance - remaining_distance) / total_distance * 100.0;
 }
 
-bool MotionController::is_motion_complete(const MotionCommand& cmd) const
+bool MotionController::MotionControllerPrivate::is_motion_complete(
+    const MotionController::MotionCommand& _cmd) const
 {
-  for (size_t i = 0; i < cmd.axes.size(); ++i)
+  for (size_t i = 0; i < _cmd.axes.size(); ++i)
   {
-    int axis = cmd.axes[i];
-    double target = cmd.positions[i];
+    int axis = _cmd.axes[i];
+    double target = _cmd.positions[i];
 
     // 获取当前位置
     double current = 0.0;
-    if (zmotion_)
+    if (zmotion)
     {
-      auto pos_opt = zmotion_->Position(axis);
+      auto pos_opt = zmotion->Position(axis);
       if (pos_opt)
       {
         current = pos_opt.value();
@@ -562,7 +655,7 @@ bool MotionController::is_motion_complete(const MotionCommand& cmd) const
     }
 
     // 检查轴是否还在运动
-    if (zmotion_ && zmotion_->is_axis_moving(axis))
+    if (zmotion && zmotion->is_axis_moving(axis))
     {
       return false;
     }

@@ -2,13 +2,9 @@
 #define MOTION_CONTROLLER_HPP
 
 #include <memory>
-#include <thread>
-#include <mutex>
-#include <condition_variable>
-#include <deque>
+#include <string>
 #include <vector>
 #include <map>
-#include <atomic>
 #include <optional>
 #include "hypa_hardware/zmotion_wrapper.hpp"
 
@@ -20,10 +16,12 @@ namespace hypa_hardware
  *
  * 管理多轴运动协调、命令缓冲队列和执行线程。
  * 支持单轴独立运动、多轴插补运动、连续轨迹流式缓冲。
+ * 使用 PIMPL 模式隐藏实现细节。
  */
 class MotionController
 {
  public:
+  // 公有类型定义（外部需要使用的类型）
   enum MotionType : uint8_t
   {
     SINGLE_AXIS = 1,
@@ -78,135 +76,33 @@ class MotionController
   MotionController(const MotionController&) = delete;
   MotionController& operator=(const MotionController&) = delete;
 
-  /**
-   * @brief 初始化控制器，连接 ZMC432
-   * @param controller_ip 控制器 IP 地址
-   * @return 成功返回 true，失败返回错误信息
-   */
-  std::optional<std::string> initialize(const std::string& _controller_ip);
+  // PIMPL 私有实现类
+  class MotionControllerPrivate;
+  std::unique_ptr<MotionControllerPrivate> pimpl_;
 
-  /**
-   * @brief 配置轴参数
-   * @param axis 轴号
-   * @param units 脉冲当量
-   * @param speed 最大速度
-   * @param accel 加速度
-   * @param decel 减速度
-   * @return
-   */
+  // 公共接口
+  std::optional<std::string> initialize(const std::string& _controller_ip);
   std::optional<std::string> configure_axis(int _axis, double _units,
                                             double _speed, double _accel,
                                             double _decel);
-
-  /**
-   * @brief 启动执行线程
-   * @return
-   */
   bool start();
-
-  /**
-   * @brief 停止执行线程并清空缓冲
-   * @return
-   */
   void stop();
-
-  /**
-   * @brief 提交运动命令到缓冲队列
-   * @param cmd 运动命令
-   * @return 如果成功入队返回 true，否则 false（队列已满或控制器未就绪）
-   */
-  bool queue_motion(const MotionCommand& cmd);
-
-  /**
-   * @brief 获取当前控制器状态
-   * @return 状态结构体
-   */
-  ControllerStatus get_current_status() const;
-
-  /**
-   * @brief 请求取消当前运动
-   */
+  bool queue_motion(const MotionCommand& _cmd);
+  ControllerStatus CurrentStatus() const;
   void cancel_current_motion();
-
-  /**
-   * @brief 检查是否有运动正在执行
-   * @return
-   */
-  bool is_executing() const { return executing_; }
-
-  /**
-   * @brief 等待当前运动完成（阻塞）
-   * @param timeout_ms 超时时间（毫秒），0 表示无限等待
-   * @return 成功完成返回 true，超时或取消返回 false
-   */
+  bool is_executing() const;
   bool wait_for_completion(int _timeout_ms = 0);
 
  private:
-  std::unique_ptr<ZMotionWrapper> zmotion_;
-  std::thread execution_thread_;
-  std::mutex buffer_mutex_;
-  std::condition_variable buffer_cv_;
-  std::deque<MotionCommand> command_buffer_;
-  std::atomic<bool> running_{false};
-  std::atomic<bool> executing_{false};
-  std::atomic<bool> cancel_requested_{false};
-
-  // 轴配置
-  struct AxisConfig
-  {
-    double units = 1.0;
-    double speed = 10.0;
-    double acceleration = 100.0;
-    double deceleration = 100.0;
-    bool configured = false;
-  };
-  std::map<int, AxisConfig> axis_configs_;
-
-  /**
-   * @brief 执行线程主循环
-   */
+  // 私有方法（委托给 pimpl_）
   void execution_loop();
-
-  /**
-   * @brief 执行单轴运动命令
-   * @param cmd 运动命令
-   * @return
-   */
-  std::optional<std::string> execute_single_axis(const MotionCommand& cmd);
-
-  /**
-   * @brief 执行插补运动命令
-   * @param cmd 运动命令
-   * @return
-   */
-  std::optional<std::string> execute_interpolated(const MotionCommand& cmd);
-
-  /**
-   * @brief 执行连续轨迹运动命令
-   * @param cmd 运动命令
-   * @return
-   */
+  std::optional<std::string> execute_single_axis(const MotionCommand& _cmd);
+  std::optional<std::string> execute_interpolated(const MotionCommand& _cmd);
   std::optional<std::string> execute_continuous_trajectory(
-      const MotionCommand& cmd);
-
-  /**
-   * @brief 更新各轴状态
-   */
+      const MotionCommand& _cmd);
   void update_status();
-
-  /**
-   * @brief 计算整体运动进度
-   * @param cmd 当前执行的命令
-   * @return 进度百分比（0-100）
-   */
-  double calculate_progress(const MotionCommand& cmd) const;
-
-  /**
-   * @brief 检查命令是否完成
-   * @param cmd 当前命令
-   * @return 如果所有轴都到达目标位置则返回 true
-   */
-  bool is_motion_complete(const MotionCommand& cmd) const;
+  double calculate_progress(const MotionCommand& _cmd) const;
+  bool is_motion_complete(const MotionCommand& _cmd) const;
 };
 
 }  // namespace hypa_hardware

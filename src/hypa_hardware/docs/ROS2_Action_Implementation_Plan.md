@@ -224,7 +224,7 @@ struct MotionCommand {
 - `void start()`
 - `void stop()`
 - `void queue_motion(const MotionCommand& cmd)`
-- `MotionStatus get_current_status()`
+- `MotionStatus CurrentStatus()`
 - `void cancel_current_motion()`
 
 **执行线程逻辑**:
