@@ -4,7 +4,7 @@
   <name>hypa_hardware</name>
   <version>0.0.1</version>
   <description>Hardware abstraction layer for ZMC432 motion controller via ROS2 actions</description>
-  <maintainer email="xinyu@hku.hk">xinyu</maintainer>
+  <maintainer email="sheng.xin.yu@faxmail.com">Xinyu Sheng</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

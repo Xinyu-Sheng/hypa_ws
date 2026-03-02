@@ -8,6 +8,21 @@ def generate_launch_description():
     return LaunchDescription(
         [
             DeclareLaunchArgument(
+                "namespace",
+                default_value="",
+                description="Namespace for the ROS 2 node",
+            ),
+            DeclareLaunchArgument(
+                "use_sim_time",
+                default_value="false",
+                description="Use simulation time",
+            ),
+            DeclareLaunchArgument(
+                "robot_name",
+                default_value="hypa",
+                description="Name of the robot",
+            ),
+            DeclareLaunchArgument(
                 "controller_ip",
                 default_value="192.168.0.11",
                 description="ZMC432 controller IP address",
@@ -38,6 +53,9 @@ def generate_launch_description():
                 name="motion_hardware_node",
                 output="screen",
                 parameters=[
+                    {"namespace": LaunchConfiguration("namespace")},
+                    {"use_sim_time": LaunchConfiguration("use_sim_time")},
+                    {"robot_name": LaunchConfiguration("robot_name")},
                     {"controller_ip": LaunchConfiguration("controller_ip")},
                     {"default_units": LaunchConfiguration("default_units")},
                     {"default_speed": LaunchConfiguration("default_speed")},

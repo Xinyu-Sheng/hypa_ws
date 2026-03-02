@@ -42,6 +42,8 @@ ament_target_dependencies(motion_node
   rclcpp
   rclcpp_action
   rclcpp_lifecycle
+  std_msgs
+  geometry_msgs
   hypa_msgs
 )
 

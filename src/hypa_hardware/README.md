@@ -198,4 +198,4 @@ Apache-2.0 (请根据实际情况修改)
 
 ## 维护者
 
-xinyu@hku.hk
+xsheng420@connect.hkust-gz.edu.cn

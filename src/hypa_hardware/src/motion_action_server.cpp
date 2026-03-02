@@ -69,11 +69,11 @@ class MotionActionServer::MotionActionServerPrivate
 MotionActionServer::MotionActionServer(
     const std::shared_ptr<rclcpp::Node>& _node, const std::string& _action_name,
     std::shared_ptr<MotionController> _controller)
-    : node_(_node),
+    : pimpl_(std::make_unique<MotionActionServerPrivate>(_node, _action_name,
+                                                         _controller)),
+      node_(_node),
       action_name_(_action_name),
-      controller_(_controller),
-      pimpl_(std::make_unique<MotionActionServerPrivate>(_node, _action_name,
-                                                         _controller))
+      controller_(_controller)
 {
 }
 
