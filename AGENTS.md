@@ -164,3 +164,10 @@ affected-packages: hypa_application, hypa_msgs
 - ✅ **多机器人安全** - 支持命名空间、参数化
 - ✅ **工具兼容** - 支持 clangd、colcon、ros2_control
 
+## 额外注意事项
+package.xml 中 maintainer是：
+<maintainer email="sheng.xin.yu@faxmail.com">Xinyu Sheng</maintainer>
+
+不要修改：
+libzmotion.so  zmcaux.cpp  zmcaux.h  zmotion.h
+上面这些文件。

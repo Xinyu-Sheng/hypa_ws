@@ -4,7 +4,7 @@
   <name>hypa_robot</name>
   <version>2.0.0</version>
   <description>HYPA机器人元包</description>
-  <maintainer email="maintainer@example.com">Hypa Team</maintainer>
+  <maintainer email="sheng.xin.yu@faxmail.com">Xinyu Sheng</maintainer>
   <license>Apache-2.0</license>
 
   <!-- 元包只需要ament_cmake作为构建工具 -->

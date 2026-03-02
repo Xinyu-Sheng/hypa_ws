@@ -4,7 +4,7 @@
   <name>hypa_launch</name>
   <version>2.0.0</version>
   <description>HYPA功能模块启动包 - 提供功能级启动配置</description>
-  <maintainer email="maintainer@example.com">Hypa Team</maintainer>
+  <maintainer email="sheng.xin.yu@faxmail.com">Xinyu Sheng</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

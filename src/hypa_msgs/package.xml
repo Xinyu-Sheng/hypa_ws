@@ -4,7 +4,7 @@
   <name>hypa_msgs</name>
   <version>2.0.0</version>
   <description>hypa消息定义</description>
-  <maintainer email="maintainer@example.com">Hypa Team</maintainer>
+  <maintainer email="sheng.xin.yu@faxmail.com">Xinyu Sheng</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
