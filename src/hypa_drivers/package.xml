@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+    <name>hypa_drivers</name>
+    <version>0.0.1</version>
+    <description>HYPA驱动元包，包含drivers目录下的所有驱动子包</description>
+    <maintainer email="sheng.xin.yu@faxmail.com">Xinyu Sheng</maintainer>
+    <license>Apache-2.0</license>
+
+    <!-- 元包只需要ament_cmake作为构建工具 -->
+    <buildtool_depend>ament_cmake</buildtool_depend>
+
+    <!-- 元包依赖：使用exec_depend而不是depend -->
+    <exec_depend>zmc432_driver</exec_depend>
+
+    <!-- 元包标识 -->
+    <export>
+        <build_type>ament_cmake</build_type>
+    </export>
+</package>

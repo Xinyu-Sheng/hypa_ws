@@ -5,10 +5,10 @@
 #include <string>
 #include <vector>
 #include <optional>
-#include "hypa_hardware/zmotion.h"
-#include "hypa_hardware/zmcaux.h"
+#include "zmc432_driver/zmotion.h"
+#include "zmc432_driver/zmcaux.h"
 
-namespace hypa_hardware
+namespace zmc432_driver
 {
 
 /**
@@ -137,6 +137,6 @@ class ZMotionWrapper
   bool is_axis_moving(int _axis);
 };
 
-}  // namespace hypa_hardware
+}  // namespace zmc432_driver
 
 #endif  // ZMOTION_WRAPPER_HPP

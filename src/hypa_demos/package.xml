@@ -3,7 +3,7 @@
 <package format="3">
   <name>hypa_demos</name>
   <version>0.0.1</version>
-  <description>Demo client for hypa_hardware motion action server</description>
+  <description>Demo client for zmc432_driver motion action server</description>
   <maintainer email="sheng.xin.yu@faxmail.com">Xinyu Sheng</maintainer>
   <license>Apache-2.0</license>
 

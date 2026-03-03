@@ -1,4 +1,4 @@
-#include "hypa_hardware/motion_controller.hpp"
+#include "zmc432_driver/motion_controller.hpp"
 #include <iostream>
 #include <algorithm>
 #include <cmath>
@@ -9,7 +9,7 @@
 #include <deque>
 #include <atomic>
 
-namespace hypa_hardware
+namespace zmc432_driver
 {
 
 // Private implementation class
@@ -664,4 +664,4 @@ bool MotionController::MotionControllerPrivate::is_motion_complete(
   return true;
 }
 
-}  // namespace hypa_hardware
+}  // namespace zmc432_driver

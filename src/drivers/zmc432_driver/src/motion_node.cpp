@@ -1,7 +1,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_lifecycle/lifecycle_node.hpp>
-#include "hypa_hardware/motion_controller.hpp"
-#include "hypa_hardware/motion_action_server.hpp"
+#include "zmc432_driver/motion_controller.hpp"
+#include "zmc432_driver/motion_action_server.hpp"
 
 int main(int argc, char** argv)
 {
@@ -47,7 +47,7 @@ int main(int argc, char** argv)
               default_units, default_speed, default_accel, default_decel);
 
   // 创建运动控制器
-  auto controller = std::make_shared<hypa_hardware::MotionController>();
+  auto controller = std::make_shared<zmc432_driver::MotionController>();
 
   // 初始化控制器（连接 ZMC432）
   auto init_result = controller->initialize(controller_ip);
@@ -100,7 +100,7 @@ int main(int argc, char** argv)
                  "Failed to get Node interface from LifecycleNode");
     return 1;
   }
-  hypa_hardware::MotionActionServer action_server(
+  zmc432_driver::MotionActionServer action_server(
       node_base, "motion/multi_axis_move", controller);
   if (!action_server.initialize())
   {

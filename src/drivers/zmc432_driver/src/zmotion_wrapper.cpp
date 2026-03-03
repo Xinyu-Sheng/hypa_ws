@@ -1,9 +1,9 @@
-#include "hypa_hardware/zmotion_wrapper.hpp"
+#include "zmc432_driver/zmotion_wrapper.hpp"
 #include <iostream>
 #include <sstream>
 #include <iomanip>
 
-namespace hypa_hardware
+namespace zmc432_driver
 {
 
 // Public interface implementations
@@ -862,4 +862,4 @@ double ZMotionWrapper::ZMotionWrapperPrivate::CurrentUnits(int _axis) const
   return 1.0;
 }
 
-}  // namespace hypa_hardware
+}  // namespace zmc432_driver

@@ -1,8 +1,8 @@
-#include "hypa_hardware/motion_action_server.hpp"
+#include "zmc432_driver/motion_action_server.hpp"
 #include <iostream>
 #include <algorithm>
 
-namespace hypa_hardware
+namespace zmc432_driver
 {
 
 // Private implementation class
@@ -482,4 +482,4 @@ MotionActionServer::MotionActionServerPrivate::convert_goal_to_command(
   return cmd;
 }
 
-}  // namespace hypa_hardware
+}  // namespace zmc432_driver

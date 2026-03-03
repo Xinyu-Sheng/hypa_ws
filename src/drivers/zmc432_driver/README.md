@@ -1,4 +1,4 @@
-# hypa_hardware
+# zmc432_driver
 
 **定位**: HYPA 硬件驱动包 - 提供 ZMC432 运动控制器的 ROS2 接口。
 
@@ -47,7 +47,7 @@ ROS2 Action Client → MotionActionServer → MotionController → ZMotionWrappe
 
 ```bash
 cd /home/xinyu/Projects/HKU/hypa_ws
-colcon build --packages-select hypa_msgs hypa_hardware
+colcon build --packages-select hypa_msgs zmc432_driver
 source install/setup.bash
 ```
 
@@ -56,7 +56,7 @@ source install/setup.bash
 启动 action 服务器：
 
 ```bash
-ros2 launch hypa_hardware motion_server.launch.py
+ros2 launch zmc432_driver motion_server.launch.py
 ```
 
 可选参数：
@@ -93,7 +93,7 @@ ros2 action send_goal /motion/multi_axis_move hypa_msgs/action/MultiAxisMotion \
 
 ```bash
 # 终端 1: 启动服务器
-ros2 launch hypa_hardware motion_server.launch.py
+ros2 launch zmc432_driver motion_server.launch.py
 
 # 终端 2: 发送连续轨迹目标（然后可以继续发送后续点）
 ros2 action send_goal /motion/multi_axis_move hypa_msgs/action/MultiAxisMotion \
@@ -166,8 +166,8 @@ ZMC432 需要正确配置 EtherCAT 主站，将 AKD 驱动器映射到轴地址�
 
 ### 编译错误
 
-- **找不到 libzmotion.so**: 确保 `libzmotion.so` 已复制到 `hypa_hardware/lib/` 目录
-- **找不到 zmotion.h**: 确保 `zmotion.h` 已复制到 `hypa_hardware/include/hypa_hardware/`
+- **找不到 libzmotion.so**: 确保 `libzmotion.so` 已复制到 `zmc432_driver/lib/` 目录
+- **找不到 zmotion.h**: 确保 `zmotion.h` 已复制到 `zmc432_driver/include/zmc432_driver/`
 - **hypa_msgs 未找到**: 先编译 hypa_msgs: `colcon build --packages-select hypa_msgs`
 
 ### 运行时错误

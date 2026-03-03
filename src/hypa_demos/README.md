@@ -1,6 +1,6 @@
 # hypa_demos
 
-运动控制演示包，展示 `hypa_hardware` 的 ROS2 Action 接口功能。
+运动控制演示包，展示 `zmc432_driver` 的 ROS2 Action 接口功能。
 
 ## 功能演示
 
@@ -15,7 +15,7 @@
 
 ## 依赖
 
-- hypa_hardware (提供 action server)
+- zmc432_driver (提供 action server)
 - hypa_msgs (包含 MultiAxisMotion.action)
 - rclcpp, rclcpp_action
 
@@ -31,11 +31,11 @@ source install/setup.bash
 
 ### 启动演示
 
-确保 `hypa_hardware` 的 action server 已启动：
+确保 `zmc432_driver` 的 action server 已启动：
 
 ```bash
 # 终端 1: 启动 action server
-ros2 launch hypa_hardware motion_server.launch.py
+ros2 launch zmc432_driver motion_server.launch.py
 ```
 
 然后运行 demo client：
@@ -68,6 +68,6 @@ ros2 run hypa_demos motion_demo_client
 
 ## 故障排除
 
-- **找不到 action server**: 确保 `hypa_hardware` 已启动
+- **找不到 action server**: 确保 `zmc432_driver` 已启动
 - **连接失败**: 检查 ZMC432 IP 地址和网络连接
 - **运动失败**: 检查轴配置和 EtherCAT 连接状态

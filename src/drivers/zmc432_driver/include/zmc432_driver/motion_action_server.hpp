@@ -7,9 +7,9 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "hypa_msgs/action/multi_axis_motion.hpp"
-#include "hypa_hardware/motion_controller.hpp"
+#include "zmc432_driver/motion_controller.hpp"
 
-namespace hypa_hardware
+namespace zmc432_driver
 {
 
 using MultiAxisMotion = hypa_msgs::action::MultiAxisMotion;
@@ -48,6 +48,6 @@ class MotionActionServer
   std::shared_ptr<MotionController> controller_;
 };
 
-}  // namespace hypa_hardware
+}  // namespace zmc432_driver
 
 #endif  // MOTION_ACTION_SERVER_HPP

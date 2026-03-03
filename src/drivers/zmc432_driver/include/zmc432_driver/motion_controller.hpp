@@ -6,9 +6,9 @@
 #include <vector>
 #include <map>
 #include <optional>
-#include "hypa_hardware/zmotion_wrapper.hpp"
+#include "zmc432_driver/zmotion_wrapper.hpp"
 
-namespace hypa_hardware
+namespace zmc432_driver
 {
 
 /**
@@ -105,6 +105,6 @@ class MotionController
   bool is_motion_complete(const MotionCommand& _cmd) const;
 };
 
-}  // namespace hypa_hardware
+}  // namespace zmc432_driver
 
 #endif  // MOTION_CONTROLLER_HPP

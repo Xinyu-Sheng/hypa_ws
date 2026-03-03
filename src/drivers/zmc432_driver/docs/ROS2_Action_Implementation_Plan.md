@@ -1,6 +1,6 @@
 # ROS2 Action 服务器实现计划
 
-**项目**: hypa_hardware - ZMC432 运动控制硬件抽象层
+**项目**: zmc432_driver - ZMC432 运动控制硬件抽象层
 **目标**: 提供 ROS2 Action 接口，通过 ZMC432 控制器的 EtherCAT 接口驱动 AKD 伺服驱动器
 **日期**: 2026-02-24
 **版本**: 1.0
@@ -83,7 +83,7 @@
 │           │ MultiAxisMotion.action                          │
 │           ▼                                                  │
 │  ┌──────────────────────────────────────────────┐         │
-│  │        MotionActionServer (hypa_hardware)    │         │
+│  │        MotionActionServer (zmc432_driver)    │         │
 │  │  - Goal 处理与验证                          │         │
 │  │  - Feedback 发布（50ms 间隔）               │         │
 │  │  - Cancel 处理                             │         │
@@ -147,15 +147,15 @@
 
 ### 步骤 2: 集成 ZMotion SDK
 
-1. 复制 `ref/source/zmotion.h` 到 `hypa_hardware/include/hypa_hardware/`
-2. 复制 `ref/source/libzmotion.so` 到 `hypa_hardware/lib/`
+1. 复制 `ref/source/zmotion.h` 到 `zmc432_driver/include/zmc432_driver/`
+2. 复制 `ref/source/libzmotion.so` 到 `zmc432_driver/lib/`
 3. （可选）复制 `ref/source/zmcaux.cpp` 作为辅助函数参考
 
 ### 步骤 3: 实现 ZMotion 封装层
 
 **文件**:
-- `hypa_hardware/include/hypa_hardware/zmotion_wrapper.hpp`
-- `hypa_hardware/src/zmotion_wrapper.cpp`
+- `zmc432_driver/include/zmc432_driver/zmotion_wrapper.hpp`
+- `zmc432_driver/src/zmotion_wrapper.cpp`
 
 **类**: `ZMotionWrapper`
 
@@ -177,8 +177,8 @@
 ### 步骤 4: 实现运动控制器
 
 **文件**:
-- `hypa_hardware/include/hypa_hardware/motion_controller.hpp`
-- `hypa_hardware/src/motion_controller.cpp`
+- `zmc432_driver/include/zmc432_driver/motion_controller.hpp`
+- `zmc432_driver/src/motion_controller.cpp`
 
 **类**: `MotionController`
 
@@ -264,8 +264,8 @@ void execution_loop() {
 ### 步骤 5: 实现 ROS2 Action 服务器
 
 **文件**:
-- `hypa_hardware/include/hypa_hardware/motion_action_server.hpp`
-- `hypa_hardware/src/motion_action_server.cpp`
+- `zmc432_driver/include/zmc432_driver/motion_action_server.hpp`
+- `zmc432_driver/src/motion_action_server.cpp`
 
 **类**: `MotionActionServer`（继承 `rclcpp_action::ServerBase<MultiAxisMotion>`）
 
@@ -307,7 +307,7 @@ rcl_action_cancel_response_t handle_cancel(
 
 ### 步骤 6: 创建主节点
 
-**文件**: `hypa_hardware/src/motion_node.cpp`
+**文件**: `zmc432_driver/src/motion_node.cpp`
 
 ```cpp
 int main(int argc, char** argv) {
@@ -349,11 +349,11 @@ int main(int argc, char** argv) {
 
 ### 步骤 7: 更新 CMakeLists.txt
 
-**文件**: `hypa_hardware/CMakeLists.txt`
+**文件**: `zmc432_driver/CMakeLists.txt`
 
 ```cmake
 cmake_minimum_required(VERSION 3.8)
-project(hypa_hardware)
+project(zmc432_driver)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -381,7 +381,7 @@ add_executable(motion_node
 target_include_directories(motion_node PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/hypa_hardware
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/zmc432_driver
 )
 
 ament_target_dependencies(motion_node
@@ -415,7 +415,7 @@ ament_package()
 
 ### 步骤 8: 创建 Launch 文件
 
-**文件**: `hypa_hardware/launch/motion_server.launch.py`
+**文件**: `zmc432_driver/launch/motion_server.launch.py`
 
 ```python
 from launch import LaunchDescription
@@ -431,7 +431,7 @@ def generate_launch_description():
             description='ZMC432 controller IP address'
         ),
         Node(
-            package='hypa_hardware',
+            package='zmc432_driver',
             executable='motion_node',
             name='motion_hardware_node',
             output='screen',
@@ -444,13 +444,13 @@ def generate_launch_description():
 
 ### 步骤 9: 更新 package.xml
 
-**文件**: `hypa_hardware/package.xml`
+**文件**: `zmc432_driver/package.xml`
 
 ```xml
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>hypa_hardware</name>
+  <name>zmc432_driver</name>
   <version>0.0.1</version>
   <description>Hardware abstraction layer for ZMC432 motion controller via ROS2 actions</description>
   <maintainer email="sheng.xin.yu@faxmail.com">Xinyu Sheng</maintainer>
@@ -553,7 +553,7 @@ int32[] executing_axis             # 正在执行的轴列表
 ### 文件结构
 
 ```
-hypa_hardware/
+zmc432_driver/
 ├── CMakeLists.txt
 ├── package.xml
 ├── README.md
@@ -561,7 +561,7 @@ hypa_hardware/
 ├── docs/
 │   └── ROS2_Action_Implementation_Plan.md  (本文件)
 ├── include/
-│   └── hypa_hardware/
+│   └── zmc432_driver/
 │       ├── zmotion.h                        (ZMotion SDK 头文件)
 │       ├── zmotion_wrapper.hpp
 │       ├── motion_controller.hpp
@@ -635,7 +635,7 @@ hypa_hardware/
    ```cmake
    target_include_directories(motion_node PRIVATE
      ${CMAKE_CURRENT_SOURCE_DIR}/include
-     ${CMAKE_CURRENT_SOURCE_DIR}/include/hypa_hardware
+     ${CMAKE_CURRENT_SOURCE_DIR}/include/zmc432_driver
    )
    ```
 
@@ -646,7 +646,7 @@ hypa_hardware/
 
 ### package.xml 关键点
 
-- 包名改为 `hypa_hardware`（与目录名一致）
+- 包名改为 `zmc432_driver`（与目录名一致）
 - 添加 `<depend>rclcpp_action</depend>`
 - `hypa_msgs` 使用 `<exec_depend>`（运行时依赖）
 
@@ -658,20 +658,20 @@ hypa_hardware/
 
 ```bash
 cd /home/xinyu/Projects/HKU/hypa_ws
-colcon build --packages-select hypa_msgs hypa_hardware
+colcon build --packages-select hypa_msgs zmc432_driver
 source install/setup.bash
 ```
 
 **预期输出**:
 - 无编译错误
-- 生成 `install/hypa_hardware/lib/hypa_hardware/motion_node`
+- 生成 `install/zmc432_driver/lib/zmc432_driver/motion_node`
 - `libzmotion.so` 正确链接
 
 ### 运行验证
 
 ```bash
 # 启动 action 服务器
-ros2 launch hypa_hardware motion_server.launch.py
+ros2 launch zmc432_driver motion_server.launch.py
 ```
 
 **预期输出**:
@@ -723,7 +723,7 @@ ros2 action send_goal /motion/multi_axis_move hypa_msgs/action/MultiAxisMotion \
 
 ```bash
 # 终端 1: 启动服务器
-ros2 launch hypa_hardware motion_server.launch.py
+ros2 launch zmc432_driver motion_server.launch.py
 
 # 终端 2: 发送连续轨迹（多个点）
 ros2 action send_goal /motion/multi_axis_move hypa_msgs/action/MultiAxisMotion \
@@ -765,7 +765,7 @@ ros2 action cancel_goal /motion/multi_axis_move
 
 | 决策项           | 选择                                         | 理由                               |
 | ---------------- | -------------------------------------------- | ---------------------------------- |
-| **包名**         | `hypa_hardware`                              | 与目录名一致，避免混淆             |
+| **包名**         | `zmc432_driver`                              | 与目录名一致，避免混淆             |
 | **Action 命名**  | `/motion/multi_axis_move`                    | 统一接口，涵盖单轴和多轴           |
 | **单位系统**     | 物理单位（mm/degree）                        | 用户友好，需配置 units 参数转换    |
 | **IP 配置**      | Launch 参数（默认 192.168.0.11）             | 灵活，支持不同网络环境             |
@@ -880,7 +880,7 @@ ros2 action cancel_goal /motion/multi_axis_move
 target_include_directories(motion_node PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/hypa_hardware
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/zmc432_driver
 )
 
 # 2. 非 ROS 第三方库（如 ZMotion SDK）

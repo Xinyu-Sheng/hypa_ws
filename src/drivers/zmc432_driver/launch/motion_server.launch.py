@@ -48,7 +48,7 @@ def generate_launch_description():
                 description="Default deceleration (physical units/s²)",
             ),
             Node(
-                package="hypa_hardware",
+                package="zmc432_driver",
                 executable="motion_node",
                 name="motion_hardware_node",
                 output="screen",

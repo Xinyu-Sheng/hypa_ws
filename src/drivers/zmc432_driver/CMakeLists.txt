@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(hypa_hardware)
+project(zmc432_driver)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -30,7 +30,7 @@ add_executable(motion_node
 target_include_directories(motion_node PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/hypa_hardware
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/zmc432_driver
 )
 
 # 非 ROS 第三方库
