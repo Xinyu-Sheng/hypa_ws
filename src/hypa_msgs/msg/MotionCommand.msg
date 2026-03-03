@@ -1,5 +1,5 @@
-# Goal definition for multi-axis motion control
-# Supports single-axis independent motion and multi-axis interpolated motion
+# 多轴运动命令消息
+# 支持单轴独立运动和多轴插补运动
 
 int32[] axes                       # 轴号列表（0-31）
 float64[] positions                # 目标位置（物理单位：mm 或 degree）
@@ -24,28 +24,3 @@ float64[] circular_params          # 圆弧插补的额外参数（圆心坐标�
                                   # ECLIPSE: [center_x, center_y, major_axis, minor_axis, start_angle, end_angle]
                                   # SPHERICAL: [center_x, center_y, center_z, radius, start_theta, end_theta, start_phi, end_phi]
 float64 wait_time                  # 运动完成后等待时间（毫秒），可选，缺省 0
-
----
-# Result definition
-bool success                       # 运动是否成功完成（true）或被取消/失败（false）
-float64[] final_positions          # 各轴最终位置（物理单位）
-int32 error_code                   # 错误码：
-                                  #   0 = 无错误
-                                  #   1 = 通信错误（连接失败、超时等）
-                                  #   2 = 轴配置错误（轴未初始化、units 未设置等）
-                                  #   3 = 参数错误（数组长度不匹配、参数越界等）
-                                  #   4 = 运动执行错误（运动指令失败）
-                                  #   5 = 轴故障（AKD 驱动器故障，包含具体故障码）
-                                  #   6 = 用户取消
-                                  #   7 = 不支持的插补模式
-                                  #   99 = 未知错误
-string error_message               # 人类可读的错误描述，包含详细错误信息
-
----
-# Feedback definition
-float64[] current_positions        # 各轴的规划位置（DPOS，单位：物理单位）
-float64[] feedback_positions       # 各轴的反馈位置（MPOS，单位：物理单位）
-float64[] current_velocities       # 各轴的当前速度（物理单位/秒）
-uint32[] axis_statuses             # 各轴的状态字（ZMotion AXISSTATUS 位域）
-float64 progress                   # 整体运动进度（0-100%），基于各轴剩余距离加权计算
-int32[] executing_axis             # 当前正在执行的轴列表（对于插补运动，所有轴都执行）

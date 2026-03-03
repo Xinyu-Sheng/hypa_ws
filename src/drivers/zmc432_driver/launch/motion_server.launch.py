@@ -47,6 +47,16 @@ def generate_launch_description():
                 default_value="100.0",
                 description="Default deceleration (physical units/s²)",
             ),
+            DeclareLaunchArgument(
+                "motion_command_topic",
+                default_value="motion_command",
+                description="Topic name for motion commands",
+            ),
+            DeclareLaunchArgument(
+                "motion_status_topic",
+                default_value="motion_status",
+                description="Topic name for motion status feedback",
+            ),
             Node(
                 package="zmc432_driver",
                 executable="motion_node",
@@ -61,6 +71,12 @@ def generate_launch_description():
                     {"default_speed": LaunchConfiguration("default_speed")},
                     {"default_accel": LaunchConfiguration("default_accel")},
                     {"default_decel": LaunchConfiguration("default_decel")},
+                    {
+                        "motion_command_topic": LaunchConfiguration(
+                            "motion_command_topic"
+                        )
+                    },
+                    {"motion_status_topic": LaunchConfiguration("motion_status_topic")},
                 ],
             ),
         ]

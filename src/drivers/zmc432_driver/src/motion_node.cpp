@@ -1,7 +1,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_lifecycle/lifecycle_node.hpp>
 #include "zmc432_driver/motion_controller.hpp"
-#include "zmc432_driver/motion_action_server.hpp"
+#include "zmc432_driver/motion_topic_node.hpp"
 
 int main(int argc, char** argv)
 {
@@ -27,7 +27,7 @@ int main(int argc, char** argv)
   // 获取必需参数
   auto namespace_val = node->get_parameter("namespace").as_string();
   auto robot_name = node->get_parameter("robot_name").as_string();
-  bool use_sim_time = node->get_parameter("use_sim_time").as_bool();
+  // use_sim_time 由 ROS 2 框架自动处理，获取后不需要显式使用
 
   // 获取应用参数
   std::string controller_ip = node->get_parameter("controller_ip").as_string();
@@ -37,9 +37,8 @@ int main(int argc, char** argv)
   double default_decel = node->get_parameter("default_decel").as_double();
 
   RCLCPP_INFO(node->get_logger(), "Motion hardware node starting...");
-  RCLCPP_INFO(node->get_logger(), "Namespace: %s, Robot: %s, Use Sim Time: %s",
-              namespace_val.c_str(), robot_name.c_str(),
-              use_sim_time ? "true" : "false");
+  RCLCPP_INFO(node->get_logger(), "Namespace: %s, Robot: %s",
+              namespace_val.c_str(), robot_name.c_str());
   RCLCPP_INFO(node->get_logger(), "Controller IP: %s", controller_ip.c_str());
   RCLCPP_INFO(node->get_logger(),
               "Default motion parameters: units=%.3f, speed=%.3f, accel=%.3f, "
@@ -92,7 +91,7 @@ int main(int argc, char** argv)
 
   RCLCPP_INFO(node->get_logger(), "Motion controller started");
 
-  // 创建 Action Server（获取 Node 接口）
+  // 创建 Topic Node（获取 Node 接口）
   auto node_base = std::dynamic_pointer_cast<rclcpp::Node>(node);
   if (!node_base)
   {
@@ -100,17 +99,43 @@ int main(int argc, char** argv)
                  "Failed to get Node interface from LifecycleNode");
     return 1;
   }
-  zmc432_driver::MotionActionServer action_server(
-      node_base, "motion/multi_axis_move", controller);
-  if (!action_server.initialize())
+
+  // 声明主题参数
+  node->declare_parameter<std::string>("motion_command_topic",
+                                       "motion_command");
+  node->declare_parameter<std::string>("motion_status_topic", "motion_status");
+
+  // 获取主题名称
+  std::string command_topic =
+      node->get_parameter("motion_command_topic").as_string();
+  std::string status_topic =
+      node->get_parameter("motion_status_topic").as_string();
+
+  // 使用机器人名称前缀主题（如果指定了命名空间）
+  if (!namespace_val.empty())
   {
-    RCLCPP_FATAL(node->get_logger(), "Failed to initialize action server");
+    command_topic =
+        "/" + namespace_val + "/" + robot_name + "/" + command_topic;
+    status_topic = "/" + namespace_val + "/" + robot_name + "/" + status_topic;
+  }
+  else if (!robot_name.empty() && robot_name != "hypa")
+  {
+    command_topic = "/" + robot_name + "/" + command_topic;
+    status_topic = "/" + robot_name + "/" + status_topic;
+  }
+
+  zmc432_driver::MotionTopicNode topic_node(node_base, controller,
+                                            command_topic, status_topic);
+  if (!topic_node.initialize())
+  {
+    RCLCPP_FATAL(node->get_logger(), "Failed to initialize motion topic node");
     return 1;
   }
 
   RCLCPP_INFO(node->get_logger(),
-              "Motion action server ready on /motion/multi_axis_move");
-  RCLCPP_INFO(node->get_logger(), "Waiting for action goals...");
+              "Motion topic node ready (command_topic='%s', status_topic='%s')",
+              command_topic.c_str(), status_topic.c_str());
+  RCLCPP_INFO(node->get_logger(), "Listening for motion commands...");
 
   // 运行 ROS2 spin（对于 LifecycleNode 使用 get_node_base_interface）
   rclcpp::executors::MultiThreadedExecutor executor;
@@ -119,7 +144,7 @@ int main(int argc, char** argv)
 
   // 清理
   RCLCPP_INFO(node->get_logger(), "Shutting down motion hardware node");
-  action_server.shutdown();
+  topic_node.shutdown();
   controller->stop();
 
   rclcpp::shutdown();

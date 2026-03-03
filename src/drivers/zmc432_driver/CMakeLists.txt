@@ -8,7 +8,6 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(rclcpp_action REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
@@ -21,7 +20,7 @@ find_library(ZMOTION_LIB zmotion PATHS ${ZMOTION_SDK_DIR} REQUIRED)
 # Executable
 add_executable(motion_node
   src/motion_node.cpp
-  src/motion_action_server.cpp
+  src/motion_topic_node.cpp
   src/motion_controller.cpp
   src/zmotion_wrapper.cpp
   src/zmcaux.cpp
@@ -40,7 +39,6 @@ target_link_libraries(motion_node
 
 ament_target_dependencies(motion_node
   rclcpp
-  rclcpp_action
   rclcpp_lifecycle
   std_msgs
   geometry_msgs

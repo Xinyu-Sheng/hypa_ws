@@ -13,7 +13,8 @@ find_package(geometry_msgs REQUIRED)
 
 # Generate ROS 2 interfaces
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "action/MultiAxisMotion.action"
+  "msg/MotionCommand.msg"
+  "msg/MotionStatus.msg"
   DEPENDENCIES std_msgs geometry_msgs builtin_interfaces
 )
 

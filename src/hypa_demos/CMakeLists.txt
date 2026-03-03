@@ -8,7 +8,6 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(rclcpp_action REQUIRED)
 find_package(hypa_msgs REQUIRED)
 
 # 添加可执行目标
@@ -23,7 +22,6 @@ target_include_directories(motion_demo_client PRIVATE
 
 ament_target_dependencies(motion_demo_client
   rclcpp
-  rclcpp_action
   hypa_msgs
 )
 

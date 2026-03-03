@@ -1,9 +1,35 @@
+# ROS 2 构建产物
 /build/
 /install/
 /log/
-/.pytest_cache/
-/.vscode/
-/frames*
 **/build/
+
+# IDE 和编辑器配置
+.vscode/
 *.code-workspace
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
 .cache
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+
+# 其他临时文件
+frames*
+*~
+.DS_Store

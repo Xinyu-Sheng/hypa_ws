@@ -2,7 +2,7 @@
 
 **定位**: HYPA 硬件驱动包 - 提供 ZMC432 运动控制器的 ROS2 接口。
 
-通过 ROS2 Action 接口控制 ZMC432 控制器，使用 EtherCAT 总线驱动 AKD 伺服驱动器。
+通过 ROS2 Topic 接口控制 ZMC432 控制器，使用 EtherCAT 总线驱动 AKD 伺服驱动器。
 支持单轴独立运动和多轴插补运动（直线、圆弧、螺旋、椭圆、空间圆弧）。
 
 ## 功能特性
@@ -34,14 +34,15 @@
 ## 系统架构
 
 ```
-ROS2 Action Client → MotionActionServer → MotionController → ZMotionWrapper → ZMC432 → EtherCAT → AKD Drives
+ROS2 Topic Publisher → MotionTopicNode → MotionController → ZMotionWrapper → ZMC432 → EtherCAT → AKD Drives
+ROS2 Topic Subscriber ← MotionTopicNode ← MotionController ← ZMotionWrapper ← ZMC432 ← EtherCAT ← AKD Drives
 ```
 
 ## 依赖
 
 - ROS2 (Humble/Ironwall/Jazzy)
 - ZMotion SDK (libzmotion.so + zmotion.h)
-- hypa_msgs (包含 MultiAxisMotion.action)
+- hypa_msgs (包含 MotionCommand.msg 和 MotionStatus.msg)
 
 ## 编译
 
@@ -53,7 +54,7 @@ source install/setup.bash
 
 ## 运行
 
-启动 action 服务器：
+启动 Topic 节点：
 
 ```bash
 ros2 launch zmc432_driver motion_server.launch.py
@@ -65,44 +66,41 @@ ros2 launch zmc432_driver motion_server.launch.py
 - `default_speed`: 默认速度（默认 10.0）
 - `default_accel`: 默认加速度（默认 100.0）
 - `default_decel`: 默认减速度（默认 100.0）
+- `motion_command_topic`: 运动命令主题名（默认 `motion_command`）
+- `motion_status_topic`: 运动状态主题名（默认 `motion_status`）
 
 ## 使用示例
 
 ### 单轴绝对运动
 
 ```bash
-ros2 action send_goal /motion/multi_axis_move hypa_msgs/action/MultiAxisMotion \
-  '{axes: [0], positions: [100.0], velocities: [10.0], motion_type: 1}'
+ros2 topic pub /hypa/motion_command hypa_msgs/msg/MotionCommand \
+  '{axes: [0], positions: [100.0], velocities: [10.0], motion_type: 1, accelerations: [100.0], decelerations: [100.0]}'
 ```
 
 ### 双轴直线插补
 
 ```bash
-ros2 action send_goal /motion/multi_axis_move hypa_msgs/action/MultiAxisMotion \
-  '{axes: [0, 1], positions: [100.0, 50.0], velocities: [10.0, 5.0], motion_type: 2, interpolation_mode: 0}'
+ros2 topic pub /hypa/motion_command hypa_msgs/msg/MotionCommand \
+  '{axes: [0, 1], positions: [100.0, 50.0], velocities: [10.0, 5.0], motion_type: 2, interpolation_mode: 0, accelerations: [50.0, 50.0], decelerations: [50.0, 50.0]}'
 ```
 
 ### 三轴螺旋插补
 
 ```bash
-ros2 action send_goal /motion/multi_axis_move hypa_msgs/action/MultiAxisMotion \
-  '{axes: [0, 1, 2], positions: [100.0, 0.0, 50.0], velocities: [10.0, 5.0, 2.0], motion_type: 2, interpolation_mode: 2, circular_params: [10.0, 5.0, 2.0, 360.0]}'
+ros2 topic pub /hypa/motion_command hypa_msgs/msg/MotionCommand \
+  '{axes: [0, 1, 2], positions: [100.0, 0.0, 50.0], velocities: [10.0, 5.0, 2.0], motion_type: 2, interpolation_mode: 2, circular_params: [10.0, 5.0, 2.0, 360.0], accelerations: [100.0, 50.0, 20.0], decelerations: [100.0, 50.0, 20.0]}'
 ```
 
-### 连续轨迹（流式缓冲）
+### 监控运动状态
 
 ```bash
-# 终端 1: 启动服务器
-ros2 launch zmc432_driver motion_server.launch.py
-
-# 终端 2: 发送连续轨迹目标（然后可以继续发送后续点）
-ros2 action send_goal /motion/multi_axis_move hypa_msgs/action/MultiAxisMotion \
-  '{axes: [0, 1], positions: [0.0, 0.0], velocities: [20.0, 10.0], motion_type: 3, interpolation_mode: 0}'
+ros2 topic echo /hypa/motion_status
 ```
 
-## Action 接口定义
+## Topic 接口定义
 
-详见 `hypa_msgs/action/MultiAxisMotion.action`。
+详见 `hypa_msgs/msg/MotionCommand.msg` 和 `hypa_msgs/msg/MotionStatus.msg`。
 
 ### Goal 字段
 
