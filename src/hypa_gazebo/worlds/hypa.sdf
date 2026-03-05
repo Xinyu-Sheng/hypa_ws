@@ -644,7 +644,7 @@
         name="hypa_gazebo::RopeVisualizer">
         <start_link>lifting_hook_1_fl</start_link>
         <end_link>lifting_hook_2_fl</end_link>
-        <line_width>0.05</line_width>
+        <line_width>0.018</line_width>
         <color>
           <r>0.2</r>
           <g>0.8</g>
@@ -659,7 +659,7 @@
         name="hypa_gazebo::RopeVisualizer">
         <start_link>lifting_hook_1_fr</start_link>
         <end_link>lifting_hook_2_fr</end_link>
-        <line_width>0.05</line_width>
+        <line_width>0.018</line_width>
         <color>
           <r>0.2</r>
           <g>0.8</g>
@@ -674,7 +674,7 @@
         name="hypa_gazebo::RopeVisualizer">
         <start_link>lifting_hook_1_bl</start_link>
         <end_link>lifting_hook_2_bl</end_link>
-        <line_width>0.05</line_width>
+        <line_width>0.018</line_width>
         <color>
           <r>0.2</r>
           <g>0.8</g>
@@ -689,7 +689,7 @@
         name="hypa_gazebo::RopeVisualizer">
         <start_link>lifting_hook_1_br</start_link>
         <end_link>lifting_hook_2_br</end_link>
-        <line_width>0.05</line_width>
+        <line_width>0.018</line_width>
         <color>
           <r>0.2</r>
           <g>0.8</g>
