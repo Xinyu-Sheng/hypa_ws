@@ -17,11 +17,6 @@ find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(hypa_msgs REQUIRED)
 
-# Find external dependencies
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(LIBPQXX REQUIRED libpqxx)
-pkg_check_modules(PROTOBUF REQUIRED protobuf)
-
 # Find Gazebo dependencies
 find_package(gz-transport13 REQUIRED)
 find_package(gz-msgs10 REQUIRED)
@@ -29,8 +24,6 @@ find_package(gz-msgs10 REQUIRED)
 # Include directories
 include_directories(
   include
-  ${LIBPQXX_INCLUDE_DIRS}
-  ${PROTOBUF_INCLUDE_DIRS}
 )
 
 # Interfaces are now in hypa_msgs package
