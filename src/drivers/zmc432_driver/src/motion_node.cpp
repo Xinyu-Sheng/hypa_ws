@@ -12,9 +12,9 @@ int main(int argc, char** argv)
   auto node =
       std::make_shared<rclcpp_lifecycle::LifecycleNode>("motion_hardware_node");
 
-  // 声明必需参数（多机器人支持和仿真时间）
+  // 声明必需参数（多机器人支持）
   node->declare_parameter<std::string>("namespace", "");
-  node->declare_parameter<bool>("use_sim_time", false);
+  // use_sim_time 由 LifecycleNode 自动声明，无需重复声明
   node->declare_parameter<std::string>("robot_name", "hypa");
 
   // 声明应用参数

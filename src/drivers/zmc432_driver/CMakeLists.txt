@@ -57,6 +57,22 @@ install(DIRECTORY launch/
   DESTINATION share/${PROJECT_NAME}/launch
 )
 
+# 安装 ZMotion SDK 库文件
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/lib/libzmotion.so
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# 安装环境hook脚本
+install(DIRECTORY hook/
+  DESTINATION share/${PROJECT_NAME}/hook
+)
+
+# 设置 RPATH 以便运行时自动找到库文件
+set_target_properties(motion_node PROPERTIES
+  INSTALL_RPATH "$ORIGIN"
+  BUILD_WITH_INSTALL_RPATH TRUE
+)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   set(ament_cmake_copyright_FOUND TRUE)
