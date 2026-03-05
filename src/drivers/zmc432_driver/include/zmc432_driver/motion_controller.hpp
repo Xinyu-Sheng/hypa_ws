@@ -59,6 +59,7 @@ class MotionController
     uint32_t status_word = 0;  // 状态字
     bool moving = false;       // 是否在运动
     bool error = false;        // 是否有错误
+    bool enabled = false;      // 是否使能
   };
 
   struct ControllerStatus
@@ -85,6 +86,9 @@ class MotionController
   std::optional<std::string> configure_axis(int _axis, double _units,
                                             double _speed, double _accel,
                                             double _decel);
+  std::optional<std::string> enable_axis(int _axis, bool _enable);
+  std::optional<std::string> enable_all_axes(bool _enable);
+  std::optional<bool> get_axis_enable(int _axis) const;
   bool start();
   void stop();
   bool queue_motion(const MotionCommand& _cmd);

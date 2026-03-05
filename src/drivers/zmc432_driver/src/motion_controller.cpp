@@ -120,6 +120,55 @@ std::optional<std::string> MotionController::configure_axis(
   return std::nullopt;
 }
 
+std::optional<std::string> MotionController::enable_axis(int _axis,
+                                                         bool _enable)
+{
+  if (!pimpl_->zmotion || !pimpl_->zmotion->is_connected())
+  {
+    return "Controller not connected";
+  }
+
+  return pimpl_->zmotion->set_axis_enable(_axis, _enable);
+}
+
+std::optional<std::string> MotionController::enable_all_axes(bool _enable)
+{
+  if (!pimpl_->zmotion || !pimpl_->zmotion->is_connected())
+  {
+    return "Controller not connected";
+  }
+
+  std::string error_msg;
+  bool has_error = false;
+
+  for (const auto& [axis, config] : pimpl_->axis_configs)
+  {
+    auto result = pimpl_->zmotion->set_axis_enable(axis, _enable);
+    if (result)
+    {
+      has_error = true;
+      error_msg +=
+          "Axis " + std::to_string(axis) + ": " + result.value() + "; ";
+    }
+  }
+
+  if (has_error)
+  {
+    return error_msg;
+  }
+  return std::nullopt;
+}
+
+std::optional<bool> MotionController::get_axis_enable(int _axis) const
+{
+  if (!pimpl_->zmotion || !pimpl_->zmotion->is_connected())
+  {
+    return std::nullopt;
+  }
+
+  return pimpl_->zmotion->get_axis_enable(_axis);
+}
+
 bool MotionController::start()
 {
   if (pimpl_->running)
@@ -204,6 +253,13 @@ bool MotionController::queue_motion(const MotionCommand& _cmd)
     {
       return false;
     }
+
+    // 检查轴是否已使能
+    auto enable_opt = pimpl_->zmotion->get_axis_enable(axis);
+    if (!enable_opt || !enable_opt.value())
+    {
+      return false;  // 轴未使能
+    }
   }
 
   // 检查连续轨迹模式下的参数
@@ -251,6 +307,13 @@ MotionController::ControllerStatus MotionController::CurrentStatus() const
             (axis_status.status_word & 0x00000002) != 0;  // BIT1: MOVING
         axis_status.error =
             (axis_status.status_word & 0x00000004) != 0;  // BIT2: ERROR (假设)
+      }
+
+      // 读取使能状态
+      auto enable_opt = pimpl_->zmotion->get_axis_enable(axis);
+      if (enable_opt)
+      {
+        axis_status.enabled = enable_opt.value();
       }
     }
 

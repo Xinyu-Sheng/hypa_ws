@@ -151,6 +151,17 @@ bool ZMotionWrapper::is_axis_moving(int _axis)
   return pimpl_->is_axis_moving(_axis);
 }
 
+std::optional<std::string> ZMotionWrapper::set_axis_enable(int _axis,
+                                                           bool _enable)
+{
+  return pimpl_->set_axis_enable(_axis, _enable);
+}
+
+std::optional<bool> ZMotionWrapper::get_axis_enable(int _axis) const
+{
+  return pimpl_->get_axis_enable(_axis);
+}
+
 std::optional<std::string> ZMotionWrapper::stop_all()
 {
   return pimpl_->stop_all();
@@ -829,28 +840,81 @@ double ZMotionWrapper::ZMotionWrapperPrivate::pulses_to_physical(
 std::optional<std::string>
 ZMotionWrapper::ZMotionWrapperPrivate::ensure_axis_configured(int _axis)
 {
+  if (_axis < 0 || _axis >= static_cast<int>(axis_configs.size()))
+  {
+    last_error = "Axis index out of range: " + std::to_string(_axis);
+    return last_error;
+  }
+
+  if (!axis_configs[_axis].configured)
+  {
+    // 使用默认参数配置轴
+    auto result = set_units(_axis, axis_configs[_axis].units);
+    if (result) return result;
+
+    result = set_speed(_axis, axis_configs[_axis].speed);
+    if (result) return result;
+
+    result = set_acceleration(_axis, axis_configs[_axis].acceleration);
+    if (result) return result;
+
+    result = set_deceleration(_axis, axis_configs[_axis].deceleration);
+    if (result) return result;
+
+    axis_configs[_axis].configured = true;
+  }
+  return std::nullopt;
+}
+
+std::optional<std::string>
+ZMotionWrapper::ZMotionWrapperPrivate::set_axis_enable(int _axis, bool _enable)
+{
+  if (!handle)
+  {
+    last_error = "Controller not connected";
+    return last_error;
+  }
+
   if (_axis < 0 || _axis >= 32)
   {
-    return "Axis number out of range (0-31)";
+    last_error = "Axis index out of range: " + std::to_string(_axis);
+    return last_error;
   }
 
-  if (axis_configs[_axis].configured)
-  {
-    return std::nullopt;
-  }
-
-  float units_val = 0.0f;
-  int32_t ret = ZAux_Direct_GetUnits(handle, _axis, &units_val);
+  int32_t ret = ZAux_Direct_SetAxisEnable(handle, _axis, _enable ? 1 : 0);
   if (ret != ERR_OK)
   {
-    axis_configs[_axis].units = 1.0;
-    axis_configs[_axis].configured = true;
+    last_error = "Set axis enable failed for axis " + std::to_string(_axis) +
+                 " (error: " + std::to_string(ret) + ")";
+    return last_error;
+  }
+  return std::nullopt;
+}
+
+std::optional<bool> ZMotionWrapper::ZMotionWrapperPrivate::get_axis_enable(
+    int _axis) const
+{
+  if (!handle)
+  {
+    last_error = "Controller not connected";
     return std::nullopt;
   }
 
-  axis_configs[_axis].units = static_cast<double>(units_val);
-  axis_configs[_axis].configured = true;
-  return std::nullopt;
+  if (_axis < 0 || _axis >= 32)
+  {
+    last_error = "Axis index out of range: " + std::to_string(_axis);
+    return std::nullopt;
+  }
+
+  int enable_state = 0;
+  int32_t ret = ZAux_Direct_GetAxisEnable(handle, _axis, &enable_state);
+  if (ret != ERR_OK)
+  {
+    last_error = "Get axis enable failed for axis " + std::to_string(_axis) +
+                 " (error: " + std::to_string(ret) + ")";
+    return std::nullopt;
+  }
+  return enable_state != 0;
 }
 
 double ZMotionWrapper::ZMotionWrapperPrivate::CurrentUnits(int _axis) const

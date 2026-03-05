@@ -17,33 +17,39 @@ find_package(hypa_msgs REQUIRED)
 set(ZMOTION_SDK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 find_library(ZMOTION_LIB zmotion PATHS ${ZMOTION_SDK_DIR} REQUIRED)
 
-# Executable
-add_executable(motion_node
-  src/motion_node.cpp
-  src/motion_topic_node.cpp
+# 创建静态库
+add_library(${PROJECT_NAME} STATIC
   src/motion_controller.cpp
   src/zmotion_wrapper.cpp
   src/zmcaux.cpp
 )
 
-target_include_directories(motion_node PRIVATE
+target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
   ${CMAKE_CURRENT_SOURCE_DIR}/include/zmc432_driver
 )
 
 # 非 ROS 第三方库
-target_link_libraries(motion_node
+target_link_libraries(${PROJECT_NAME}
   ${ZMOTION_LIB}
 )
 
-ament_target_dependencies(motion_node
+ament_target_dependencies(${PROJECT_NAME}
   rclcpp
   rclcpp_lifecycle
   std_msgs
   geometry_msgs
   hypa_msgs
 )
+
+# Executable
+add_executable(motion_node
+  src/motion_node.cpp
+  src/motion_topic_node.cpp
+)
+
+target_link_libraries(motion_node ${PROJECT_NAME})
 
 install(TARGETS motion_node
   DESTINATION lib/${PROJECT_NAME}
@@ -62,9 +68,27 @@ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/lib/libzmotion.so
   DESTINATION lib/${PROJECT_NAME}
 )
 
+# 可选：添加测试程序
+if(BUILD_TESTING)
+  add_executable(test_enable src/test_enable.cpp)
+  target_include_directories(test_enable PUBLIC include)
+  ament_target_dependencies(test_enable rclcpp hypa_msgs)
+  target_link_libraries(test_enable ${PROJECT_NAME} ${ZMOTION_LIB})
+
+  # 安装测试程序
+  install(TARGETS test_enable
+    DESTINATION lib/${PROJECT_NAME}
+  )
+endif()
+
 # 安装环境hook脚本
 install(DIRECTORY hook/
   DESTINATION share/${PROJECT_NAME}/hook
+)
+
+# 安装 ZMotion SDK 库文件
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/lib/libzmotion.so
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 # 设置 RPATH 以便运行时自动找到库文件

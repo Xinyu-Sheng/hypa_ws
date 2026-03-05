@@ -44,7 +44,10 @@ class ZMotionWrapper
     // 轴配置缓存
     struct AxisConfigCache
     {
-      double units = 1.0;  // 默认 1.0（脉冲单位）
+      double units = 1.0;           // 默认 1.0（脉冲单位）
+      double speed = 10.0;          // 默认速度
+      double acceleration = 100.0;  // 默认加速度
+      double deceleration = 100.0;  // 默认减速度
       bool configured = false;
     };
     std::vector<AxisConfigCache> axis_configs;
@@ -87,6 +90,8 @@ class ZMotionWrapper
     std::optional<double> Speed(int _axis) const;
     std::optional<uint32_t> AxisStatus(int _axis) const;
     bool is_axis_moving(int _axis);
+    std::optional<std::string> set_axis_enable(int _axis, bool _enable);
+    std::optional<bool> get_axis_enable(int _axis) const;
 
    private:
     int64_t physical_to_pulses(int _axis, double _physical_position) const;
@@ -135,6 +140,8 @@ class ZMotionWrapper
   std::optional<double> Speed(int _axis) const;
   std::optional<uint32_t> AxisStatus(int _axis) const;
   bool is_axis_moving(int _axis);
+  std::optional<std::string> set_axis_enable(int _axis, bool _enable);
+  std::optional<bool> get_axis_enable(int _axis) const;
 };
 
 }  // namespace zmc432_driver
