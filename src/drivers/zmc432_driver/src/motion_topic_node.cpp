@@ -6,11 +6,11 @@ namespace zmc432_driver
 // Private implementation class
 class MotionTopicNode::MotionTopicNodePrivate
 {
- public:
-  MotionTopicNodePrivate(const std::shared_ptr<rclcpp::Node>& _node,
+  public:
+  MotionTopicNodePrivate(const std::shared_ptr<rclcpp::Node> &_node,
                          std::shared_ptr<MotionController> _controller,
-                         const std::string& _command_topic,
-                         const std::string& _status_topic)
+                         const std::string &_command_topic,
+                         const std::string &_status_topic)
       : node(_node),
         controller(_controller),
         command_topic(_command_topic),
@@ -19,11 +19,14 @@ class MotionTopicNode::MotionTopicNodePrivate
   {
   }
 
-  ~MotionTopicNodePrivate() { shutdown(); }
+  ~MotionTopicNodePrivate()
+  {
+    shutdown();
+  }
 
   // 禁止拷贝
-  MotionTopicNodePrivate(const MotionTopicNodePrivate&) = delete;
-  MotionTopicNodePrivate& operator=(const MotionTopicNodePrivate&) = delete;
+  MotionTopicNodePrivate(const MotionTopicNodePrivate &) = delete;
+  MotionTopicNodePrivate &operator=(const MotionTopicNodePrivate &) = delete;
 
   std::shared_ptr<rclcpp::Node> node;
   std::shared_ptr<MotionController> controller;
@@ -49,14 +52,14 @@ class MotionTopicNode::MotionTopicNodePrivate
       const hypa_msgs::msg::MotionCommand::ConstSharedPtr _msg);
 
   hypa_msgs::msg::MotionStatus convert_status_to_msg(
-      const MotionController::ControllerStatus& _status);
+      const MotionController::ControllerStatus &_status);
 };
 
 // Public interface implementations
-MotionTopicNode::MotionTopicNode(const std::shared_ptr<rclcpp::Node>& _node,
+MotionTopicNode::MotionTopicNode(const std::shared_ptr<rclcpp::Node> &_node,
                                  std::shared_ptr<MotionController> _controller,
-                                 const std::string& _command_topic,
-                                 const std::string& _status_topic)
+                                 const std::string &_command_topic,
+                                 const std::string &_status_topic)
     : pimpl_(std::make_unique<MotionTopicNodePrivate>(
           _node, _controller, _command_topic, _status_topic)),
       node_(_node),
@@ -66,11 +69,20 @@ MotionTopicNode::MotionTopicNode(const std::shared_ptr<rclcpp::Node>& _node,
 {
 }
 
-MotionTopicNode::~MotionTopicNode() { shutdown(); }
+MotionTopicNode::~MotionTopicNode()
+{
+  shutdown();
+}
 
-bool MotionTopicNode::initialize() { return pimpl_->initialize(); }
+bool MotionTopicNode::initialize()
+{
+  return pimpl_->initialize();
+}
 
-void MotionTopicNode::shutdown() { pimpl_->shutdown(); }
+void MotionTopicNode::shutdown()
+{
+  pimpl_->shutdown();
+}
 
 // MotionTopicNodePrivate method implementations
 bool MotionTopicNode::MotionTopicNodePrivate::initialize()
@@ -80,82 +92,84 @@ bool MotionTopicNode::MotionTopicNodePrivate::initialize()
       [this](const hypa_msgs::msg::MotionCommand::ConstSharedPtr _msg)
   { this->handle_command(_msg); };
 
-  command_subscription =
-      node->create_subscription<hypa_msgs::msg::MotionCommand>(
-          command_topic, 10, command_callback);
+  this->command_subscription =
+      this->node->create_subscription<hypa_msgs::msg::MotionCommand>(
+          this->command_topic, 10, command_callback);
 
-  if (!command_subscription)
+  if (!this->command_subscription)
   {
-    RCLCPP_ERROR(node->get_logger(),
+    RCLCPP_ERROR(this->node->get_logger(),
                  "Failed to create command subscription on topic '%s'",
-                 command_topic.c_str());
+                 this->command_topic.c_str());
     return false;
   }
 
   // 创建状态发布器
-  status_publisher =
-      node->create_publisher<hypa_msgs::msg::MotionStatus>(status_topic, 10);
+  this->status_publisher =
+      this->node->create_publisher<hypa_msgs::msg::MotionStatus>(
+          this->status_topic, 10);
 
-  if (!status_publisher)
+  if (!this->status_publisher)
   {
-    RCLCPP_ERROR(node->get_logger(),
+    RCLCPP_ERROR(this->node->get_logger(),
                  "Failed to create status publisher on topic '%s'",
-                 status_topic.c_str());
+                 this->status_topic.c_str());
     return false;
   }
 
   // 创建定时器以定期发布状态（50ms 间隔，20Hz）
-  status_timer = node->create_wall_timer(std::chrono::milliseconds(50),
-                                         [this]() { this->publish_status(); });
+  this->status_timer = this->node->create_wall_timer(
+      std::chrono::milliseconds(50), [this]() { this->publish_status(); });
 
-  if (!status_timer)
+  if (!this->status_timer)
   {
-    RCLCPP_ERROR(node->get_logger(), "Failed to create status timer");
+    RCLCPP_ERROR(this->node->get_logger(), "Failed to create status timer");
     return false;
   }
 
-  running = true;
-  RCLCPP_INFO(node->get_logger(),
+  this->running = true;
+  RCLCPP_INFO(this->node->get_logger(),
               "Motion topic node initialized (command_topic='%s', "
               "status_topic='%s')",
-              command_topic.c_str(), status_topic.c_str());
+              this->command_topic.c_str(), this->status_topic.c_str());
   return true;
 }
 
 void MotionTopicNode::MotionTopicNodePrivate::shutdown()
 {
-  if (running)
+  if (this->running)
   {
-    running = false;
-    if (status_timer)
+    this->running = false;
+    if (this->status_timer)
     {
-      status_timer->cancel();
+      this->status_timer->cancel();
     }
-    command_subscription.reset();
-    status_publisher.reset();
-    RCLCPP_INFO(node->get_logger(), "Motion topic node shutdown");
+    this->command_subscription.reset();
+    this->status_publisher.reset();
+    RCLCPP_INFO(this->node->get_logger(), "Motion topic node shutdown");
   }
 }
 
 void MotionTopicNode::MotionTopicNodePrivate::handle_command(
     const hypa_msgs::msg::MotionCommand::ConstSharedPtr _msg)
 {
-  if (!running)
+  if (!this->running)
   {
-    RCLCPP_WARN(node->get_logger(), "Received command but node is not running");
+    RCLCPP_WARN(this->node->get_logger(),
+                "Received command but node is not running");
     return;
   }
 
-  RCLCPP_INFO(node->get_logger(), "Received motion command");
+  RCLCPP_INFO(this->node->get_logger(), "Received motion command");
 
   // 转换消息为命令
-  MotionController::MotionCommand cmd = convert_msg_to_command(_msg);
+  MotionController::MotionCommand cmd = this->convert_msg_to_command(_msg);
 
   // 验证命令
   if (cmd.axes.empty() || cmd.positions.empty() || cmd.velocities.empty())
   {
     RCLCPP_WARN(
-        node->get_logger(),
+        this->node->get_logger(),
         "Invalid command: axes, positions, and velocities must not be empty");
     return;
   }
@@ -164,32 +178,32 @@ void MotionTopicNode::MotionTopicNodePrivate::handle_command(
       cmd.axes.size() != cmd.velocities.size())
   {
     RCLCPP_WARN(
-        node->get_logger(),
+        this->node->get_logger(),
         "Invalid command: axes, positions, and velocities array size mismatch");
     return;
   }
 
   // 提交命令到控制器
-  if (!controller->queue_motion(cmd))
+  if (!this->controller->queue_motion(cmd))
   {
-    RCLCPP_ERROR(node->get_logger(), "Failed to queue motion command");
+    RCLCPP_ERROR(this->node->get_logger(), "Failed to queue motion command");
     return;
   }
 
-  RCLCPP_INFO(node->get_logger(), "Motion command queued successfully");
+  RCLCPP_INFO(this->node->get_logger(), "Motion command queued successfully");
 }
 
 void MotionTopicNode::MotionTopicNodePrivate::publish_status()
 {
-  if (!running)
+  if (!this->running)
   {
     return;
   }
 
-  auto status = controller->CurrentStatus();
-  auto msg = convert_status_to_msg(status);
+  auto status = this->controller->CurrentStatus();
+  auto msg = this->convert_status_to_msg(status);
 
-  status_publisher->publish(msg);
+  this->status_publisher->publish(msg);
 }
 
 MotionController::MotionCommand
@@ -215,7 +229,7 @@ MotionTopicNode::MotionTopicNodePrivate::convert_msg_to_command(
 
 hypa_msgs::msg::MotionStatus
 MotionTopicNode::MotionTopicNodePrivate::convert_status_to_msg(
-    const MotionController::ControllerStatus& _status)
+    const MotionController::ControllerStatus &_status)
 {
   hypa_msgs::msg::MotionStatus msg;
 
@@ -223,7 +237,7 @@ MotionTopicNode::MotionTopicNodePrivate::convert_status_to_msg(
   msg.progress = _status.progress;
 
   // 从 map 填充数组
-  for (const auto& [axis, axis_status] : _status.axis_statuses)
+  for (const auto &[axis, axis_status] : _status.axis_statuses)
   {
     msg.current_positions.push_back(axis_status.position);
     msg.feedback_positions.push_back(axis_status.feedback);

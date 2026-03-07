@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <string>
-
 #include "hwt9053_can_driver/hwt9053_can_driver_node.hpp"
+
+#include <string>
 
 namespace hwt9053_can_driver
 {
@@ -22,10 +22,10 @@ namespace hwt9053_can_driver
 // PIMPL 实现
 class HWT9053CANDriverNode::Impl
 {
- public:
+  public:
 };
 
-HWT9053CANDriverNode::HWT9053CANDriverNode(const rclcpp::NodeOptions& _options)
+HWT9053CANDriverNode::HWT9053CANDriverNode(const rclcpp::NodeOptions &_options)
     : rclcpp_lifecycle::LifecycleNode("hwt9053_can_driver", _options),
       pimpl_(std::make_unique<Impl>()),
       parser_(std::make_unique<HWT9053Parser>()),
@@ -47,7 +47,7 @@ HWT9053CANDriverNode::HWT9053CANDriverNode(const rclcpp::NodeOptions& _options)
 HWT9053CANDriverNode::~HWT9053CANDriverNode() = default;
 
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-HWT9053CANDriverNode::on_configure(const rclcpp_lifecycle::State& _state)
+HWT9053CANDriverNode::on_configure(const rclcpp_lifecycle::State &_state)
 {
   RCLCPP_INFO(this->get_logger(), "正在配置 HWT9053 CAN 驱动节点");
 
@@ -96,7 +96,7 @@ HWT9053CANDriverNode::on_configure(const rclcpp_lifecycle::State& _state)
 }
 
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-HWT9053CANDriverNode::on_activate(const rclcpp_lifecycle::State& _state)
+HWT9053CANDriverNode::on_activate(const rclcpp_lifecycle::State &_state)
 {
   RCLCPP_INFO(this->get_logger(), "正在激活 HWT9053 CAN 驱动节点");
 
@@ -114,7 +114,7 @@ HWT9053CANDriverNode::on_activate(const rclcpp_lifecycle::State& _state)
 }
 
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-HWT9053CANDriverNode::on_deactivate(const rclcpp_lifecycle::State& _state)
+HWT9053CANDriverNode::on_deactivate(const rclcpp_lifecycle::State &_state)
 {
   RCLCPP_INFO(this->get_logger(), "正在停用 HWT9053 CAN 驱动节点");
 
@@ -129,7 +129,7 @@ HWT9053CANDriverNode::on_deactivate(const rclcpp_lifecycle::State& _state)
 }
 
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-HWT9053CANDriverNode::on_cleanup(const rclcpp_lifecycle::State& _state)
+HWT9053CANDriverNode::on_cleanup(const rclcpp_lifecycle::State &_state)
 {
   RCLCPP_INFO(this->get_logger(), "正在清理 HWT9053 CAN 驱动节点");
 
@@ -142,7 +142,7 @@ HWT9053CANDriverNode::on_cleanup(const rclcpp_lifecycle::State& _state)
 }
 
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-HWT9053CANDriverNode::on_shutdown(const rclcpp_lifecycle::State& _state)
+HWT9053CANDriverNode::on_shutdown(const rclcpp_lifecycle::State &_state)
 {
   RCLCPP_INFO(this->get_logger(), "正在关闭 HWT9053 CAN 驱动节点");
 

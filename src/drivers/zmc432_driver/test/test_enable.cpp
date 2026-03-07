@@ -1,5 +1,6 @@
 #include <iostream>
 #include <memory>
+
 #include "zmc432_driver/motion_controller.hpp"
 
 int main()

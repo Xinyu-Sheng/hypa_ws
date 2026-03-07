@@ -1,7 +1,7 @@
 #include "zmc432_driver/zmotion_wrapper.hpp"
+
 #include <iostream>
 #include <sstream>
-#include <iomanip>
 
 namespace zmc432_driver
 {
@@ -12,7 +12,10 @@ ZMotionWrapper::ZMotionWrapper()
 {
 }
 
-ZMotionWrapper::~ZMotionWrapper() { disconnect(); }
+ZMotionWrapper::~ZMotionWrapper()
+{
+  disconnect();
+}
 
 ZMotionWrapper::ZMotionWrapperPrivate::ZMotionWrapperPrivate()
     : axis_configs(32)
@@ -21,14 +24,20 @@ ZMotionWrapper::ZMotionWrapperPrivate::ZMotionWrapperPrivate()
 
 ZMotionWrapper::ZMotionWrapperPrivate::~ZMotionWrapperPrivate() = default;
 
-std::optional<std::string> ZMotionWrapper::connect(const std::string& _ip)
+std::optional<std::string> ZMotionWrapper::connect(const std::string &_ip)
 {
   return pimpl_->connect(_ip);
 }
 
-void ZMotionWrapper::disconnect() { pimpl_->disconnect(); }
+void ZMotionWrapper::disconnect()
+{
+  pimpl_->disconnect();
+}
 
-bool ZMotionWrapper::is_connected() const { return pimpl_->is_connected(); }
+bool ZMotionWrapper::is_connected() const
+{
+  return pimpl_->is_connected();
+}
 
 std::optional<std::string> ZMotionWrapper::set_units(int _axis, double _units)
 {
@@ -71,47 +80,47 @@ std::optional<std::string> ZMotionWrapper::move_velocity(int _axis,
 }
 
 std::optional<std::string> ZMotionWrapper::move_line_absolute(
-    const std::vector<int>& _axes, const std::vector<double>& _positions)
+    const std::vector<int> &_axes, const std::vector<double> &_positions)
 {
   return pimpl_->move_line_absolute(_axes, _positions);
 }
 
 std::optional<std::string> ZMotionWrapper::move_line_relative(
-    const std::vector<int>& _axes, const std::vector<double>& _distances)
+    const std::vector<int> &_axes, const std::vector<double> &_distances)
 {
   return pimpl_->move_line_relative(_axes, _distances);
 }
 
 std::optional<std::string> ZMotionWrapper::move_circular_absolute(
-    const std::vector<int>& _axes, const std::vector<double>& _positions,
-    const std::vector<double>& _circular_params)
+    const std::vector<int> &_axes, const std::vector<double> &_positions,
+    const std::vector<double> &_circular_params)
 {
   return pimpl_->move_circular_absolute(_axes, _positions, _circular_params);
 }
 
 std::optional<std::string> ZMotionWrapper::move_spiral_absolute(
-    const std::vector<int>& _axes, const std::vector<double>& _positions,
-    const std::vector<double>& _spiral_params)
+    const std::vector<int> &_axes, const std::vector<double> &_positions,
+    const std::vector<double> &_spiral_params)
 {
   return pimpl_->move_spiral_absolute(_axes, _positions, _spiral_params);
 }
 
 std::optional<std::string> ZMotionWrapper::move_eclipse_absolute(
-    const std::vector<int>& _axes, const std::vector<double>& _positions,
-    const std::vector<double>& _eclipse_params)
+    const std::vector<int> &_axes, const std::vector<double> &_positions,
+    const std::vector<double> &_eclipse_params)
 {
   return pimpl_->move_eclipse_absolute(_axes, _positions, _eclipse_params);
 }
 
 std::optional<std::string> ZMotionWrapper::move_spherical_absolute(
-    const std::vector<int>& _axes, const std::vector<double>& _positions,
-    const std::vector<double>& _spherical_params)
+    const std::vector<int> &_axes, const std::vector<double> &_positions,
+    const std::vector<double> &_spherical_params)
 {
   return pimpl_->move_spherical_absolute(_axes, _positions, _spherical_params);
 }
 
 std::optional<std::string> ZMotionWrapper::buffer_move(
-    const std::vector<int>& _axes, const std::vector<double>& _positions)
+    const std::vector<int> &_axes, const std::vector<double> &_positions)
 {
   return pimpl_->buffer_move(_axes, _positions);
 }
@@ -168,10 +177,10 @@ std::optional<std::string> ZMotionWrapper::stop_all()
 }
 
 std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::connect(
-    const std::string& _ip)
+    const std::string &_ip)
 {
   // 调用 ZMotion API 连接
-  int32_t ret = ZMC_OpenEth(const_cast<char*>(_ip.c_str()), &handle);
+  int32_t ret = ZMC_OpenEth(const_cast<char *>(_ip.c_str()), &handle);
   if (ret != ERR_OK || handle == nullptr)
   {
     last_error = "Failed to connect to ZMC432 at " + _ip +
@@ -179,7 +188,7 @@ std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::connect(
     return last_error;
   }
 
-  return std::nullopt;  // 成功
+  return std::nullopt;
 }
 
 void ZMotionWrapper::ZMotionWrapperPrivate::disconnect()
@@ -253,7 +262,7 @@ ZMotionWrapper::ZMotionWrapperPrivate::set_deceleration(int _axis,
 }
 // EtherCAT initialization implementation
 std::optional<std::string> ZMotionWrapper::ecat_init(int slot_id,
-                                                     const EcatInitInfo& info,
+                                                     const EcatInitInfo &info,
                                                      int timeout_ms)
 {
   if (!is_connected())
@@ -325,7 +334,6 @@ std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::move_velocity(
     return "Axis " + std::to_string(_axis) + " not configured";
   }
 
-  int64_t pulses_per_sec = physical_to_pulses(_axis, std::abs(_velocity));
   int direction = (_velocity >= 0) ? 1 : -1;
   int32_t ret = ZAux_Direct_Single_Vmove(handle, _axis, direction);
   if (ret != ERR_OK)
@@ -350,7 +358,7 @@ std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::move_velocity(
 
 std::optional<std::string>
 ZMotionWrapper::ZMotionWrapperPrivate::move_line_absolute(
-    const std::vector<int>& _axes, const std::vector<double>& _positions)
+    const std::vector<int> &_axes, const std::vector<double> &_positions)
 {
   if (_axes.empty() || _positions.size() != _axes.size())
   {
@@ -369,15 +377,16 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_line_absolute(
   cmd << "MOVEABS(";
   for (size_t i = 0; i < _axes.size(); ++i)
   {
-    if (i > 0) cmd << ",";
+    if (i > 0)
+      cmd << ",";
     int64_t pulses = physical_to_pulses(_axes[i], _positions[i]);
     cmd << _axes[i] << "," << pulses;
   }
   cmd << ")";
 
   char ack[2048] = {0};
-  int32_t ret = ZAux_DirectCommand(handle, const_cast<char*>(cmd.str().c_str()),
-                                   ack, sizeof(ack));
+  int32_t ret = ZAux_DirectCommand(
+      handle, const_cast<char *>(cmd.str().c_str()), ack, sizeof(ack));
   if (ret != ERR_OK)
   {
     last_error =
@@ -390,7 +399,7 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_line_absolute(
 
 std::optional<std::string>
 ZMotionWrapper::ZMotionWrapperPrivate::move_line_relative(
-    const std::vector<int>& _axes, const std::vector<double>& _distances)
+    const std::vector<int> &_axes, const std::vector<double> &_distances)
 {
   if (_axes.empty() || _distances.size() != _axes.size())
   {
@@ -409,15 +418,16 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_line_relative(
   cmd << "MOVEREL(";
   for (size_t i = 0; i < _axes.size(); ++i)
   {
-    if (i > 0) cmd << ",";
+    if (i > 0)
+      cmd << ",";
     int64_t pulses = physical_to_pulses(_axes[i], _distances[i]);
     cmd << _axes[i] << "," << pulses;
   }
   cmd << ")";
 
   char ack[2048] = {0};
-  int32_t ret = ZAux_DirectCommand(handle, const_cast<char*>(cmd.str().c_str()),
-                                   ack, sizeof(ack));
+  int32_t ret = ZAux_DirectCommand(
+      handle, const_cast<char *>(cmd.str().c_str()), ack, sizeof(ack));
   if (ret != ERR_OK)
   {
     last_error =
@@ -430,8 +440,8 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_line_relative(
 
 std::optional<std::string>
 ZMotionWrapper::ZMotionWrapperPrivate::move_circular_absolute(
-    const std::vector<int>& _axes, const std::vector<double>& _positions,
-    const std::vector<double>& _circular_params)
+    const std::vector<int> &_axes, const std::vector<double> &_positions,
+    const std::vector<double> &_circular_params)
 {
   if (_axes.size() < 2 || _axes.size() > 3)
   {
@@ -454,7 +464,8 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_circular_absolute(
   cmd << "MOVECIRCABS(";
   for (size_t i = 0; i < _axes.size(); ++i)
   {
-    if (i > 0) cmd << ",";
+    if (i > 0)
+      cmd << ",";
     int64_t pulses = physical_to_pulses(_axes[i], _positions[i]);
     cmd << _axes[i] << "," << pulses;
   }
@@ -475,8 +486,8 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_circular_absolute(
   cmd << ")";
 
   char ack[2048] = {0};
-  int32_t ret = ZAux_DirectCommand(handle, const_cast<char*>(cmd.str().c_str()),
-                                   ack, sizeof(ack));
+  int32_t ret = ZAux_DirectCommand(
+      handle, const_cast<char *>(cmd.str().c_str()), ack, sizeof(ack));
   if (ret != ERR_OK)
   {
     last_error =
@@ -489,8 +500,8 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_circular_absolute(
 
 std::optional<std::string>
 ZMotionWrapper::ZMotionWrapperPrivate::move_spiral_absolute(
-    const std::vector<int>& _axes, const std::vector<double>& _positions,
-    const std::vector<double>& _spiral_params)
+    const std::vector<int> &_axes, const std::vector<double> &_positions,
+    const std::vector<double> &_spiral_params)
 {
   if (_axes.size() != 3)
   {
@@ -518,7 +529,8 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_spiral_absolute(
   cmd << "MOVESPIRALABS(";
   for (size_t i = 0; i < _axes.size(); ++i)
   {
-    if (i > 0) cmd << ",";
+    if (i > 0)
+      cmd << ",";
     cmd << _axes[i];
   }
   for (size_t i = 0; i < _positions.size(); ++i)
@@ -543,8 +555,8 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_spiral_absolute(
   cmd << ")";
 
   char ack[2048] = {0};
-  int32_t ret = ZAux_DirectCommand(handle, const_cast<char*>(cmd.str().c_str()),
-                                   ack, sizeof(ack));
+  int32_t ret = ZAux_DirectCommand(
+      handle, const_cast<char *>(cmd.str().c_str()), ack, sizeof(ack));
   if (ret != ERR_OK)
   {
     last_error =
@@ -557,8 +569,8 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_spiral_absolute(
 
 std::optional<std::string>
 ZMotionWrapper::ZMotionWrapperPrivate::move_eclipse_absolute(
-    const std::vector<int>& _axes, const std::vector<double>& _positions,
-    const std::vector<double>& _eclipse_params)
+    const std::vector<int> &_axes, const std::vector<double> &_positions,
+    const std::vector<double> &_eclipse_params)
 {
   if (_axes.size() != 2)
   {
@@ -591,7 +603,8 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_eclipse_absolute(
 
   for (size_t i = 0; i < _eclipse_params.size(); ++i)
   {
-    if (i > 0) cmd << ",";
+    if (i > 0)
+      cmd << ",";
     if (i < 4)
     {
       int axis_idx = (i < 2) ? i : 0;
@@ -606,8 +619,8 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_eclipse_absolute(
   cmd << ")";
 
   char ack[2048] = {0};
-  int32_t ret = ZAux_DirectCommand(handle, const_cast<char*>(cmd.str().c_str()),
-                                   ack, sizeof(ack));
+  int32_t ret = ZAux_DirectCommand(
+      handle, const_cast<char *>(cmd.str().c_str()), ack, sizeof(ack));
   if (ret != ERR_OK)
   {
     last_error =
@@ -620,8 +633,8 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_eclipse_absolute(
 
 std::optional<std::string>
 ZMotionWrapper::ZMotionWrapperPrivate::move_spherical_absolute(
-    const std::vector<int>& _axes, const std::vector<double>& _positions,
-    const std::vector<double>& _spherical_params)
+    const std::vector<int> &_axes, const std::vector<double> &_positions,
+    const std::vector<double> &_spherical_params)
 {
   if (_axes.size() != 3)
   {
@@ -649,7 +662,8 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_spherical_absolute(
   cmd << "MOVESPHERICALABS(";
   for (size_t i = 0; i < _axes.size(); ++i)
   {
-    if (i > 0) cmd << ",";
+    if (i > 0)
+      cmd << ",";
     cmd << _axes[i];
   }
   for (size_t i = 0; i < _positions.size(); ++i)
@@ -676,8 +690,8 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_spherical_absolute(
   cmd << ")";
 
   char ack[2048] = {0};
-  int32_t ret = ZAux_DirectCommand(handle, const_cast<char*>(cmd.str().c_str()),
-                                   ack, sizeof(ack));
+  int32_t ret = ZAux_DirectCommand(
+      handle, const_cast<char *>(cmd.str().c_str()), ack, sizeof(ack));
   if (ret != ERR_OK)
   {
     last_error =
@@ -689,7 +703,7 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_spherical_absolute(
 }
 
 std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::buffer_move(
-    const std::vector<int>& _axes, const std::vector<double>& _positions)
+    const std::vector<int> &_axes, const std::vector<double> &_positions)
 {
   if (_axes.empty() || _positions.size() != _axes.size())
   {
@@ -708,15 +722,16 @@ std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::buffer_move(
   cmd << "BUFFERMOVE(";
   for (size_t i = 0; i < _axes.size(); ++i)
   {
-    if (i > 0) cmd << ",";
+    if (i > 0)
+      cmd << ",";
     int64_t pulses = physical_to_pulses(_axes[i], _positions[i]);
     cmd << _axes[i] << "," << pulses;
   }
   cmd << ")";
 
   char ack[2048] = {0};
-  int32_t ret = ZAux_DirectCommand(handle, const_cast<char*>(cmd.str().c_str()),
-                                   ack, sizeof(ack));
+  int32_t ret = ZAux_DirectCommand(
+      handle, const_cast<char *>(cmd.str().c_str()), ack, sizeof(ack));
   if (ret != ERR_OK)
   {
     last_error = "Buffer move failed (error: " + std::to_string(ret) + ")";
@@ -813,7 +828,8 @@ std::optional<uint32_t> ZMotionWrapper::ZMotionWrapperPrivate::AxisStatus(
 bool ZMotionWrapper::ZMotionWrapperPrivate::is_axis_moving(int _axis)
 {
   auto status_opt = AxisStatus(_axis);
-  if (!status_opt) return false;
+  if (!status_opt)
+    return false;
 
   uint32_t status = status_opt.value();
   return (status & 0x00000002) != 0;
@@ -871,16 +887,20 @@ ZMotionWrapper::ZMotionWrapperPrivate::ensure_axis_configured(int _axis)
   {
     // 使用默认参数配置轴
     auto result = set_units(_axis, axis_configs[_axis].units);
-    if (result) return result;
+    if (result)
+      return result;
 
     result = set_speed(_axis, axis_configs[_axis].speed);
-    if (result) return result;
+    if (result)
+      return result;
 
     result = set_acceleration(_axis, axis_configs[_axis].acceleration);
-    if (result) return result;
+    if (result)
+      return result;
 
     result = set_deceleration(_axis, axis_configs[_axis].deceleration);
-    if (result) return result;
+    if (result)
+      return result;
 
     axis_configs[_axis].configured = true;
   }

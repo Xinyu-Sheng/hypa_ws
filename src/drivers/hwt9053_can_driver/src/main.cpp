@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "hwt9053_can_driver/hwt9053_can_driver_node.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
-#include "hwt9053_can_driver/hwt9053_can_driver_node.hpp"
 
-int main(int _argc, char* _argv[])
+int main(int _argc, char *_argv[])
 {
   rclcpp::init(_argc, _argv);
 

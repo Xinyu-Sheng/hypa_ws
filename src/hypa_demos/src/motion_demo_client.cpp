@@ -1,13 +1,13 @@
-#include <memory>
-#include <string>
-#include <vector>
 #include <chrono>
 #include <iomanip>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <vector>
 
-#include "rclcpp/rclcpp.hpp"
 #include "hypa_msgs/msg/motion_command.hpp"
 #include "hypa_msgs/msg/motion_status.hpp"
+#include "rclcpp/rclcpp.hpp"
 
 using namespace std::chrono_literals;
 
@@ -16,8 +16,8 @@ namespace hypa_demos
 
 class MotionDemoClient : public rclcpp::Node
 {
- public:
-  explicit MotionDemoClient(const rclcpp::NodeOptions& _options)
+  public:
+  explicit MotionDemoClient(const rclcpp::NodeOptions &_options)
       : Node("motion_demo_client", _options)
   {
     // 声明参数
@@ -67,7 +67,7 @@ class MotionDemoClient : public rclcpp::Node
     RCLCPP_INFO(this->get_logger(), "Status topic: %s", status_topic_.c_str());
   }
 
- private:
+  private:
   rclcpp::Publisher<hypa_msgs::msg::MotionCommand>::SharedPtr
       command_publisher_;
   rclcpp::Subscription<hypa_msgs::msg::MotionStatus>::SharedPtr
@@ -177,7 +177,7 @@ class MotionDemoClient : public rclcpp::Node
     this->demo_step_ = 3;
   }
 
-  void SendCommand(const hypa_msgs::msg::MotionCommand& _cmd)
+  void SendCommand(const hypa_msgs::msg::MotionCommand &_cmd)
   {
     RCLCPP_INFO(this->get_logger(), "Publishing motion command...");
     command_publisher_->publish(_cmd);
@@ -215,7 +215,8 @@ class MotionDemoClient : public rclcpp::Node
        << _status->progress << "% | Positions: [";
     for (size_t i = 0; i < _status->current_positions.size(); ++i)
     {
-      if (i > 0) ss << ", ";
+      if (i > 0)
+        ss << ", ";
       ss << _status->current_positions[i];
     }
     ss << "]";
@@ -240,7 +241,7 @@ class MotionDemoClient : public rclcpp::Node
 
 }  // namespace hypa_demos
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
   rclcpp::init(argc, argv);
   auto node =

@@ -1,11 +1,12 @@
 #ifndef MOTION_CONTROLLER_HPP
 #define MOTION_CONTROLLER_HPP
 
+#include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
-#include <map>
-#include <optional>
+
 #include "zmc432_driver/zmotion_wrapper.hpp"
 
 namespace zmc432_driver
@@ -20,7 +21,7 @@ namespace zmc432_driver
  */
 class MotionController
 {
- public:
+  public:
   // 公有类型定义（外部需要使用的类型）
   enum MotionType : uint8_t
   {
@@ -74,15 +75,15 @@ class MotionController
   ~MotionController();
 
   // 禁止拷贝
-  MotionController(const MotionController&) = delete;
-  MotionController& operator=(const MotionController&) = delete;
+  MotionController(const MotionController &) = delete;
+  MotionController &operator=(const MotionController &) = delete;
 
   // PIMPL 私有实现类
   class MotionControllerPrivate;
   std::unique_ptr<MotionControllerPrivate> pimpl_;
 
   // 公共接口
-  std::optional<std::string> initialize(const std::string& _controller_ip);
+  std::optional<std::string> initialize(const std::string &_controller_ip);
   std::optional<std::string> configure_axis(int _axis, double _units,
                                             double _speed, double _accel,
                                             double _decel);
@@ -91,27 +92,27 @@ class MotionController
   std::optional<bool> get_axis_enable(int _axis) const;
 
   // EtherCAT bus initialization
-  std::optional<std::string> initialize_bus(const EcatInitInfo& info,
+  std::optional<std::string> initialize_bus(const EcatInitInfo &info,
                                             int slot = 0,
                                             int timeout_ms = 5000);
   bool start();
   void stop();
-  bool queue_motion(const MotionCommand& _cmd);
+  bool queue_motion(const MotionCommand &_cmd);
   ControllerStatus CurrentStatus() const;
   void cancel_current_motion();
   bool is_executing() const;
   bool wait_for_completion(int _timeout_ms = 0);
 
- private:
+  private:
   // 私有方法（委托给 pimpl_）
   void execution_loop();
-  std::optional<std::string> execute_single_axis(const MotionCommand& _cmd);
-  std::optional<std::string> execute_interpolated(const MotionCommand& _cmd);
+  std::optional<std::string> execute_single_axis(const MotionCommand &_cmd);
+  std::optional<std::string> execute_interpolated(const MotionCommand &_cmd);
   std::optional<std::string> execute_continuous_trajectory(
-      const MotionCommand& _cmd);
+      const MotionCommand &_cmd);
   void update_status();
-  double calculate_progress(const MotionCommand& _cmd) const;
-  bool is_motion_complete(const MotionCommand& _cmd) const;
+  double calculate_progress(const MotionCommand &_cmd) const;
+  bool is_motion_complete(const MotionCommand &_cmd) const;
 };
 
 }  // namespace zmc432_driver

@@ -2,11 +2,12 @@
 #define MOTION_TOPIC_NODE_HPP
 
 #include <memory>
-#include <string>
 #include <mutex>
-#include "rclcpp/rclcpp.hpp"
+#include <string>
+
 #include "hypa_msgs/msg/motion_command.hpp"
 #include "hypa_msgs/msg/motion_status.hpp"
+#include "rclcpp/rclcpp.hpp"
 #include "zmc432_driver/motion_controller.hpp"
 
 namespace zmc432_driver
@@ -20,22 +21,22 @@ namespace zmc432_driver
  */
 class MotionTopicNode
 {
- public:
-  MotionTopicNode(const std::shared_ptr<rclcpp::Node>& _node,
+  public:
+  MotionTopicNode(const std::shared_ptr<rclcpp::Node> &_node,
                   std::shared_ptr<MotionController> _controller,
-                  const std::string& _command_topic = "motion_command",
-                  const std::string& _status_topic = "motion_status");
+                  const std::string &_command_topic = "motion_command",
+                  const std::string &_status_topic = "motion_status");
 
   ~MotionTopicNode();
 
   // 禁止拷贝
-  MotionTopicNode(const MotionTopicNode&) = delete;
-  MotionTopicNode& operator=(const MotionTopicNode&) = delete;
+  MotionTopicNode(const MotionTopicNode &) = delete;
+  MotionTopicNode &operator=(const MotionTopicNode &) = delete;
 
   bool initialize();
   void shutdown();
 
- private:
+  private:
   class MotionTopicNodePrivate;
   std::unique_ptr<MotionTopicNodePrivate> pimpl_;
 

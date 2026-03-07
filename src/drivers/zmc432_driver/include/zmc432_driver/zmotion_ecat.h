@@ -1,8 +1,8 @@
 #ifndef ZMOTION_ECAT_H
 #define ZMOTION_ECAT_H
 
-#include "zmotion.h"
 #include "zmcaux.h"
+#include "zmotion.h"
 
 #ifdef __cplusplus
 extern "C"

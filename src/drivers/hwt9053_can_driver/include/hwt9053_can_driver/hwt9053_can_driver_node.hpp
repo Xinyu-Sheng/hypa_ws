@@ -18,40 +18,39 @@
 #include <memory>
 #include <string>
 
+#include "can_msgs/msg/frame.hpp"
+#include "hwt9053_can_driver/hwt9053_parser.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
-#include "can_msgs/msg/frame.hpp"
 #include "sensor_msgs/msg/imu.hpp"
-
-#include "hwt9053_can_driver/hwt9053_parser.hpp"
 
 namespace hwt9053_can_driver
 {
 
 class HWT9053CANDriverNode : public rclcpp_lifecycle::LifecycleNode
 {
- public:
+  public:
   explicit HWT9053CANDriverNode(
-      const rclcpp::NodeOptions& _options = rclcpp::NodeOptions());
+      const rclcpp::NodeOptions &_options = rclcpp::NodeOptions());
   ~HWT9053CANDriverNode();
 
   // 生命周期回调
   rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-  on_configure(const rclcpp_lifecycle::State& _state) override;
+  on_configure(const rclcpp_lifecycle::State &_state) override;
 
   rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-  on_activate(const rclcpp_lifecycle::State& _state) override;
+  on_activate(const rclcpp_lifecycle::State &_state) override;
 
   rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-  on_deactivate(const rclcpp_lifecycle::State& _state) override;
+  on_deactivate(const rclcpp_lifecycle::State &_state) override;
 
   rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-  on_cleanup(const rclcpp_lifecycle::State& _state) override;
+  on_cleanup(const rclcpp_lifecycle::State &_state) override;
 
   rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-  on_shutdown(const rclcpp_lifecycle::State& _state) override;
+  on_shutdown(const rclcpp_lifecycle::State &_state) override;
 
- private:
+  private:
   // 回调函数
   void CanFrameCallback(const can_msgs::msg::Frame::SharedPtr _msg);
 

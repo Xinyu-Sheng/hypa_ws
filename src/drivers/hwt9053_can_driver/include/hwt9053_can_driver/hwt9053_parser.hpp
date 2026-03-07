@@ -15,8 +15,8 @@
 #ifndef HWT9053_CAN_DRIVER__HWT9053_PARSER_HPP_
 #define HWT9053_CAN_DRIVER__HWT9053_PARSER_HPP_
 
-#include <cstdint>
 #include <array>
+#include <cstdint>
 #include <memory>
 
 #include "sensor_msgs/msg/imu.hpp"
@@ -60,7 +60,7 @@ struct HWT9053Data
 // HWT9053 数据解析器类（使用 PIMPL 模式）
 class HWT9053Parser
 {
- public:
+  public:
   // HWT9053 CAN ID 定义
   static constexpr uint32_t CAN_ID_ACCEL = 0x50;   // 加速度数据
   static constexpr uint32_t CAN_ID_GYRO = 0x51;    // 角速度数据
@@ -77,7 +77,7 @@ class HWT9053Parser
    * @param _data CAN 数据字节数组
    * @param _dlc 数据长度
    */
-  void ParseCANFrame(uint32_t _can_id, const std::array<uint8_t, 8>& _data,
+  void ParseCANFrame(uint32_t _can_id, const std::array<uint8_t, 8> &_data,
                      uint8_t _dlc);
 
   /**
@@ -90,14 +90,14 @@ class HWT9053Parser
    * @brief 获取传感器原始数据
    * @return HWT9053Data 结构体
    */
-  const HWT9053Data& GetData() const;
+  const HWT9053Data &GetData() const;
 
   /**
    * @brief 重置数据
    */
   void Reset();
 
- private:
+  private:
   // PIMPL：私有数据实现
   class Impl;
   std::unique_ptr<Impl> pimpl_;

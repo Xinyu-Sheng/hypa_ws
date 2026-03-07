@@ -46,19 +46,19 @@
 ********************************************************************************************************/
 
 // #include "stdafx.h"
-#include "stdio.h"
-#include "string.h"
-#include "time.h"
-#include "stdarg.h"
-#include "ctype.h"
-#include "malloc.h"
-#include "stdlib.h"
-
-#include "zmotion.h"
 #include "zmcaux.h"
 
+#include "ctype.h"
+#include "malloc.h"
+#include "stdarg.h"
+#include "stdio.h"
+#include "stdlib.h"
+#include "string.h"
+#include "time.h"
+#include "zmotion.h"
+
 #ifdef Z_DEBUG
-#undef THIS_FILE
+  #undef THIS_FILE
 static const char THIS_FILE[] = "zmcaux";
 #endif
 
@@ -70,7 +70,7 @@ char g_ZMC_aDebugFileName[2048] = "zauxcmd.txt";
 //错误输出部分
 #endif
 
-void ZAux_TraceOut(const char* cText, ...)
+void ZAux_TraceOut(const char *cText, ...)
 {
   char ErrorText[2048];
 
@@ -84,7 +84,7 @@ void ZAux_TraceOut(const char* cText, ...)
   // OutputDebugString( ErrorText );
 
 #ifdef ZAUX_DEBUG
-  FILE* DebugFileId;
+  FILE *DebugFileId;
   DebugFileId = fopen(ZAUX_DEBUG_FILE, "a");
   if (NULL == DebugFileId)
   {
@@ -106,7 +106,7 @@ Input:          //串口号COMId
 Output:         //卡链接phandle
 Return:         //错误码
 *************************************************************/
-int32 ZAux_OpenCom(uint32 comid, ZMC_HANDLE* phandle)
+int32 ZAux_OpenCom(uint32 comid, ZMC_HANDLE *phandle)
 {
   int32 iresult;
   iresult = ZMC_OpenCom(comid, phandle);
@@ -124,7 +124,7 @@ Output:         //卡链接handle
 Return:         //错误码
 *************************************************************/
 int32 ZAux_SearchAndOpenCom(uint32 uimincomidfind, uint32 uimaxcomidfind,
-                            uint* pcomid, uint32 uims, ZMC_HANDLE* phandle)
+                            uint *pcomid, uint32 uims, ZMC_HANDLE *phandle)
 {
   int32 iresult;
   iresult = ZMC_SearchAndOpenCom(uimincomidfind, uimaxcomidfind, pcomid, uims,
@@ -158,7 +158,7 @@ Input:          //ipaddress IP地址
 Output:         //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_SetIp(ZMC_HANDLE handle, char* ipaddress)
+int32 ZAux_SetIp(ZMC_HANDLE handle, char *ipaddress)
 {
   char cmdbuff[2048];
   char cmdbuffAck[2048];
@@ -177,7 +177,7 @@ Input:          //IP地址，字符串的方式输入
 Output:         //卡链接handle
 Return:         //错误码
 *************************************************************/
-int32 ZAux_OpenEth(char* ipaddr, ZMC_HANDLE* phandle)
+int32 ZAux_OpenEth(char *ipaddr, ZMC_HANDLE *phandle)
 {
   int32 iresult;
   iresult = ZMC_OpenEth(ipaddr, phandle);
@@ -192,7 +192,7 @@ Input:          //addrbufflength		最大长度
 output:			//ipaddrlist		当前晚点IP列表
 Return:         //错误码, ERR_OK表示有搜索到.
 *************************************************************/
-int32 ZAux_SearchEthlist(char* ipaddrlist, uint32 addrbufflength, uint32 uims)
+int32 ZAux_SearchEthlist(char *ipaddrlist, uint32 addrbufflength, uint32 uims)
 {
   // 自动搜索IP地址
   int32 iresult;
@@ -207,7 +207,7 @@ Input:          //uims 响应时间
 Output:         //
 Return:         //错误码, ERR_OK表示有搜索到.
 *************************************************************/
-int32 ZAux_SearchEth(const char* ipaddress, uint32 uims)
+int32 ZAux_SearchEth(const char *ipaddress, uint32 uims)
 {
   // 自动搜索IP地址
   char buffer[10240];
@@ -222,7 +222,7 @@ int32 ZAux_SearchEth(const char* ipaddress, uint32 uims)
 
   // 从字符串转换过来
   int ipos = 0;
-  const char* pstring;
+  const char *pstring;
   pstring = buffer;
 
   for (int j = 0; j < 100; j++)  // 最多100个IP列表
@@ -307,7 +307,7 @@ Input:          //下载到RAM-ROM  0-RAM  1-ROM
 Output:         //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_BasDown(ZMC_HANDLE handle, const char* Filename, uint32 run_mode)
+int32 ZAux_BasDown(ZMC_HANDLE handle, const char *Filename, uint32 run_mode)
 {
   int32 iresult;
   char atemp[4096];
@@ -350,7 +350,7 @@ Input:			//返回的字符长度	uiResponseLength
 Output:         //返回的字符串		psResponse
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Execute(ZMC_HANDLE handle, const char* pszCommand, char* psResponse,
+int32 ZAux_Execute(ZMC_HANDLE handle, const char *pszCommand, char *psResponse,
                    uint32 uiResponseLength)
 {
   int32 iresult;
@@ -364,7 +364,7 @@ int32 ZAux_Execute(ZMC_HANDLE handle, const char* pszCommand, char* psResponse,
   // 把命令写入文件
   if (g_ZMC_bIfDebugtoFile)
   {
-    FILE* DebugFileId;
+    FILE *DebugFileId;
     char Backbuff[2048];
     char time_str[32];
     time_t SysTime = time(0);
@@ -372,7 +372,7 @@ int32 ZAux_Execute(ZMC_HANDLE handle, const char* pszCommand, char* psResponse,
     if (NULL == DebugFileId)
     {
       //::MessageBox(NULL, "Can not open file", _T("Error"), MB_OK |
-      //:MB_ICONEXCLAMATION);
+      //: MB_ICONEXCLAMATION);
     }
     else
     {
@@ -444,8 +444,8 @@ Input:			//返回的字符长度	uiResponseLength
 Output:         //返回的字符串		psResponse
 Return:         //错误码
 *************************************************************/
-int32 ZAux_DirectCommand(ZMC_HANDLE handle, const char* pszCommand,
-                         char* psResponse, uint32 uiResponseLength)
+int32 ZAux_DirectCommand(ZMC_HANDLE handle, const char *pszCommand,
+                         char *psResponse, uint32 uiResponseLength)
 {
   int32 iresult;
   iresult = ZMC_DirectCommand(handle, pszCommand, psResponse, uiResponseLength);
@@ -457,7 +457,7 @@ int32 ZAux_DirectCommand(ZMC_HANDLE handle, const char* pszCommand,
   // 把命令写入文件
   if (g_ZMC_bIfDebugtoFile)
   {
-    FILE* DebugFileId;
+    FILE *DebugFileId;
     char Backbuff[2048];
     char time_str[32];
     time_t SysTime = time(0);
@@ -465,7 +465,7 @@ int32 ZAux_DirectCommand(ZMC_HANDLE handle, const char* pszCommand,
     if (NULL == DebugFileId)
     {
       //::MessageBox(NULL, "Can not open file", _T("Error"), MB_OK |
-      //:MB_ICONEXCLAMATION);
+      //: MB_ICONEXCLAMATION);
     }
     else
     {
@@ -534,7 +534,7 @@ Input:          //卡链接handle
 bifTofile		0 关闭  1-只输出错误命令  2-只输出运动与设置命令
 3输出全部命令 Output:         // Return:         //错误码
 *************************************************************/
-int32 ZAux_SetTraceFile(int bifTofile, const char* pFilePathName)
+int32 ZAux_SetTraceFile(int bifTofile, const char *pFilePathName)
 {
   g_ZMC_bIfDebugtoFile = bifTofile;
   strcpy(g_ZMC_aDebugFileName, pFilePathName);
@@ -554,7 +554,7 @@ Input:          //卡链接handle
 Output:         //piValue 输入口状态
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetIn(ZMC_HANDLE handle, int ionum, uint32* piValue)
+int32 ZAux_Direct_GetIn(ZMC_HANDLE handle, int ionum, uint32 *piValue)
 {
   int32 iresult;
 
@@ -616,7 +616,7 @@ Input:          //卡链接handle
 Output:         //piValue 输出口状态
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetOp(ZMC_HANDLE handle, int ionum, uint32* piValue)
+int32 ZAux_Direct_GetOp(ZMC_HANDLE handle, int ionum, uint32 *piValue)
 {
   int32 iresult;
 
@@ -658,7 +658,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的模拟量值 4系列以下0-4095
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetAD(ZMC_HANDLE handle, int ionum, float* pfValue)
+int32 ZAux_Direct_GetAD(ZMC_HANDLE handle, int ionum, float *pfValue)
 {
   int32 iresult;
 
@@ -720,7 +720,7 @@ Input:          //卡链接handle
 Output:         //pfValue 读取的的模拟量值 4系列以下0-4095
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetDA(ZMC_HANDLE handle, int ionum, float* pfValue)
+int32 ZAux_Direct_GetDA(ZMC_HANDLE handle, int ionum, float *pfValue)
 {
   int32 iresult;
 
@@ -783,7 +783,7 @@ Input:          //卡链接handle
 Output:         //piValue 反转状态
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetInvertIn(ZMC_HANDLE handle, int ionum, int* piValue)
+int32 ZAux_Direct_GetInvertIn(ZMC_HANDLE handle, int ionum, int *piValue)
 {
   int32 iresult;
 
@@ -846,7 +846,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的频率
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetPwmFreq(ZMC_HANDLE handle, int ionum, float* pfValue)
+int32 ZAux_Direct_GetPwmFreq(ZMC_HANDLE handle, int ionum, float *pfValue)
 {
   int32 iresult;
 
@@ -909,7 +909,7 @@ Input:          //卡链接handle
 Output:         //pfValue 读取的占空比
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetPwmDuty(ZMC_HANDLE handle, int ionum, float* pfValue)
+int32 ZAux_Direct_GetPwmDuty(ZMC_HANDLE handle, int ionum, float *pfValue)
 {
   int32 iresult;
 
@@ -957,7 +957,7 @@ Output:         //pValueList 位状态 按位存储
 Return:         //错误码
 *************************************************************/
 int32 ZAux_GetModbusIn(ZMC_HANDLE handle, int ionumfirst, int ionumend,
-                       uint8* pValueList)
+                       uint8 *pValueList)
 {
   if (ionumend < ionumfirst)
   {
@@ -977,7 +977,7 @@ Output:         //pValueList 位状态 按位存储
 Return:         //错误码
 *************************************************************/
 int32 ZAux_GetModbusOut(ZMC_HANDLE handle, int ionumfirst, int ionumend,
-                        uint8* pValueList)
+                        uint8 *pValueList)
 {
   if (ionumend < ionumfirst)
   {
@@ -995,9 +995,9 @@ Input:          //卡链接handle
 Output:         //pValueList 读取的坐标值 从轴0开始
 Return:         //错误码
 *************************************************************/
-int32 ZAux_GetModbusDpos(ZMC_HANDLE handle, int imaxaxises, float* pValueList)
+int32 ZAux_GetModbusDpos(ZMC_HANDLE handle, int imaxaxises, float *pValueList)
 {
-  return ZMC_Modbus_Get4x(handle, 10000, imaxaxises * 2, (uint16*)pValueList);
+  return ZMC_Modbus_Get4x(handle, 10000, imaxaxises * 2, (uint16 *)pValueList);
 }
 
 /*************************************************************
@@ -1007,9 +1007,9 @@ Input:          //卡链接handle
 Output:         //pValueList 读取的反馈坐标值 从轴0开始
 Return:         //错误码
 *************************************************************/
-int32 ZAux_GetModbusMpos(ZMC_HANDLE handle, int imaxaxises, float* pValueList)
+int32 ZAux_GetModbusMpos(ZMC_HANDLE handle, int imaxaxises, float *pValueList)
 {
-  return ZMC_Modbus_Get4x(handle, 11000, imaxaxises * 2, (uint16*)pValueList);
+  return ZMC_Modbus_Get4x(handle, 11000, imaxaxises * 2, (uint16 *)pValueList);
 }
 
 /*************************************************************
@@ -1020,9 +1020,9 @@ Output:         //pValueList 读取的当前速度 从轴0开始
 Return:         //错误码
 *************************************************************/
 int32 ZAux_GetModbusCurSpeed(ZMC_HANDLE handle, int imaxaxises,
-                             float* pValueList)
+                             float *pValueList)
 {
-  return ZMC_Modbus_Get4x(handle, 12000, imaxaxises * 2, (uint16*)pValueList);
+  return ZMC_Modbus_Get4x(handle, 12000, imaxaxises * 2, (uint16 *)pValueList);
 }
 
 #if 0
@@ -1045,7 +1045,7 @@ Input:          //卡链接handle
 Output:         //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_SetParam(ZMC_HANDLE handle, const char* sParam, int iaxis,
+int32 ZAux_Direct_SetParam(ZMC_HANDLE handle, const char *sParam, int iaxis,
                            float fset)
 {
   char cmdbuff[2048];
@@ -1066,8 +1066,8 @@ Input:          //卡链接handle
 Output:         //pfValue  读取的返回值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetParam(ZMC_HANDLE handle, const char* sParam, int iaxis,
-                           float* pfValue)
+int32 ZAux_Direct_GetParam(ZMC_HANDLE handle, const char *sParam, int iaxis,
+                           float *pfValue)
 {
   int32 iresult;
 
@@ -1133,7 +1133,7 @@ Input:          //卡链接handle
 Output:         //pfValue 加速度返回值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetAccel(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetAccel(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -1175,7 +1175,7 @@ Input:          //卡链接handle
 Output:         //读取的轴叠加轴号
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetAddax(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetAddax(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -1242,7 +1242,7 @@ Input:          //卡链接handle
 Output:         //piValue 报警信号输入口返回值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetAlmIn(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetAlmIn(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -1308,7 +1308,7 @@ Input:          //卡链接handle
 Output:         //iValue 轴类型返回值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetAtype(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetAtype(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -1350,7 +1350,7 @@ Input:          //卡链接handle
 Output:         //轴状态返回值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetAxisStatus(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetAxisStatus(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -1417,7 +1417,7 @@ Input:          //卡链接handle
 Output:         //piValue 轴地址返回值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetAxisAddress(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetAxisAddress(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -1483,7 +1483,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回的使能状态
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetAxisEnable(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetAxisEnable(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -1549,7 +1549,7 @@ Input:          //卡链接handle
 Output:         //pfValue 连接速率返回值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetClutchRate(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetClutchRate(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -1615,7 +1615,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的范围值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetCloseWin(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetCloseWin(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -1681,7 +1681,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回的拐角模式
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetCornerMode(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetCornerMode(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -1747,7 +1747,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的爬行速度值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetCreep(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetCreep(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -1813,7 +1813,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回原点输入口编号
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetDatumIn(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetDatumIn(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -1879,7 +1879,7 @@ Input:          //卡链接handle
 Output:         //pfValue 设定的减速度返回值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetDecel(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetDecel(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -1945,7 +1945,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的拐角减速角度
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetDecelAngle(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetDecelAngle(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -2011,7 +2011,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的命令位置坐标
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetDpos(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetDpos(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -2053,7 +2053,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的内部编码器值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetEncoder(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetEncoder(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -2095,7 +2095,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的最终位置
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetEndMove(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetEndMove(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -2137,7 +2137,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的最终位置
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetEndMoveBuffer(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetEndMoveBuffer(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -2202,7 +2202,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的速度值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetEndMoveSpeed(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetEndMoveSpeed(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -2268,7 +2268,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回的标记值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetErrormask(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetErrormask(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -2334,7 +2334,7 @@ Input:          //卡链接handle
 Output:         //返回的JOG输入口编号
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetFastJog(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetFastJog(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -2400,7 +2400,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的快速减速度
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetFastDec(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetFastDec(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -2442,7 +2442,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的随动误差
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetFe(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetFe(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -2508,7 +2508,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的设置最大误差值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetFeLimit(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetFeLimit(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -2574,7 +2574,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的报警误差值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetFeRange(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetFeRange(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -2640,7 +2640,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回输入HOLDIN输入口编号
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetFholdIn(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetFholdIn(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -2706,7 +2706,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的保持速度
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetFhspeed(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetFhspeed(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -2772,7 +2772,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回SP运动速度值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetForceSpeed(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetForceSpeed(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -2838,7 +2838,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的正向限位坐标
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetFsLimit(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetFsLimit(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -2904,7 +2904,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的限速半径
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetFullSpRadius(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetFullSpRadius(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -2970,7 +2970,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回正向限位输入口编号
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetFwdIn(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetFwdIn(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -3036,7 +3036,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回的JOG输入口编号
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetFwdJog(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetFwdJog(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -3078,7 +3078,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回运行状态 0-运动中 -1 停止
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetIfIdle(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetIfIdle(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -3144,7 +3144,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回的脉冲模式
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetInvertStep(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetInvertStep(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -3212,7 +3212,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回的速度计算模式
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetInterpFactor(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetInterpFactor(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -3277,7 +3277,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的JOG速度值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetJogSpeed(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetJogSpeed(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -3319,7 +3319,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回链接的参考轴号
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetLinkax(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetLinkax(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -3361,7 +3361,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回状态值  -1 没有剩余函数 0-还有剩余运动
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetLoaded(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetLoaded(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -3427,7 +3427,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的起始速度值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetLspeed(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetLspeed(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -3493,7 +3493,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回的反找等待时间
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetHomeWait(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetHomeWait(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -3535,7 +3535,7 @@ Input:          //卡链接handle
 Output:         //piValue  返回的锁存触发状态 -1-锁存触发 0-未触发
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetMark(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetMark(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -3577,7 +3577,7 @@ Input:          //卡链接handle
 Output:         //piValue  返回的锁存触发状态 -1-锁存触发 0-未触发
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetMarkB(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetMarkB(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -3643,7 +3643,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回的脉冲频率
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetMaxSpeed(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetMaxSpeed(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -3708,7 +3708,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回的连续插补开关状态
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetMerge(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetMerge(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -3750,7 +3750,7 @@ Input:          //卡链接handle
 Output:         //piValue 缓冲运动数
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetMovesBuffered(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetMovesBuffered(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -3792,7 +3792,7 @@ Input:          //卡链接handle
 Output:         //piValue 当前MARK标号
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetMoveCurmark(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetMoveCurmark(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -3881,7 +3881,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的轴反馈位置坐标
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetMpos(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetMpos(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -3923,7 +3923,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的编码器反馈速度
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetMspeed(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetMspeed(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -3965,7 +3965,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回当前的运动类型
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetMtype(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetMtype(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -4008,7 +4008,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回下一条指令的运动类型
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetNtype(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetNtype(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -4074,7 +4074,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的偏移坐标值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetOffpos(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetOffpos(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -4140,7 +4140,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的结束坐标值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetOpenWin(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetOpenWin(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -4182,7 +4182,7 @@ Input:          //卡链接handle
 Output:         //pfValue 锁存的坐标位置
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetRegPos(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetRegPos(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -4224,7 +4224,7 @@ iaxis 轴号
 Output:         //pfValue 锁存的坐标位置
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetRegPosB(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetRegPosB(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -4266,7 +4266,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的剩余距离
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetRemain(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetRemain(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -4310,7 +4310,7 @@ Output:         //piValue 剩余的直线缓冲数量
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_GetRemain_LineBuffer(ZMC_HANDLE handle, int iaxis,
-                                       int* piValue)
+                                       int *piValue)
 {
   int32 iresult;
 
@@ -4353,7 +4353,7 @@ Input:          //卡链接handle
 Output:         //piValue 剩余的缓冲数量
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetRemain_Buffer(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetRemain_Buffer(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -4419,7 +4419,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的循环坐标值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetRepDist(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetRepDist(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -4485,7 +4485,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回的模式
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetRepOption(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetRepOption(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -4551,7 +4551,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回的负向限位输入口编号
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetRevIn(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetRevIn(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -4617,7 +4617,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回的输入口编号
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetRevJog(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetRevJog(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -4683,7 +4683,7 @@ Input:          //卡链接handle
 Output:         //pfValue 设定的限位值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetRsLimit(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetRsLimit(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -4749,7 +4749,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的速度值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetSpeed(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetSpeed(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -4815,7 +4815,7 @@ Input:          //卡链接handle
 Output:         //pfValue 平滑时间
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetSramp(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetSramp(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -4882,7 +4882,7 @@ Output:         //pfValue 返回的SP运动起始速度值
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_GetStartMoveSpeed(ZMC_HANDLE handle, int iaxis,
-                                    float* pfValue)
+                                    float *pfValue)
 {
   int32 iresult;
 
@@ -4948,7 +4948,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的拐角停止角度
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetStopAngle(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetStopAngle(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -5014,7 +5014,7 @@ Input:          //卡链接handle
 Output:         //pfValue	返回的倒角半径值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetZsmooth(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetZsmooth(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -5080,7 +5080,7 @@ Input:          //卡链接handle
 Output:         //pfValue 返回的脉冲当量
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetUnits(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetUnits(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -5123,7 +5123,7 @@ Output:         //pfValue 返回的阵雨距离
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_GetVectorBuffered(ZMC_HANDLE handle, int iaxis,
-                                    float* pfValue)
+                                    float *pfValue)
 {
   int32 iresult;
 
@@ -5165,7 +5165,7 @@ Input:          //卡链接handle
 Output:         //pfValue	返回的当前速度值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetVpSpeed(ZMC_HANDLE handle, int iaxis, float* pfValue)
+int32 ZAux_Direct_GetVpSpeed(ZMC_HANDLE handle, int iaxis, float *pfValue)
 {
   int32 iresult;
 
@@ -5207,8 +5207,8 @@ Input:          //卡链接handle
 全局变量名称/或者指定轴号的轴参数名称DPOS(0) Output:         //pfValue 返回值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetVariablef(ZMC_HANDLE handle, const char* pname,
-                               float* pfValue)
+int32 ZAux_Direct_GetVariablef(ZMC_HANDLE handle, const char *pname,
+                               float *pfValue)
 {
   int32 iresult;
 
@@ -5250,8 +5250,8 @@ Input:          //卡链接handle
 全局变量名称/或者指定轴号的轴参数名称DPOS(0) Output:         //piValue 返回值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetVariableInt(ZMC_HANDLE handle, const char* pname,
-                                 int* piValue)
+int32 ZAux_Direct_GetVariableInt(ZMC_HANDLE handle, const char *pname,
+                                 int *piValue)
 {
   int32 iresult;
 
@@ -5299,7 +5299,7 @@ Input:          //卡链接handle
 Output:         //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_Base(ZMC_HANDLE handle, int imaxaxises, int* piAxislist)
+int32 ZAux_Direct_Base(ZMC_HANDLE handle, int imaxaxises, int *piAxislist)
 {
   int i;
   char cmdbuffAck[2048];
@@ -5367,8 +5367,8 @@ Input:          //卡链接handle
 Output:         //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_Move(ZMC_HANDLE handle, int imaxaxises, int* piAxislist,
-                       float* pfDisancelist)
+int32 ZAux_Direct_Move(ZMC_HANDLE handle, int imaxaxises, int *piAxislist,
+                       float *pfDisancelist)
 {
   int i;
   char cmdbuff[2048];
@@ -5423,8 +5423,8 @@ Input:          //卡链接handle
 Output:         //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_MoveSp(ZMC_HANDLE handle, int imaxaxises, int* piAxislist,
-                         float* pfDisancelist)
+int32 ZAux_Direct_MoveSp(ZMC_HANDLE handle, int imaxaxises, int *piAxislist,
+                         float *pfDisancelist)
 {
   int i;
   char cmdbuff[2048];
@@ -5479,8 +5479,8 @@ Input:          //卡链接handle
 Output:         //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_MoveAbs(ZMC_HANDLE handle, int imaxaxises, int* piAxislist,
-                          float* pfDisancelist)
+int32 ZAux_Direct_MoveAbs(ZMC_HANDLE handle, int imaxaxises, int *piAxislist,
+                          float *pfDisancelist)
 {
   int i;
 
@@ -5536,8 +5536,8 @@ Input:          //卡链接handle
 Output:         //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_MoveAbsSp(ZMC_HANDLE handle, int imaxaxises, int* piAxislist,
-                            float* pfDisancelist)
+int32 ZAux_Direct_MoveAbsSp(ZMC_HANDLE handle, int imaxaxises, int *piAxislist,
+                            float *pfDisancelist)
 {
   int i;
 
@@ -5622,7 +5622,7 @@ Input:          //卡链接handle
 Output:         //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_MoveCirc(ZMC_HANDLE handle, int imaxaxises, int* piAxislist,
+int32 ZAux_Direct_MoveCirc(ZMC_HANDLE handle, int imaxaxises, int *piAxislist,
                            float fend1, float fend2, float fcenter1,
                            float fcenter2, int idirection)
 {
@@ -5670,7 +5670,7 @@ Input:          //卡链接handle
 Output:         //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_MoveCircSp(ZMC_HANDLE handle, int imaxaxises, int* piAxislist,
+int32 ZAux_Direct_MoveCircSp(ZMC_HANDLE handle, int imaxaxises, int *piAxislist,
                              float fend1, float fend2, float fcenter1,
                              float fcenter2, int idirection)
 {
@@ -5718,7 +5718,7 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_MoveCircAbs(ZMC_HANDLE handle, int imaxaxises,
-                              int* piAxislist, float fend1, float fend2,
+                              int *piAxislist, float fend1, float fend2,
                               float fcenter1, float fcenter2, int idirection)
 {
   int i;
@@ -5760,7 +5760,7 @@ Description:    //绝对圆心圆弧插补SP运动  20130901 以后的控制器�
 0-逆时针，1-顺时针 Output:         // Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_MoveCircAbsSp(ZMC_HANDLE handle, int imaxaxises,
-                                int* piAxislist, float fend1, float fend2,
+                                int *piAxislist, float fend1, float fend2,
                                 float fcenter1, float fcenter2, int idirection)
 {
   int i;
@@ -5805,7 +5805,7 @@ Input:          //卡链接handle
 Output:         //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_MoveCirc2(ZMC_HANDLE handle, int imaxaxises, int* piAxislist,
+int32 ZAux_Direct_MoveCirc2(ZMC_HANDLE handle, int imaxaxises, int *piAxislist,
                             float fmid1, float fmid2, float fend1, float fend2)
 {
   int i;
@@ -5850,7 +5850,7 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_MoveCirc2Abs(ZMC_HANDLE handle, int imaxaxises,
-                               int* piAxislist, float fmid1, float fmid2,
+                               int *piAxislist, float fmid1, float fmid2,
                                float fend1, float fend2)
 {
   int i;
@@ -5895,7 +5895,7 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_MoveCirc2Sp(ZMC_HANDLE handle, int imaxaxises,
-                              int* piAxislist, float fmid1, float fmid2,
+                              int *piAxislist, float fmid1, float fmid2,
                               float fend1, float fend2)
 {
   int i;
@@ -5940,7 +5940,7 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_MoveCirc2AbsSp(ZMC_HANDLE handle, int imaxaxises,
-                                 int* piAxislist, float fmid1, float fmid2,
+                                 int *piAxislist, float fmid1, float fmid2,
                                  float fend1, float fend2)
 {
   int i;
@@ -5987,7 +5987,7 @@ Input:          //卡链接handle
 第三轴的速度计算:0(缺省)第三轴参与速度计算。1第三轴不参与速度计算。 Output: //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_MHelical(ZMC_HANDLE handle, int imaxaxises, int* piAxislist,
+int32 ZAux_Direct_MHelical(ZMC_HANDLE handle, int imaxaxises, int *piAxislist,
                            float fend1, float fend2, float fcenter1,
                            float fcenter2, int idirection, float fDistance3,
                            int imode)
@@ -6037,7 +6037,7 @@ Input:          //卡链接handle
 第三轴参与速度计算。1第三轴不参与速度计算。 Output:         // Return: //错误码
 *************************************************************/
 int32 ZAux_Direct_MHelicalAbs(ZMC_HANDLE handle, int imaxaxises,
-                              int* piAxislist, float fend1, float fend2,
+                              int *piAxislist, float fend1, float fend2,
                               float fcenter1, float fcenter2, int idirection,
                               float fDistance3, int imode)
 {
@@ -6087,7 +6087,7 @@ Input:          //卡链接handle
 0(缺省)第三轴参与速度计算。 1第三轴不参与速度计算。 Output:         // Return:
 //错误码
 *************************************************************/
-int32 ZAux_Direct_MHelicalSp(ZMC_HANDLE handle, int imaxaxises, int* piAxislist,
+int32 ZAux_Direct_MHelicalSp(ZMC_HANDLE handle, int imaxaxises, int *piAxislist,
                              float fend1, float fend2, float fcenter1,
                              float fcenter2, int idirection, float fDistance3,
                              int imode)
@@ -6136,7 +6136,7 @@ Input:          //卡链接handle
 第三轴参与速度计算。1第三轴不参与速度计算。 Output:         // Return: //错误码
 *************************************************************/
 int32 ZAux_Direct_MHelicalAbsSp(ZMC_HANDLE handle, int imaxaxises,
-                                int* piAxislist, float fend1, float fend2,
+                                int *piAxislist, float fend1, float fend2,
                                 float fcenter1, float fcenter2, int idirection,
                                 float fDistance3, int imode)
 {
@@ -6184,7 +6184,7 @@ Input:          //卡链接handle
 Output:         //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_MHelical2(ZMC_HANDLE handle, int imaxaxises, int* piAxislist,
+int32 ZAux_Direct_MHelical2(ZMC_HANDLE handle, int imaxaxises, int *piAxislist,
                             float fmid1, float fmid2, float fend1, float fend2,
                             float fDistance3, int imode)
 {
@@ -6232,7 +6232,7 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_MHelical2Abs(ZMC_HANDLE handle, int imaxaxises,
-                               int* piAxislist, float fmid1, float fmid2,
+                               int *piAxislist, float fmid1, float fmid2,
                                float fend1, float fend2, float fDistance3,
                                int imode)
 {
@@ -6281,7 +6281,7 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_MHelical2Sp(ZMC_HANDLE handle, int imaxaxises,
-                              int* piAxislist, float fmid1, float fmid2,
+                              int *piAxislist, float fmid1, float fmid2,
                               float fend1, float fend2, float fDistance3,
                               int imode)
 {
@@ -6329,7 +6329,7 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_MHelical2AbsSp(ZMC_HANDLE handle, int imaxaxises,
-                                 int* piAxislist, float fmid1, float fmid2,
+                                 int *piAxislist, float fmid1, float fmid2,
                                  float fend1, float fend2, float fDistance3,
                                  int imode)
 {
@@ -6378,7 +6378,7 @@ Input:          //卡链接handle
 第二轴的椭圆半径，半长轴或者半短轴都可，AB相等时自动为圆弧或螺旋。 Output: //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_MEclipse(ZMC_HANDLE handle, int imaxaxises, int* piAxislist,
+int32 ZAux_Direct_MEclipse(ZMC_HANDLE handle, int imaxaxises, int *piAxislist,
                            float fend1, float fend2, float fcenter1,
                            float fcenter2, int idirection, float fADis,
                            float fBDis)
@@ -6431,7 +6431,7 @@ Input:          //卡链接handle
   Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_MEclipseAbs(ZMC_HANDLE handle, int imaxaxises,
-                              int* piAxislist, float fend1, float fend2,
+                              int *piAxislist, float fend1, float fend2,
                               float fcenter1, float fcenter2, int idirection,
                               float fADis, float fBDis)
 {
@@ -6479,7 +6479,7 @@ Input:          //卡链接handle
 第二轴的椭圆半径，半长轴或者半短轴都可，AB相等时自动为圆弧或螺旋。 Output: //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_MEclipseSp(ZMC_HANDLE handle, int imaxaxises, int* piAxislist,
+int32 ZAux_Direct_MEclipseSp(ZMC_HANDLE handle, int imaxaxises, int *piAxislist,
                              float fend1, float fend2, float fcenter1,
                              float fcenter2, int idirection, float fADis,
                              float fBDis)
@@ -6532,7 +6532,7 @@ Input:          //卡链接handle
   Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_MEclipseAbsSp(ZMC_HANDLE handle, int imaxaxises,
-                                int* piAxislist, float fend1, float fend2,
+                                int *piAxislist, float fend1, float fend2,
                                 float fcenter1, float fcenter2, int idirection,
                                 float fADis, float fBDis)
 {
@@ -6580,7 +6580,7 @@ Input:          //卡链接handle
 第三个轴的运动距离 Output:         // Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_MEclipseHelical(ZMC_HANDLE handle, int imaxaxises,
-                                  int* piAxislist, float fend1, float fend2,
+                                  int *piAxislist, float fend1, float fend2,
                                   float fcenter1, float fcenter2,
                                   int idirection, float fADis, float fBDis,
                                   float fDistance3)
@@ -6631,7 +6631,7 @@ Input:          //卡链接handle
 第三个轴的运动距离 Output:         // Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_MEclipseHelicalAbs(ZMC_HANDLE handle, int imaxaxises,
-                                     int* piAxislist, float fend1, float fend2,
+                                     int *piAxislist, float fend1, float fend2,
                                      float fcenter1, float fcenter2,
                                      int idirection, float fADis, float fBDis,
                                      float fDistance3)
@@ -6679,7 +6679,7 @@ Input:          //卡链接handle
 第三个轴的运动距离 Output:         // Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_MEclipseHelicalSp(ZMC_HANDLE handle, int imaxaxises,
-                                    int* piAxislist, float fend1, float fend2,
+                                    int *piAxislist, float fend1, float fend2,
                                     float fcenter1, float fcenter2,
                                     int idirection, float fADis, float fBDis,
                                     float fDistance3)
@@ -6729,7 +6729,7 @@ Input:          //卡链接handle
 第三个轴的运动距离 Output:         // Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_MEclipseHelicalAbsSp(ZMC_HANDLE handle, int imaxaxises,
-                                       int* piAxislist, float fend1,
+                                       int *piAxislist, float fend1,
                                        float fend2, float fcenter1,
                                        float fcenter2, int idirection,
                                        float fADis, float fBDis,
@@ -6783,7 +6783,7 @@ Input:          //卡链接handle
 Output:         //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_MSpherical(ZMC_HANDLE handle, int imaxaxises, int* piAxislist,
+int32 ZAux_Direct_MSpherical(ZMC_HANDLE handle, int imaxaxises, int *piAxislist,
                              float fend1, float fend2, float fend3,
                              float fcenter1, float fcenter2, float fcenter3,
                              int imode, float fcenter4, float fcenter5)
@@ -6837,7 +6837,7 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_MSphericalSp(ZMC_HANDLE handle, int imaxaxises,
-                               int* piAxislist, float fend1, float fend2,
+                               int *piAxislist, float fend1, float fend2,
                                float fend3, float fcenter1, float fcenter2,
                                float fcenter3, int imode, float fcenter4,
                                float fcenter5)
@@ -6882,7 +6882,7 @@ Description:
 第4轴螺旋的功能，指定第4轴的相对距离，此轴不参与速度计算。 Output:         //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_MoveSpiral(ZMC_HANDLE handle, int imaxaxises, int* piAxislist,
+int32 ZAux_Direct_MoveSpiral(ZMC_HANDLE handle, int imaxaxises, int *piAxislist,
                              float centre1, float centre2, float circles,
                              float pitch, float distance3, float distance4)
 {
@@ -6927,7 +6927,7 @@ Description:
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_MoveSpiralSp(ZMC_HANDLE handle, int imaxaxises,
-                               int* piAxislist, float centre1, float centre2,
+                               int *piAxislist, float centre1, float centre2,
                                float circles, float pitch, float distance3,
                                float distance4)
 {
@@ -6976,7 +6976,7 @@ Input:          //卡链接handle
 Output:         //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_MoveSmooth(ZMC_HANDLE handle, int imaxaxises, int* piAxislist,
+int32 ZAux_Direct_MoveSmooth(ZMC_HANDLE handle, int imaxaxises, int *piAxislist,
                              float end1, float end2, float end3, float next1,
                              float next2, float next3, float radius)
 {
@@ -7027,7 +7027,7 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_MoveSmoothSp(ZMC_HANDLE handle, int imaxaxises,
-                               int* piAxislist, float end1, float end2,
+                               int *piAxislist, float end1, float end2,
                                float end3, float next1, float next2,
                                float next3, float radius)
 {
@@ -7260,7 +7260,7 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_MoveTurnabs(ZMC_HANDLE handle, int tablenum, int imaxaxises,
-                              int* piAxislist, float* pfDisancelist)
+                              int *piAxislist, float *pfDisancelist)
 {
   int i;
 
@@ -7327,8 +7327,8 @@ Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_McircTurnabs(ZMC_HANDLE handle, int tablenum, float refpos1,
                                float refpos2, int mode, float end1, float end2,
-                               int imaxaxises, int* piAxislist,
-                               float* pfDisancelist)
+                               int imaxaxises, int *piAxislist,
+                               float *pfDisancelist)
 {
   int i;
 
@@ -7630,7 +7630,7 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_CancelAxisList(ZMC_HANDLE handle, int imaxaxises,
-                                 int* piAxislist, int imode)
+                                 int *piAxislist, int imode)
 {
   int i = 0;
 
@@ -7668,8 +7668,8 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_Connframe(ZMC_HANDLE handle, int Jogmaxaxises,
-                            int* JogAxislist, int frame, int tablenum,
-                            int Virmaxaxises, int* VirAxislist)
+                            int *JogAxislist, int frame, int tablenum,
+                            int Virmaxaxises, int *VirAxislist)
 {
   int i;
 
@@ -7735,8 +7735,8 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_Connreframe(ZMC_HANDLE handle, int Virmaxaxises,
-                              int* VirAxislist, int frame, int tablenum,
-                              int Jogmaxaxises, int* JogAxislist)
+                              int *VirAxislist, int frame, int tablenum,
+                              int Jogmaxaxises, int *JogAxislist)
 {
   int i;
 
@@ -7903,7 +7903,7 @@ Output:         //homestatus 回零完成标志 0-回零异常 1回零成功
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_GetHomeStatus(ZMC_HANDLE handle, uint32 iaxis,
-                                uint32* homestatus)
+                                uint32 *homestatus)
 {
   int32 iresult;
   char cmdbuff[2048];
@@ -7995,7 +7995,7 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_SetVrf(ZMC_HANDLE handle, int vrstartnum, int numes,
-                         float* pfValue)
+                         float *pfValue)
 {
   // int i;
   // int32 iresult;
@@ -8043,7 +8043,7 @@ int32 ZAux_Direct_SetVrf(ZMC_HANDLE handle, int vrstartnum, int numes,
     }
 
     iresult = ZMC_RegisterWrite(handle, "VR", 32, vrstartnum + isend, icur,
-                                (uint8*)(pfValue + isend));
+                                (uint8 *)(pfValue + isend));
     if (ERR_OK != iresult)
     {
       return iresult;
@@ -8067,7 +8067,7 @@ Output:         //pfValue  返回的读取值，多个时必须分配空间.
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_GetVrf(ZMC_HANDLE handle, int vrstartnum, int numes,
-                         float* pfValue)
+                         float *pfValue)
 {
   // int i, icur, isend;
   // int32 iresult;
@@ -8151,7 +8151,7 @@ int32 ZAux_Direct_GetVrf(ZMC_HANDLE handle, int vrstartnum, int numes,
     }
 
     iresult = ZMC_RegisterRead(handle, "VR", 32, vrstartnum + isend, icur,
-                               (uint8*)(pfValue + isend));
+                               (uint8 *)(pfValue + isend));
     if (ERR_OK != iresult)
     {
       return iresult;
@@ -8175,7 +8175,7 @@ Input:          //卡链接handle
 返回的读取值，多个时必须分配空间. Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_GetVrInt(ZMC_HANDLE handle, int vrstartnum, int numes,
-                           int* piValue)
+                           int *piValue)
 {
   int i, icur, isend;
   int32 iresult;
@@ -8247,7 +8247,7 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_SetTable(ZMC_HANDLE handle, int tabstart, int numes,
-                           float* pfValue)
+                           float *pfValue)
 {
   int i, icur;
   int32 iresult;
@@ -8309,7 +8309,7 @@ Output:         //pfValue  多个时必须分配空间.
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_GetTable(ZMC_HANDLE handle, int tabstart, int numes,
-                           float* pfValue)
+                           float *pfValue)
 {
   int i, icur, isend;
   int32 iresult;
@@ -8383,11 +8383,11 @@ Input:          //卡链接handle
 Output:         //pfvlaue 转换的数据
 Return:         //错误码
 *************************************************************/
-int32 ZAux_TransStringtoFloat(const char* pstringin, int inumes, float* pfvlaue)
+int32 ZAux_TransStringtoFloat(const char *pstringin, int inumes, float *pfvlaue)
 {
-  char* ptemp;
+  char *ptemp;
 
-  ptemp = (char*)pstringin;
+  ptemp = (char *)pstringin;
   while (' ' == *ptemp)
   {
     ptemp++;
@@ -8398,7 +8398,7 @@ int32 ZAux_TransStringtoFloat(const char* pstringin, int inumes, float* pfvlaue)
     return ERR_ACKERROR;
   }
 
-  char* pstringnew = ptemp;
+  char *pstringnew = ptemp;
 
   //
   for (int i = 0; i < inumes; i++)
@@ -8438,11 +8438,11 @@ Input:          //卡链接handle
 Output:         //pivlaue 转换的数据
 Return:         //错误码
 *************************************************************/
-int32 ZAux_TransStringtoInt(const char* pstringin, int inumes, int* pivlaue)
+int32 ZAux_TransStringtoInt(const char *pstringin, int inumes, int *pivlaue)
 {
-  char* ptemp;
+  char *ptemp;
 
-  ptemp = (char*)pstringin;
+  ptemp = (char *)pstringin;
   while (' ' == *ptemp)
   {
     ptemp++;
@@ -8453,7 +8453,7 @@ int32 ZAux_TransStringtoInt(const char* pstringin, int inumes, int* pivlaue)
     return ERR_ACKERROR;
   }
 
-  char* pstringnew = ptemp;
+  char *pstringnew = ptemp;
 
   //
   for (int i = 0; i < inumes; i++)
@@ -8497,9 +8497,9 @@ Input:          //sFilename 文件绝对路径
 Output:         //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_WriteUFile(const char* sFilename, float* pVarlist, int inum)
+int32 ZAux_WriteUFile(const char *sFilename, float *pVarlist, int inum)
 {
-  FILE* pfile;
+  FILE *pfile;
 
   // 写入文件
   pfile = fopen(sFilename, "wb");
@@ -8532,9 +8532,9 @@ Input:          //sFilename 文件绝对路径
 Output:         //pVarlist	读取的数据列表
 Return:         //错误码
 *************************************************************/
-int32 ZAux_ReadUFile(const char* sFilename, float* pVarlist, int* pinum)
+int32 ZAux_ReadUFile(const char *sFilename, float *pVarlist, int *pinum)
 {
-  FILE* pfile;
+  FILE *pfile;
   uint32 uifilesize;
 
   // 读取文件
@@ -8575,7 +8575,7 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Modbus_Set0x(ZMC_HANDLE handle, uint16 start, uint16 inum,
-                        uint8* pdata)
+                        uint8 *pdata)
 {
   int32 iresult;
   iresult = ZMC_Modbus_Set0x(handle, start, inum, pdata);
@@ -8592,7 +8592,7 @@ Output:         //pdata 返回的位状态  按位存储
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Modbus_Get0x(ZMC_HANDLE handle, uint16 start, uint16 inum,
-                        uint8* pdata)
+                        uint8 *pdata)
 {
   int32 iresult;
   iresult = ZMC_Modbus_Get0x(handle, start, inum, pdata);
@@ -8610,7 +8610,7 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Modbus_Set4x(ZMC_HANDLE handle, uint16 start, uint16 inum,
-                        uint16* pdata)
+                        uint16 *pdata)
 {
   int32 iresult;
   iresult = ZMC_Modbus_Set4x(handle, start, inum, pdata);
@@ -8627,7 +8627,7 @@ Output:         //pdata	读取的REG寄存器值
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Modbus_Get4x(ZMC_HANDLE handle, uint16 start, uint16 inum,
-                        uint16* pdata)
+                        uint16 *pdata)
 {
   int32 iresult;
   iresult = ZMC_Modbus_Get4x(handle, start, inum, pdata);
@@ -8645,12 +8645,12 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Modbus_Get4x_Float(ZMC_HANDLE handle, uint16 start, uint16 inum,
-                              float* pfdata)
+                              float *pfdata)
 {
   int i, j;
   int32 iresult;
-  void* pf;
-  uint16* pi;
+  void *pf;
+  uint16 *pi;
   uint16 tempdata[2048];
 
   if (NULL == pfdata || inum < 0)
@@ -8668,7 +8668,7 @@ int32 ZAux_Modbus_Get4x_Float(ZMC_HANDLE handle, uint16 start, uint16 inum,
     {
       for (j = 0; j < 2; j++)
       {
-        *((uint16*)pf + j) = *(pi + j);
+        *((uint16 *)pf + j) = *(pi + j);
       }
       pf = pfdata + i;
       pi = pi + 2;
@@ -8687,12 +8687,12 @@ Output:         //pfdata	读取的REG寄存器值
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Modbus_Set4x_Float(ZMC_HANDLE handle, uint16 start, uint16 inum,
-                              float* pfdata)
+                              float *pfdata)
 {
   int i, j;
   int32 iresult;
-  void* pf;
-  uint16* pi;
+  void *pf;
+  uint16 *pi;
   uint16 tempdata[2048];
 
   if (NULL == pfdata || inum < 0)
@@ -8707,7 +8707,7 @@ int32 ZAux_Modbus_Set4x_Float(ZMC_HANDLE handle, uint16 start, uint16 inum,
   {
     for (j = 0; j < 2; j++)
     {
-      *(pi + j) = *((uint16*)pf + j);
+      *(pi + j) = *((uint16 *)pf + j);
     }
     pf = pfdata + i;
     pi = pi + 2;
@@ -8726,12 +8726,12 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Modbus_Get4x_Long(ZMC_HANDLE handle, uint16 start, uint16 inum,
-                             int32* pidata)
+                             int32 *pidata)
 {
   int i, j;
   int32 iresult;
-  void* pitemp;
-  uint16* pi;
+  void *pitemp;
+  uint16 *pi;
   uint16 tempdata[2048];
 
   if (NULL == pidata || inum < 0)
@@ -8749,7 +8749,7 @@ int32 ZAux_Modbus_Get4x_Long(ZMC_HANDLE handle, uint16 start, uint16 inum,
     {
       for (j = 0; j < 2; j++)
       {
-        *((uint16*)pitemp + j) = *(pi + j);
+        *((uint16 *)pitemp + j) = *(pi + j);
       }
       pitemp = pidata + i;
       pi = pi + 2;
@@ -8768,12 +8768,12 @@ Output:         //pidata	读取的REG寄存器值
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Modbus_Set4x_Long(ZMC_HANDLE handle, uint16 start, uint16 inum,
-                             int32* pidata)
+                             int32 *pidata)
 {
   int i, j;
   int32 iresult;
-  void* pitemp;
-  uint16* pi;
+  void *pitemp;
+  uint16 *pi;
   uint16 tempdata[2048];
 
   if (NULL == pidata || inum < 0)
@@ -8788,7 +8788,7 @@ int32 ZAux_Modbus_Set4x_Long(ZMC_HANDLE handle, uint16 start, uint16 inum,
   {
     for (j = 0; j < 2; j++)
     {
-      *(pi + j) = *((uint16*)pitemp + j);
+      *(pi + j) = *((uint16 *)pitemp + j);
     }
     pitemp = pidata + i;
     pi = pi + 2;
@@ -8806,7 +8806,7 @@ Output:         pidata	读取返回的字符串
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Modbus_Get4x_String(ZMC_HANDLE handle, uint16 start, uint16 inum,
-                               char* pidata)
+                               char *pidata)
 {
   int i;
   int32 iresult;
@@ -8849,7 +8849,7 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Modbus_Set4x_String(ZMC_HANDLE handle, uint16 start, uint16 inum,
-                               char* pidata)
+                               char *pidata)
 {
   int i;
   int32 iresult;
@@ -8890,7 +8890,7 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_FlashWritef(ZMC_HANDLE handle, uint16 uiflashid, uint32 uinumes,
-                       float* pfvlue)
+                       float *pfvlue)
 {
   int32 iresult;
   iresult = ZMC_FlashWritef(handle, uiflashid, uinumes, pfvlue);
@@ -8908,7 +8908,7 @@ puinumesread 读取到的变量个数
 Return:         //错误码
 *************************************************************/
 int32 ZAux_FlashReadf(ZMC_HANDLE handle, uint16 uiflashid, uint32 uibuffnum,
-                      float* pfvlue, uint32* puinumesread)
+                      float *pfvlue, uint32 *puinumesread)
 {
   int32 iresult;
   iresult = ZMC_FlashReadf(handle, uiflashid, uibuffnum, pfvlue, puinumesread);
@@ -8945,7 +8945,7 @@ Input:          //卡链接handle
 Output:         //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_MovePara(ZMC_HANDLE handle, uint32 base_axis, char* paraname,
+int32 ZAux_Direct_MovePara(ZMC_HANDLE handle, uint32 base_axis, char *paraname,
                            uint32 iaxis, float fvalue)
 {
   char cmdbuff[2048];
@@ -9130,7 +9130,7 @@ MODBUS_IEEE MODBUS_BIT NVRAM VECT_BUFFED  REMAIN inum		参数编号或轴号
 对IN等BIT类型参数无效。 fvalue		修改值 Output:         // Return:
 //错误码
 *************************************************************/
-int32 ZAux_Direct_MoveWait(ZMC_HANDLE handle, uint32 base_axis, char* paraname,
+int32 ZAux_Direct_MoveWait(ZMC_HANDLE handle, uint32 base_axis, char *paraname,
                            int inum, int Cmp_mode, float fvalue)
 {
   char cmdbuff[2048];
@@ -9168,7 +9168,7 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_MoveTask(ZMC_HANDLE handle, uint32 base_axis, uint32 tasknum,
-                           char* labelname)
+                           char *labelname)
 {
   char cmdbuff[2048];
   char cmdbuffAck[2048];
@@ -9260,7 +9260,7 @@ Description:    //硬件位置比较输出剩余缓冲获取
 轴号 output:			//位置比较输出剩余缓冲数		buff
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetHwPswitchBuff(ZMC_HANDLE handle, int axisnum, int* buff)
+int32 ZAux_Direct_GetHwPswitchBuff(ZMC_HANDLE handle, int axisnum, int *buff)
 {
   if (0 > axisnum || axisnum > MAX_AXIS_AUX)
   {
@@ -9323,7 +9323,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回状态，对应AXISSTATUS判断对应位
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetAxisStopReason(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_Direct_GetAxisStopReason(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -9366,8 +9366,8 @@ Input:          //卡链接handle
 Output:         pfValue  返回的轴参数列表
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetAllAxisPara(ZMC_HANDLE handle, const char* sParam,
-                                 int imaxaxis, float* pfValue)
+int32 ZAux_Direct_GetAllAxisPara(ZMC_HANDLE handle, const char *sParam,
+                                 int imaxaxis, float *pfValue)
 {
   int32 iresult;
   char cmdbuff[2048];
@@ -9410,8 +9410,8 @@ DposStatus-命令坐标  MposStatus-反馈坐标  AxisStatus-轴状态 Input:
 命令坐标 MposStatus 反馈坐标 AxisStatus 轴状态 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_GetAllAxisInfo(ZMC_HANDLE handle, int imaxaxis,
-                                 int* IdleStatus, float* DposStatus,
-                                 float* MposStatus, int* AxisStatus)
+                                 int *IdleStatus, float *DposStatus,
+                                 float *MposStatus, int *AxisStatus)
 {
   int32 iresult = 0;
   if (imaxaxis <= 0 || imaxaxis > MAX_AXIS_AUX || NULL == IdleStatus ||
@@ -9447,8 +9447,8 @@ Input:          //卡链接handle
 Output:         //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_SetUserArray(ZMC_HANDLE handle, char* arrayname,
-                               int arraystart, int numes, float* pfValue)
+int32 ZAux_Direct_SetUserArray(ZMC_HANDLE handle, char *arrayname,
+                               int arraystart, int numes, float *pfValue)
 {
   int i;
   int32 iresult;
@@ -9485,8 +9485,8 @@ Input:          //卡链接handle
 Output:         //pfValue  多个时必须分配空间.
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetUserArray(ZMC_HANDLE handle, char* arrayname,
-                               int arraystart, int numes, float* pfValue)
+int32 ZAux_Direct_GetUserArray(ZMC_HANDLE handle, char *arrayname,
+                               int arraystart, int numes, float *pfValue)
 {
   int i, icur, isend;
   int32 iresult;
@@ -9555,7 +9555,7 @@ Input:          //卡链接handle
 Output:         //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_SetUserVar(ZMC_HANDLE handle, char* varname, float pfValue)
+int32 ZAux_Direct_SetUserVar(ZMC_HANDLE handle, char *varname, float pfValue)
 {
   int32 iresult;
   char cmdbuff[2048];
@@ -9582,7 +9582,7 @@ Input:          //卡链接handle
 Output:         //pfValue  多个时必须分配空间.
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetUserVar(ZMC_HANDLE handle, char* varname, float* pfValue)
+int32 ZAux_Direct_GetUserVar(ZMC_HANDLE handle, char *varname, float *pfValue)
 {
   int32 iresult;
   char cmdbuff[2048];
@@ -9622,7 +9622,7 @@ Input:          //PCI卡号， 卡号从0开始，实际连接为PCI卡号+1(兼
 Output:         //卡链接handle
 Return:         //错误码
 *************************************************************/
-int32 ZAux_OpenPci(uint32 cardnum, ZMC_HANDLE* phandle)
+int32 ZAux_OpenPci(uint32 cardnum, ZMC_HANDLE *phandle)
 {
   int32 iresult;
   char buffer[1024];
@@ -9637,7 +9637,10 @@ Description:    //读取PCI的控制卡个数
 Input:          //
 Return:         //检查的最大PCI卡个数
 *************************************************************/
-int32 ZAux_GetMaxPciCards() { return ZMC_GetMaxPciCards(); }
+int32 ZAux_GetMaxPciCards()
+{
+  return ZMC_GetMaxPciCards();
+}
 
 /*************************************************************
 Description:    //获取控制器卡信息
@@ -9647,8 +9650,8 @@ Output:         SoftType 控制器型号类型
                                 ControllerId	控制器唯一ID
 Return:         //错误码
 *************************************************************/
-int32 ZAux_GetControllerInfo(ZMC_HANDLE handle, char* SoftType,
-                             char* SoftVersion, char* ControllerId)
+int32 ZAux_GetControllerInfo(ZMC_HANDLE handle, char *SoftType,
+                             char *SoftVersion, char *ControllerId)
 {
   int32 iresult;
   char cmdbuffAck[2048];
@@ -9711,7 +9714,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回扫描成功节点数量
 Return:         //错误码
 *************************************************************/
-int32 ZAux_BusCmd_GetNodeNum(ZMC_HANDLE handle, int slot, int* piValue)
+int32 ZAux_BusCmd_GetNodeNum(ZMC_HANDLE handle, int slot, int *piValue)
 {
   int32 iresult;
 
@@ -9756,7 +9759,7 @@ Input:          //卡链接handle
 返回信息 Return:         //错误码
 *************************************************************/
 int32 ZAux_BusCmd_GetNodeInfo(ZMC_HANDLE handle, int slot, int node, int sel,
-                              int* piValue)
+                              int *piValue)
 {
   int32 iresult;
 
@@ -9800,7 +9803,7 @@ bit2-节点状态 值为1时，bit0为1，bit1和bit2为0，设备通讯正常
 Return:         //错误码
 *************************************************************/
 int32 ZAux_BusCmd_GetNodeStatus(ZMC_HANDLE handle, uint32 slot, uint32 node,
-                                uint32* nodestatus)
+                                uint32 *nodestatus)
 {
   int32 iresult;
 
@@ -9843,7 +9846,7 @@ Input:          //卡链接handle
 *************************************************************/
 int32 ZAux_BusCmd_SDORead(ZMC_HANDLE handle, uint32 slot, uint32 node,
                           uint32 index, uint32 subindex, uint32 type,
-                          int32* value)
+                          int32 *value)
 {
   int32 iresult;
 
@@ -9932,7 +9935,7 @@ Input:          //卡链接handle
 5-uint8 6-uint16 7-uint32 Output:         //value 读取的数据值 Return: //错误码
 *************************************************************/
 int32 ZAux_BusCmd_SDOReadAxis(ZMC_HANDLE handle, uint32 iaxis, uint32 index,
-                              uint32 subindex, uint32 type, int32* value)
+                              uint32 subindex, uint32 type, int32 *value)
 {
   int32 iresult;
 
@@ -10017,7 +10020,7 @@ Input:          //卡链接handle
 7*256+11 Output:         //value 读取的数据值 Return:         //错误码
 *************************************************************/
 int32 ZAux_BusCmd_RtexRead(ZMC_HANDLE handle, uint32 iaxis, uint32 ipara,
-                           float* value)
+                           float *value)
 {
   int32 iresult;
 
@@ -10117,7 +10120,7 @@ Input:          //卡链接handle
 Output:         //fValue 反馈的偏移距离
 Return:         //错误码
 *************************************************************/
-int32 ZAux_BusCmd_GetDatumOffpos(ZMC_HANDLE handle, int iaxis, float* fValue)
+int32 ZAux_BusCmd_GetDatumOffpos(ZMC_HANDLE handle, int iaxis, float *fValue)
 {
   int32 iresult;
   char cmdbuff[2048];
@@ -10191,7 +10194,7 @@ Output:         //homestatus 回零完成标志 0-回零异常 1回零成功
 Return:         //错误码
 *************************************************************/
 int32 ZAux_BusCmd_GetHomeStatus(ZMC_HANDLE handle, uint32 iaxis,
-                                uint32* homestatus)
+                                uint32 *homestatus)
 {
   int32 iresult;
   char cmdbuff[2048];
@@ -10273,7 +10276,7 @@ Input:          //卡链接handle
 Output:         //piValue 当前转矩
 Return:         //错误码
 *************************************************************/
-int32 ZAux_BusCmd_GetDriveTorque(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_BusCmd_GetDriveTorque(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -10338,7 +10341,7 @@ Input:          //卡链接handle
 Output:         //piValue 返回的最大转矩
 Return:         //错误码
 *************************************************************/
-int32 ZAux_BusCmd_GetMaxDriveTorque(ZMC_HANDLE handle, int iaxis, int* piValue)
+int32 ZAux_BusCmd_GetMaxDriveTorque(ZMC_HANDLE handle, int iaxis, int *piValue)
 {
   int32 iresult;
 
@@ -10404,7 +10407,7 @@ Description:    //读取模拟量输出 力矩、速度模式下可以
 Output:         //fValue 模拟量返回值
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_GetDAC(ZMC_HANDLE handle, int iaxis, float* fValue)
+int32 ZAux_Direct_GetDAC(ZMC_HANDLE handle, int iaxis, float *fValue)
 {
   int32 iresult;
 
@@ -10453,7 +10456,7 @@ Description:    //获取总线初始化完成状态  （只针对Zmotion tools
 工具软件配置过总线参数控制器使用有效） Input:          //卡链接handle Output: //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_BusCmd_GetInitStatus(ZMC_HANDLE handle, int* piValue)
+int32 ZAux_BusCmd_GetInitStatus(ZMC_HANDLE handle, int *piValue)
 {
   int32 iresult;
   float scan_flag, start_flag;
@@ -10489,7 +10492,7 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_GetInMulti(ZMC_HANDLE handle, int startio, int endio,
-                             int32* piValue)
+                             int32 *piValue)
 {
   int32 iresult;
 
@@ -10659,8 +10662,8 @@ Output:         //Max_motor			 最大电机数量
 Output:         //Max_io			 最大IN,OUT,AD,DA数量
 Return:         //错误码
 *************************************************************/
-int32 ZAux_GetSysSpecification(ZMC_HANDLE handle, uint16* Max_VirtuAxises,
-                               uint8* Max_motor, uint8* Max_io)
+int32 ZAux_GetSysSpecification(ZMC_HANDLE handle, uint16 *Max_VirtuAxises,
+                               uint8 *Max_motor, uint8 *Max_io)
 {
   int32 iresult;
   struct_SysMaxSpecification specification;
@@ -10711,7 +10714,7 @@ Output:         //状态
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_SetOutMulti(ZMC_HANDLE handle, uint16 iofirst, uint16 ioend,
-                              uint32* istate)
+                              uint32 *istate)
 {
   int32 iresult;
   if (NULL == istate || iofirst > ioend)
@@ -10754,7 +10757,7 @@ Output:         //状态
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_GetOutMulti(ZMC_HANDLE handle, uint16 iofirst, uint16 ioend,
-                              uint32* istate)
+                              uint32 *istate)
 {
   int32 iresult;
   if (NULL == istate || iofirst > ioend)
@@ -10798,7 +10801,7 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_MultiMove(ZMC_HANDLE handle, int iMoveLen, int imaxaxises,
-                            int* piAxislist, float* pfDisancelist)
+                            int *piAxislist, float *pfDisancelist)
 {
   int i, j;
   int32 iresult;
@@ -10868,7 +10871,7 @@ Output:         //
 Return:         //错误码
 *************************************************************/
 int32 ZAux_Direct_MultiMoveAbs(ZMC_HANDLE handle, int iMoveLen, int imaxaxises,
-                               int* piAxislist, float* pfDisancelist)
+                               int *piAxislist, float *pfDisancelist)
 {
   int i, j;
   int32 iresult;
@@ -10934,7 +10937,7 @@ Input:          //卡链接handle
 关节轴/虚拟轴 pfRotatePara			平移旋转参数 Output:         //
 Return:         //错误码
 *************************************************************/
-int32 ZAux_Direct_FrameRotate(ZMC_HANDLE handle, int iaxis, float* pfRotatePara)
+int32 ZAux_Direct_FrameRotate(ZMC_HANDLE handle, int iaxis, float *pfRotatePara)
 {
   int i;
   char cmdbuff[2048];
@@ -10965,15 +10968,15 @@ Output:         //CanAOut_List		 节点DA数量
 Output:         //CanAxis_List		 节点轴数量
 Return:         //错误码
 *************************************************************/
-int32 ZAux_GetCanInfo(ZMC_HANDLE handle, uint8* CanNum, uint16* CanId_List,
-                      uint8* CanIn_List, uint8* CanOut_List, uint8* CanAin_List,
-                      uint8* CanAOut_List, uint8* CanAxis_List)
+int32 ZAux_GetCanInfo(ZMC_HANDLE handle, uint8 *CanNum, uint16 *CanId_List,
+                      uint8 *CanIn_List, uint8 *CanOut_List, uint8 *CanAin_List,
+                      uint8 *CanAOut_List, uint8 *CanAxis_List)
 {
   int32 iresult;
   uint16 Canid = 0;
   uint8 Temp_CanNum = 0;
-  struct_ChildCardInfo* m_CardInfo =
-      (struct_ChildCardInfo*)malloc(sizeof(struct_ChildCardInfo));
+  struct_ChildCardInfo *m_CardInfo =
+      (struct_ChildCardInfo *)malloc(sizeof(struct_ChildCardInfo));
 
   iresult = ZMC_EnumChildCard(handle, -1, m_CardInfo);
   Canid = m_CardInfo->m_cardid;

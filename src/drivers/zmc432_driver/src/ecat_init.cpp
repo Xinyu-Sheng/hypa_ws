@@ -1,12 +1,14 @@
-#include "zmc432_driver/zmotion_ecat.h"
-#include "zmc432_driver/zmotion.h"
-#include "zmc432_driver/zmcaux.h"
-#include <cstring>
-#include <cstdlib>
-#include <cstdio>
 #include <unistd.h>
 
-static void MyDelayMs(int DelayTiem, int* pOutTime)
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
+#include "zmc432_driver/zmcaux.h"
+#include "zmc432_driver/zmotion.h"
+#include "zmc432_driver/zmotion_ecat.h"
+
+static void MyDelayMs(int DelayTiem, int *pOutTime)
 {
   usleep(DelayTiem * 1000);
   if (pOutTime)
@@ -15,7 +17,7 @@ static void MyDelayMs(int DelayTiem, int* pOutTime)
   }
 }
 
-int ZAux_BusCmd_SlotScan(ZMC_HANDLE handle, int SlotId, int* pOutTime)
+int ZAux_BusCmd_SlotScan(ZMC_HANDLE handle, int SlotId, int *pOutTime)
 {
   uint32 puiread;
   uint8 pbifExcuteDown;
@@ -112,7 +114,7 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
   uint8 IoNum[4];
   ZAux_GetSysSpecification(handle, &VirtualAxiseNum, &MotionAxisNum, IoNum);
 
-  for (int i = 0; i < VirtualAxiseNum; i++)
+  for (int i = 0; i < VirtualAxiseNum; ++i)
   {
     Iresult += ZAux_Direct_SetAxisAddress(handle, i, 0);
     Iresult += ZAux_Direct_SetAxisEnable(handle, i, 0);
@@ -130,7 +132,7 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
     }
   }
 
-  for (int i = 0; i < EcatInfo.LocalAxisNum; i++)
+  for (int i = 0; i < EcatInfo.LocalAxisNum; ++i)
   {
     Iresult += ZAux_Direct_SetAxisAddress(handle, EcatInfo.LocalAxisId + i,
                                           (-1 << 16) + i);
@@ -153,18 +155,19 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
   }
 
   int ScanOkFlag = 0;
-  for (int i = 0; i < 3; i++)
+  for (int i = 0; i < 3; ++i)
   {
     ScanOkFlag = ZAux_BusCmd_SlotScan(handle, SlotId, &OutTime);
     Iresult = 0;
-    if (1 == ScanOkFlag) break;
+    if (1 == ScanOkFlag)
+      break;
   }
   if (ScanOkFlag == 1)
   {
     sprintf(cmdbuff, "?NODE_COUNT(%d)", SlotId);
     Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
     ScanNodeNum = std::atoi(ReceBuff);
-    for (int i = 0; i < ScanNodeNum; i++)
+    for (int i = 0; i < ScanNodeNum; ++i)
     {
       if (EcatInfo.DcOffsetFlag[i] == 1)
       {
@@ -182,11 +185,12 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
       }
     }
   }
-  for (int i = 0; i < 3; i++)
+  for (int i = 0; i < 3; ++i)
   {
     ScanOkFlag = ZAux_BusCmd_SlotScan(handle, SlotId, &OutTime);
     Iresult = 0;
-    if (1 == ScanOkFlag) break;
+    if (1 == ScanOkFlag)
+      break;
   }
   if (1 == ScanOkFlag)
   {
@@ -401,7 +405,7 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
       MyDelayMs(3000, &OutTime);
       // clear alarms and enable axes if requested
       for (int Drivei = EcatInfo.DriveAxisStart;
-           Drivei < (EcatInfo.DriveAxisStart + BusAxisNum); Drivei++)
+           Drivei < (EcatInfo.DriveAxisStart + BusAxisNum); ++Drivei)
       {
         sprintf(cmdbuff, "DRIVE_CONTROLWORD(%d)=128 ", Drivei);
         Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
@@ -420,7 +424,7 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
       if (EcatInfo.DriveEnable == 1)
       {
         for (int Drivei = EcatInfo.DriveAxisStart;
-             Drivei < (EcatInfo.DriveAxisStart + BusAxisNum); Drivei++)
+             Drivei < (EcatInfo.DriveAxisStart + BusAxisNum); ++Drivei)
         {
           ZAux_Direct_SetAxisEnable(handle, Drivei, 1);
           MyDelayMs(10, &OutTime);

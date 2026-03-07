@@ -4,8 +4,10 @@
 
 #include <array>
 #include <string>
-#include "zmc432_driver/zmotion_ecat.h"
+
 #include <rclcpp/rclcpp.hpp>
+
+#include "zmc432_driver/zmotion_ecat.h"
 
 namespace zmc432_driver
 {
@@ -68,8 +70,8 @@ struct EcatInitInfo
     return out;
   }
 
-  static EcatInitInfo from_node(const rclcpp::Node* node,
-                                const std::string& prefix = "ecat")
+  static EcatInitInfo from_node(const rclcpp::Node *node,
+                                const std::string &prefix = "ecat")
   {
     EcatInitInfo info;
     node->get_parameter_or(prefix + ".use_defaults", info.use_defaults, true);

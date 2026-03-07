@@ -152,12 +152,12 @@ void MyClass::Process(std::string &_name, int _count)
 
 ```cpp
 // Good
-int& variable = reference;
-int* pointer = nullptr;
-
-// Bad
 int &variable = reference;
 int *pointer = nullptr;
+
+// Bad
+int& variable = reference;
+int* pointer = nullptr;
 ```
 
 #### 10. 命名规范

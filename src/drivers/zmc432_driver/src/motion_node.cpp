@@ -1,10 +1,11 @@
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_lifecycle/lifecycle_node.hpp>
+
+#include "zmc432_driver/ecat_init.hpp"
 #include "zmc432_driver/motion_controller.hpp"
 #include "zmc432_driver/motion_topic_node.hpp"
-#include "zmc432_driver/ecat_init.hpp"
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
   // 初始化 ROS2
   rclcpp::init(argc, argv);

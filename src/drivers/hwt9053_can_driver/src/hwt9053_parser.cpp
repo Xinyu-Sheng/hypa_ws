@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <cmath>
-
 #include "hwt9053_can_driver/hwt9053_parser.hpp"
+
+#include <cmath>
 
 namespace hwt9053_can_driver
 {
@@ -22,11 +22,13 @@ namespace hwt9053_can_driver
 // PIMPL 实现
 class HWT9053Parser::Impl
 {
- public:
+  public:
   HWT9053Data data;
 };
 
-HWT9053Parser::HWT9053Parser() : pimpl_(std::make_unique<Impl>()) {}
+HWT9053Parser::HWT9053Parser() : pimpl_(std::make_unique<Impl>())
+{
+}
 
 HWT9053Parser::~HWT9053Parser() = default;
 
@@ -48,7 +50,7 @@ float HWT9053Parser::Int16ToFloat(int16_t _value, float _scale) const
 }
 
 void HWT9053Parser::ParseCANFrame(uint32_t _can_id,
-                                  const std::array<uint8_t, 8>& _data,
+                                  const std::array<uint8_t, 8> &_data,
                                   uint8_t _dlc)
 {
   if (_dlc != 8)
@@ -204,8 +206,14 @@ sensor_msgs::msg::Imu HWT9053Parser::ToIMUMessage() const
   return msg;
 }
 
-const HWT9053Data& HWT9053Parser::GetData() const { return this->pimpl_->data; }
+const HWT9053Data &HWT9053Parser::GetData() const
+{
+  return this->pimpl_->data;
+}
 
-void HWT9053Parser::Reset() { this->pimpl_->data = HWT9053Data(); }
+void HWT9053Parser::Reset()
+{
+  this->pimpl_->data = HWT9053Data();
+}
 
 }  // namespace hwt9053_can_driver
