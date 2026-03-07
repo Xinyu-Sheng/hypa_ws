@@ -151,7 +151,7 @@ feat: add trajectory planning algorithm
 affected-packages: hypa_application, hypa_msgs
 ```
 
-禁止自动暂存，commit内容要精简。
+禁止自动暂存，commit内容要精简，commit要用英文。
 
 ---
 
