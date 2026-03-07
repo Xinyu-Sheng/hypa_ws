@@ -26,35 +26,26 @@ extern "C"
   typedef unsigned short WORD;
   // typedef unsigned int  DWORD;
   // #define __stdcall
-  typedef unsigned char
-      uint8; /* defined for unsigned 8-bits integer variable
-                无符号8位整型变量  */
-  typedef signed char
-      int8; /* defined for signed 8-bits integer variable
-               有符号8位整型变量  */
-  typedef unsigned short
-      uint16; /* defined for unsigned 16-bits integer variable
-                 无符号16位整型变量 */
-  typedef signed short
-      int16; /* defined for signed 16-bits integer variable
-                有符号16位整型变量 */
-  typedef unsigned int
-      uint32; /* defined for unsigned 32-bits integer variable
-                 无符号32位整型变量 */
-  typedef signed int
-      int32; /* defined for signed 32-bits integer variable
-                有符号32位整型变量 */
-  typedef float
-      fp32; /* single precision floating point variable (32bits)
-               单精度浮点数（32位长度）
-             */
-  typedef double
-      fp64; /* double precision floating point variable (64bits)
-               双精度浮点数（64位长度）
-             */
-  typedef unsigned int
-      uint; /* defined for unsigned 32-bits integer variable
-               无符号32位整型变量 */
+  typedef unsigned char uint8;   /* defined for unsigned 8-bits integer variable
+                                    无符号8位整型变量  */
+  typedef signed char int8;      /* defined for signed 8-bits integer variable
+                                    有符号8位整型变量  */
+  typedef unsigned short uint16; /* defined for unsigned 16-bits integer
+                                    variable 无符号16位整型变量 */
+  typedef signed short int16;    /* defined for signed 16-bits integer variable
+                                    有符号16位整型变量 */
+  typedef unsigned int uint32; /* defined for unsigned 32-bits integer variable
+                                  无符号32位整型变量 */
+  typedef signed int int32;    /* defined for signed 32-bits integer variable
+                                  有符号32位整型变量 */
+  typedef float fp32;  /* single precision floating point variable (32bits)
+                          单精度浮点数（32位长度）
+                        */
+  typedef double fp64; /* double precision floating point variable (64bits)
+                          双精度浮点数（64位长度）
+                        */
+  typedef unsigned int uint; /* defined for unsigned 32-bits integer variable
+                                无符号32位整型变量 */
 
   // 连接类型,
   enum ZMC_CONNECTION_TYPE
@@ -101,9 +92,8 @@ extern "C"
     TASK_STATE_PAUSING = 4,
     TASK_STATE_STOPING = 5,
 
-    TASK_STATE_ERROR =
-        100,  // 查询的时候如果ID错返回这个值,
-              // 脚本初始化发现语法错误也返回这个错误
+    TASK_STATE_ERROR = 100,  // 查询的时候如果ID错返回这个值,
+                             // 脚本初始化发现语法错误也返回这个错误
   };
 
   // 新增加
@@ -1087,26 +1077,21 @@ extern "C"
     AXIS_FEATURE_STEPPER_DOUBLE = 1,  //  步进 双脉冲
     AXIS_FEATURE_STEPPER_AB = 2,      //  步进 A, B相
 
-    AXIS_FEATURE_ENCODER =
-        4,  // 支持配置为编码器, 正交,
-    AXIS_FEATURE_ENCODER_PULDIR =
-        5,  // 脉冲方向方式的编码器
+    AXIS_FEATURE_ENCODER = 4,         // 支持配置为编码器, 正交,
+    AXIS_FEATURE_ENCODER_PULDIR = 5,  // 脉冲方向方式的编码器
     AXIS_FEATURE_ENCODER_DOUBLE = 6,  // 双脉冲编码器
 
     AXIS_FEATURE_ENCODER_SSI = 7,    //
     AXIS_FEATURE_ENCODER_TAMA = 8,   //
     AXIS_FEATURE_ENCODER_ENDAT = 9,  //
 
-    AXIS_FEATURE_WITH_EZ =
-        10,  // 有EZ输入，可以和步进一起使用
-    AXIS_FEATURE_SERVODAC = 11,  // dac 伺服
-    AXIS_FEATURE_STEPCODER =
-        12,  // 特殊的类型
-             // 步进和编码器一起使用
+    AXIS_FEATURE_WITH_EZ = 10,    // 有EZ输入，可以和步进一起使用
+    AXIS_FEATURE_SERVODAC = 11,   // dac 伺服
+    AXIS_FEATURE_STEPCODER = 12,  // 特殊的类型
+                                  // 步进和编码器一起使用
 
-    AXIS_FEATURE_CANOPEN =
-        13,  //  后面的暂时不支持
-             // AXIS_FEATURE_ZCAN = 14, // 支持配置为ZCAN,
+    AXIS_FEATURE_CANOPEN = 13,  //  后面的暂时不支持
+                                // AXIS_FEATURE_ZCAN = 14, // 支持配置为ZCAN,
     // 这个可以和其他的类型一起合并
 
   };
@@ -1159,8 +1144,7 @@ extern "C"
     uint16 m_MaxModbusRegs;
 
     // 下面为BASIC规格
-    uint16
-        m_MaxFiles;  // 系统支持程序文件数
+    uint16 m_MaxFiles;  // 系统支持程序文件数
     uint8 m_Max3Files;
     // uint8   m_bIfSupport3File; // 3次文件.
     uint8 m_bReserve;
@@ -1313,10 +1297,10 @@ extern "C"
                                  float *pfValue);
 
   /*************************************************************
-  Description:    //�ӿ���Ϣ��ȡ
-  Input:          //������handle
+  Description:    //�ӿ���Ϣ��ȡ
+  Input:          //������handle
   Output:         //
-  Return:         //������
+  Return:         //������
   *************************************************************/
   int32 __stdcall ZMC_EnumChildCard(ZMC_HANDLE handle, uint16 lastid,
                                     struct_ChildCardInfo *pCard);
