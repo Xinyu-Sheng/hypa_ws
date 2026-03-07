@@ -49,7 +49,10 @@ extern "C"
   -3:超时时间内,未扫描到驱动器  -4:总线开启失败  -5：总线扫描失败 说明:
   //该接口会阻塞线程,阻塞时长为超时时间
   *******************************************************************************************************************/
-  int32 __stdcall ZAux_BusCmd_EcatScan(ZMC_HANDLE handle, int SlotId,
+  // 这个接口最初只做 EtherCAT 总线扫描，后来演化得更复杂：
+  // 地址映射、PDO/IO 配置、总线启动、看门狗、清故障、基准、使能等等。
+  // 因此重命名为更贴切的 EcatInit。
+  int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
                                        EcatInitInfoSet EcatInfo,
                                        int ApiOutTime);
 

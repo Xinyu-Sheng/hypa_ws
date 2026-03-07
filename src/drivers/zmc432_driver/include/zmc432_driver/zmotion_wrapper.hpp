@@ -95,8 +95,8 @@ class ZMotionWrapper
     std::optional<std::string> set_axis_enable(int _axis, bool _enable);
     std::optional<bool> get_axis_enable(int _axis) const;
 
-    // internal implementation for bus scan
-    std::optional<std::string> ecat_scan(int slot_id, const EcatInitInfo& info,
+    // internal implementation for EtherCAT 总线初始化
+    std::optional<std::string> ecat_init(int slot_id, const EcatInitInfo& info,
                                          int timeout_ms);
 
    private:
@@ -149,9 +149,16 @@ class ZMotionWrapper
   std::optional<std::string> set_axis_enable(int _axis, bool _enable);
   std::optional<bool> get_axis_enable(int _axis) const;
 
-  // EtherCAT bus initialization/scan
-  std::optional<std::string> ecat_scan(int slot_id, const EcatInitInfo& info,
+  // EtherCAT bus initialization
+  std::optional<std::string> ecat_init(int slot_id, const EcatInitInfo& info,
                                        int timeout_ms);
+
+  [[deprecated("use ecat_init instead")]]
+  std::optional<std::string> ecat_scan(int slot_id, const EcatInitInfo& info,
+                                       int timeout_ms)
+  {
+    return ecat_init(slot_id, info, timeout_ms);
+  }
 };
 
 }  // namespace zmc432_driver

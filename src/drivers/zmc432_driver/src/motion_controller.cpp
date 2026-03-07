@@ -166,7 +166,7 @@ std::optional<std::string> MotionController::initialize_bus(
   {
     return "Controller not connected";
   }
-  return pimpl_->zmotion->ecat_scan(slot, info, timeout_ms);
+  return pimpl_->zmotion->ecat_init(slot, info, timeout_ms);
 }
 
 std::optional<bool> MotionController::get_axis_enable(int _axis) const

@@ -251,8 +251,8 @@ ZMotionWrapper::ZMotionWrapperPrivate::set_deceleration(int _axis,
   }
   return std::nullopt;
 }
-// EtherCAT scan implementation
-std::optional<std::string> ZMotionWrapper::ecat_scan(int slot_id,
+// EtherCAT initialization implementation
+std::optional<std::string> ZMotionWrapper::ecat_init(int slot_id,
                                                      const EcatInitInfo& info,
                                                      int timeout_ms)
 {
@@ -262,7 +262,7 @@ std::optional<std::string> ZMotionWrapper::ecat_scan(int slot_id,
   }
   EcatInitInfoSet cinfo = info.toC();
   int32_t ret =
-      ZAux_BusCmd_EcatScan(pimpl_->handle, slot_id, cinfo, timeout_ms);
+      ZAux_BusCmd_EcatInit(pimpl_->handle, slot_id, cinfo, timeout_ms);
   if (ret < 0)
   {
     return "ecat init error " + std::to_string(ret);

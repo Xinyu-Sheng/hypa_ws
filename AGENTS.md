@@ -171,3 +171,5 @@ package.xml 中 maintainer是：
 不要修改：
 libzmotion.so  zmcaux.cpp  zmcaux.h  zmotion.h
 上面这些文件。
+
+最终用中文回答我。
