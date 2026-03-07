@@ -2,6 +2,7 @@
 #include <rclcpp_lifecycle/lifecycle_node.hpp>
 #include "zmc432_driver/motion_controller.hpp"
 #include "zmc432_driver/motion_topic_node.hpp"
+#include "zmc432_driver/ecat_init.hpp"
 
 int main(int argc, char** argv)
 {
@@ -61,6 +62,31 @@ int main(int argc, char** argv)
   RCLCPP_INFO(node->get_logger(), "Connected to ZMC432 at %s",
               controller_ip.c_str());
 
+  // helper pointer used for parameter utilities
+  auto node_base = std::dynamic_pointer_cast<rclcpp::Node>(node);
+
+  // EtherCAT 初始化参数
+  node->declare_parameter<bool>("perform_ecat_init", false);
+  node->declare_parameter<int>("ecat_slot_id", 0);
+  node->declare_parameter<int>("ecat_timeout_ms", 5000);
+  // some common fields, advanced users can still call API manually
+  node->declare_parameter<int>("ecat.drive_axis_start", 0);
+  node->declare_parameter<int>("ecat.drive_axis_num", -1);
+
+  if (node->get_parameter("perform_ecat_init").as_bool())
+  {
+    auto info = zmc432_driver::EcatInitInfo::from_node(node_base.get(), "ecat");
+    int slot = node->get_parameter("ecat_slot_id").as_int();
+    int tout = node->get_parameter("ecat_timeout_ms").as_int();
+    auto err = controller->initialize_bus(info, slot, tout);
+    if (err)
+    {
+      RCLCPP_FATAL(node->get_logger(), "ECAT init failed: %s", err->c_str());
+      return 1;
+    }
+    RCLCPP_INFO(node->get_logger(), "EtherCAT bus initialised");
+  }
+
   // 配置默认轴参数（这里可以配置所有可能使用的轴）
   // 示例：配置轴 0-3
   for (int axis = 0; axis < 4; ++axis)
@@ -91,8 +117,7 @@ int main(int argc, char** argv)
 
   RCLCPP_INFO(node->get_logger(), "Motion controller started");
 
-  // 创建 Topic Node（获取 Node 接口）
-  auto node_base = std::dynamic_pointer_cast<rclcpp::Node>(node);
+  // 创建 Topic Node（获取 Node 接口）  // 使用之前定义的 node_base
   if (!node_base)
   {
     RCLCPP_FATAL(node->get_logger(),

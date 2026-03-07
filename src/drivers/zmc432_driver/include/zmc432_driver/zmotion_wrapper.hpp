@@ -7,6 +7,8 @@
 #include <optional>
 #include "zmc432_driver/zmotion.h"
 #include "zmc432_driver/zmcaux.h"
+#include "zmc432_driver/zmotion_ecat.h"
+#include "zmc432_driver/ecat_init.hpp"
 
 namespace zmc432_driver
 {
@@ -93,6 +95,10 @@ class ZMotionWrapper
     std::optional<std::string> set_axis_enable(int _axis, bool _enable);
     std::optional<bool> get_axis_enable(int _axis) const;
 
+    // internal implementation for bus scan
+    std::optional<std::string> ecat_scan(int slot_id, const EcatInitInfo& info,
+                                         int timeout_ms);
+
    private:
     int64_t physical_to_pulses(int _axis, double _physical_position) const;
     double pulses_to_physical(int _axis, int64_t _pulses) const;
@@ -142,6 +148,10 @@ class ZMotionWrapper
   bool is_axis_moving(int _axis);
   std::optional<std::string> set_axis_enable(int _axis, bool _enable);
   std::optional<bool> get_axis_enable(int _axis) const;
+
+  // EtherCAT bus initialization/scan
+  std::optional<std::string> ecat_scan(int slot_id, const EcatInitInfo& info,
+                                       int timeout_ms);
 };
 
 }  // namespace zmc432_driver

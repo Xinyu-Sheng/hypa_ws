@@ -159,6 +159,16 @@ std::optional<std::string> MotionController::enable_all_axes(bool _enable)
   return std::nullopt;
 }
 
+std::optional<std::string> MotionController::initialize_bus(
+    const EcatInitInfo& info, int slot, int timeout_ms)
+{
+  if (!pimpl_->zmotion || !pimpl_->zmotion->is_connected())
+  {
+    return "Controller not connected";
+  }
+  return pimpl_->zmotion->ecat_scan(slot, info, timeout_ms);
+}
+
 std::optional<bool> MotionController::get_axis_enable(int _axis) const
 {
   if (!pimpl_->zmotion || !pimpl_->zmotion->is_connected())

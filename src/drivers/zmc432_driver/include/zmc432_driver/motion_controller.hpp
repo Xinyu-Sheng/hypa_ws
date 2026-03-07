@@ -89,6 +89,11 @@ class MotionController
   std::optional<std::string> enable_axis(int _axis, bool _enable);
   std::optional<std::string> enable_all_axes(bool _enable);
   std::optional<bool> get_axis_enable(int _axis) const;
+
+  // EtherCAT bus initialization
+  std::optional<std::string> initialize_bus(const EcatInitInfo& info,
+                                            int slot = 0,
+                                            int timeout_ms = 5000);
   bool start();
   void stop();
   bool queue_motion(const MotionCommand& _cmd);

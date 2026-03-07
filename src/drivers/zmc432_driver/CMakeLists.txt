@@ -22,6 +22,7 @@ add_library(${PROJECT_NAME} STATIC
   src/motion_controller.cpp
   src/zmotion_wrapper.cpp
   src/zmcaux.cpp
+  src/ecat_init.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -59,6 +60,7 @@ install(DIRECTORY include/
   DESTINATION include
 )
 
+# ensure new headers installed as part of include directory
 install(DIRECTORY launch/
   DESTINATION share/${PROJECT_NAME}/launch
 )
@@ -70,15 +72,29 @@ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/lib/libzmotion.so
 
 # 可选：添加测试程序
 if(BUILD_TESTING)
-  add_executable(test_enable src/test_enable.cpp)
+  add_executable(test_enable test/test_enable.cpp)
   target_include_directories(test_enable PUBLIC include)
   ament_target_dependencies(test_enable rclcpp hypa_msgs)
   target_link_libraries(test_enable ${PROJECT_NAME} ${ZMOTION_LIB})
 
+  # EtherCAT 初始化测试
+  add_executable(test_ecat_init test/test_ecat_init.cpp)
+  target_include_directories(test_ecat_init PUBLIC include)
+  ament_target_dependencies(test_ecat_init rclcpp)
+  target_link_libraries(test_ecat_init ${PROJECT_NAME} ${ZMOTION_LIB})
+
   # 安装测试程序
-  install(TARGETS test_enable
+  install(TARGETS test_enable test_ecat_init
     DESTINATION lib/${PROJECT_NAME}
   )
+
+  # ensure tests can find zmotion library at runtime
+  set_target_properties(test_enable PROPERTIES
+    INSTALL_RPATH "$ORIGIN"
+    BUILD_WITH_INSTALL_RPATH TRUE)
+  set_target_properties(test_ecat_init PROPERTIES
+    INSTALL_RPATH "$ORIGIN"
+    BUILD_WITH_INSTALL_RPATH TRUE)
 endif()
 
 # 安装环境hook脚本
