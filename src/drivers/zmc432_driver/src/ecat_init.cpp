@@ -650,10 +650,17 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
     //      Mode=8: OP (正式运行，实时周期250us)
     // ═══════════════════════════════════════════════════════════════════
     MyDelayMs(100, &OutTime);
+    // 【诊断：SLOT_START 前的状态检查】
+    printf("[ecat_init] ===== SLOT_START 前诊断 =====\n");
+    printf("[ecat_init] BusAxisNum=%d Iresult=%d\n", BusAxisNum, Iresult);
+    printf("[ecat_init] 驱动器信息: Vender=0x%x Device=0x%x Alias=%d\n", Drive_Vender, Drive_Device, Drive_Alias);
+    printf("[ecat_init] 执行 SLOT_START(0, 4) 进入 PREOP 模式...\n");
     sprintf(cmdbuff, "SLOT_START(%d, 4)", SlotId);
     Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
     MyDelayMs(1000, &OutTime);
     EcatScanOutTime = OutTime;
+    printf("[ecat_init] PREOP mode entered, Iresult after SLOT_START(0,4)=%d\n", Iresult);
+    printf("[ecat_init] 等待 1000ms 后执行 SLOT_START(0, 8) 进入 OP 模式\n");
     sprintf(cmdbuff, "SLOT_START(%d, 8)  ?return", SlotId);
     Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
     ReceBuff[2] = 0;
@@ -664,7 +671,7 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
     }
     else
     {
-      printf("DEBUG SLOT_START response '%s'\n", ReceBuff);
+      printf("[ecat_init] SLOT_START(%d, 8) response: ReceBuff='%s' strlen=%zu first_char_hex=%02x\n", SlotId, ReceBuff, strlen(ReceBuff), (unsigned char)ReceBuff[0]);
       MyDelayMs(500, &OutTime);
       EcatScanOutTime = EcatScanOutTime - 500;
     }
