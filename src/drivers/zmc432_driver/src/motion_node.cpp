@@ -25,6 +25,8 @@ int main(int argc, char **argv)
   node->declare_parameter<double>("default_speed", 10.0);
   node->declare_parameter<double>("default_accel", 100.0);
   node->declare_parameter<double>("default_decel", 100.0);
+  // 最多配置的轴数量，默认 4
+  node->declare_parameter<int>("axis_count", 4);
 
   // 获取必需参数
   auto namespace_val = node->get_parameter("namespace").as_string();
@@ -37,6 +39,12 @@ int main(int argc, char **argv)
   double default_speed = node->get_parameter("default_speed").as_double();
   double default_accel = node->get_parameter("default_accel").as_double();
   double default_decel = node->get_parameter("default_decel").as_double();
+  int axis_count = node->get_parameter("axis_count").as_int();
+  if (axis_count < 0)
+  {
+    RCLCPP_WARN(node->get_logger(), "axis_count negative (%d), treating as 0", axis_count);
+    axis_count = 0;
+  }
 
   RCLCPP_INFO(node->get_logger(), "Motion hardware node starting...");
   RCLCPP_INFO(node->get_logger(), "Namespace: %s, Robot: %s",
@@ -46,6 +54,7 @@ int main(int argc, char **argv)
               "Default motion parameters: units=%.3f, speed=%.3f, accel=%.3f, "
               "decel=%.3f",
               default_units, default_speed, default_accel, default_decel);
+  RCLCPP_INFO(node->get_logger(), "Axis count: %d", axis_count);
 
   // 创建运动控制器
   auto controller = std::make_shared<zmc432_driver::MotionController>();
@@ -89,8 +98,8 @@ int main(int argc, char **argv)
   }
 
   // 配置默认轴参数（这里可以配置所有可能使用的轴）
-  // 示例：配置轴 0-3
-  for (int axis = 0; axis < 4; ++axis)
+  // 实际配置数量由 axis_count 参数决定
+  for (int axis = 0; axis < axis_count; ++axis)
   {
     auto config_result = controller->configure_axis(
         axis, default_units, default_speed, default_accel, default_decel);

@@ -15,6 +15,11 @@ source install/setup.bash
 ros2 launch zmc432_driver motion_server.launch.py
 ```
 
+> ⚙️ 若需指定轴数量，可在启动时传入 `axis_count` 参数，例如：
+> ```bash
+> ros2 launch zmc432_driver motion_server.launch.py axis_count:=6
+> ```
+
 发送一个简单运动命令并观察状态：
 
 ```bash

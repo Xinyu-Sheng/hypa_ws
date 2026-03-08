@@ -20,6 +20,8 @@ ros2 run zmc432_driver test_enable
 ros2 run zmc432_driver test_ecat_init 192.168.0.11
 ```
 
+> **提示**：在运行测试或启动节点时，可通过 `axis_count` 参数指定轴数量，默认值可能因控制器型号不同而变化，测试时请注意这一点以确保输出符合预期。
+
 > 注意：这两个可执行文件会链接 `libzmotion.so`，请确保其在 `LD_LIBRARY_PATH` 或 `install/zmc432_driver/lib` 中。
 
 ## 手动检查

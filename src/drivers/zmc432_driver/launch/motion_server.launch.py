@@ -57,6 +57,11 @@ def generate_launch_description():
                 default_value="motion_status",
                 description="Topic name for motion status feedback",
             ),
+            DeclareLaunchArgument(
+                "axis_count",
+                default_value="4",
+                description="Number of motion axes to configure",
+            ),
             Node(
                 package="zmc432_driver",
                 executable="motion_node",
@@ -77,6 +82,7 @@ def generate_launch_description():
                         )
                     },
                     {"motion_status_topic": LaunchConfiguration("motion_status_topic")},
+                    {"axis_count": LaunchConfiguration("axis_count")},
                 ],
             ),
         ]

@@ -4,24 +4,60 @@
 
 ## 轴参数配置
 
-节点启动时默认会对轴 0–3 应用以下参数：
+节点启动时会读取以下参数：
+
+* `axis_count`：轴的数量，默认 4；
+* `default_units`、`default_speed`、`default_accel`、`default_decel`：默认的单位换算、速度、加速度、减速度。
+
+下面是一个 YAML 示例：
 
 ```yaml
-default_units: 1.0
-default_speed: 10.0
-default_accel: 100.0
-default_decel: 100.0
+axis_count: 6
+default_units: 0.001
+default_speed: 20.0
+default_accel: 200.0
+default_decel: 200.0
 ```
 
-要更改配置：
+在 C++ 节点中可以这样声明和读取参数：
 
-1. 修改源码 `src/motion_node.cpp` 中的循环
-   ```cpp
-   for (int i = 0; i < num_axes; ++i) {
-     controller->configure_axis(i, units, speed, accel, decel);
-   }
-   ```
-2. 或者通过扩展添加动态配置服务（TODO）。
+```cpp
+int axis_count;
+node->declare_parameter("axis_count", 4);
+node->get_parameter("axis_count", axis_count);
+
+double units, speed, accel, decel;
+node->declare_parameter("default_units", 1.0);
+node->declare_parameter("default_speed", 10.0);
+node->declare_parameter("default_accel", 100.0);
+node->declare_parameter("default_decel", 100.0);
+node->get_parameter("default_units", units);
+node->get_parameter("default_speed", speed);
+node->get_parameter("default_accel", accel);
+node->get_parameter("default_decel", decel);
+
+for (int i = 0; i < axis_count; ++i) {
+  controller->configure_axis(i, units, speed, accel, decel);
+}
+```
+
+也可以在 launch 文件中设置参数：
+
+```xml
+<node pkg="zmc432_driver" exec="motion_node" name="motion" output="screen">
+  <param name="axis_count" value="8"/>
+  <param name="default_units" value="0.002"/>
+</node>
+```
+
+或者使用命令行工具：
+
+```bash
+ros2 param set /motion axis_count 6
+ros2 param set /motion default_units 0.005
+```
+
+这些设置会在节点启动时应用于每个轴的默认配置，修改后需要重启节点才能生效。
 
 单位系统转换公式：
 ```
