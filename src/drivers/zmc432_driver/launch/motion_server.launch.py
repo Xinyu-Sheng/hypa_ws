@@ -59,7 +59,7 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "axis_count",
-                default_value="4",
+                default_value="1",
                 description="Number of motion axes to configure",
             ),
             Node(

@@ -6,7 +6,7 @@
 
 节点启动时会读取以下参数：
 
-* `axis_count`：轴的数量，默认 4；
+* `axis_count`：轴的数量，默认 1；
 * `default_units`、`default_speed`、`default_accel`、`default_decel`：默认的单位换算、速度、加速度、减速度。
 
 下面是一个 YAML 示例：
@@ -65,19 +65,6 @@ ros2 param set /motion default_units 0.005
 ```
 例如 `units=0.001` 时，1 脉冲对应 0.001 mm。
 
-## 电机使能
-
-- 启动后默认轴 0–3 已使能。要更改状态请使用 C++ API 或随包提供的测试程序 (`test_enable`)：
-  ```bash
-  ros2 run zmc432_driver test_enable
-  ```
-- 在 `MotionController::queue_motion()` 中，会检查 `axis_enabled` 数组，未使能的轴会被拒绝执行命令。
-
-> **C++ 示例**
-> ```cpp
-> auto res = controller->enable_axis(0, true);
-> if (!res) { /* 错误处理 */ }
-> ```
 
 ## EtherCAT 总线
 
