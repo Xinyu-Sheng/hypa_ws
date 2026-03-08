@@ -112,6 +112,9 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
   uint8 pbifExcuteDown;
   char ReceBuff[256];
   char cmdbuff[2048];
+  /* debug */
+  printf("DEBUG ZAux_BusCmd_EcatInit slot=%d ApiOutTime=%d\n", SlotId,
+         ApiOutTime);
   // 变量定义
   float TableData = 0;
   int Drive_Vender, Drive_Device, Drive_Alias;
@@ -233,6 +236,7 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
 
   if (ERR_OK != Iresult)
   {
+    printf("DEBUG ZAux_BusCmd_EcatInit early exit, Iresult=%d\n", Iresult);
     // 阶段错误码拦截！
     return Iresult;
   }
@@ -255,7 +259,9 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
   int ScanOkFlag = 0;
   for (int i = 0; i < 3; ++i)
   {
+    printf("DEBUG scan loop attempt %d\n", i);
     ScanOkFlag = ZAux_BusCmd_SlotScan(handle, SlotId, &OutTime);
+    printf("DEBUG scan loop result ScanOkFlag=%d\n", ScanOkFlag);
     Iresult = 0;
     if (1 == ScanOkFlag)
       break;
@@ -266,6 +272,7 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
     sprintf(cmdbuff, "?NODE_COUNT(%d)", SlotId);
     Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
     ScanNodeNum = std::atoi(ReceBuff);
+    printf("DEBUG scanned node count=%f\n", ScanNodeNum);
     for (int i = 0; i < ScanNodeNum; ++i)
     {
       // 判断是否需要设置DC偏移时间
@@ -307,6 +314,8 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
       // 判断节点数目是否正确
       if ((int)ScanNodeNum != EcatInfo.EcatNodeNum)
       {
+        printf("DEBUG WrongNodeNum expected=%d actual=%d\n",
+               EcatInfo.EcatNodeNum, (int)ScanNodeNum);
         // 节点数目不一致
         return WrongNodeNum;
       }
@@ -327,6 +336,8 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
       // 判断轴数目是否正确
       if (BusAxisNum != EcatInfo.DriveAxisNum)
       {
+        printf("DEBUG WrongAxisNum expected=%d actual=%d\n",
+               EcatInfo.DriveAxisNum, BusAxisNum);
         // 驱动器轴数目不一致
         return WrongAxisNum;
       }
@@ -377,6 +388,7 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
         if (((ServoPeriod * 1000 * EcatInfo.DcOffsetTime[i] - ZmlInfo) > 5) ||
             (ZmlInfo != NodeInfo))
         {
+          printf("DEBUG DcShiftSetFailu slot=%d node=%d\n", SlotId, i);
           return DcShiftSetFailu;  // DC偏移设置失败
         }
       }
@@ -630,10 +642,12 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
     ReceBuff[2] = 0;
     if (0 == strcmp("-1", ReceBuff))
     {
+      printf("DEBUG SLOT_START returned -1 success\n");
       EcatScanOutTime = 0;
     }
     else
     {
+      printf("DEBUG SLOT_START response '%s'\n", ReceBuff);
       MyDelayMs(500, &OutTime);
       EcatScanOutTime = EcatScanOutTime - 500;
     }
@@ -726,9 +740,11 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
     }
     else
     {
+      printf("DEBUG returning EcatStartFailu\n");
       return EcatStartFailu;  // 总线开启失败
     }
   }
   // 未扫描到驱动器
+  printf("DEBUG returning NotScanNode\n");
   return NotScanNode;
 }
