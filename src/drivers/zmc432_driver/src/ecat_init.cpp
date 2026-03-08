@@ -126,6 +126,12 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
   /* debug */
   printf("DEBUG ZAux_BusCmd_EcatInit slot=%d ApiOutTime=%d\n", SlotId,
          ApiOutTime);
+  // EtherCAT 诊断：查询模块状态
+  printf("[ecat_init] querying ECAT_STATUS...\n");
+  sprintf(cmdbuff, "?ECAT_STATUS");
+  int diag_ret = ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
+  printf("[ecat_init] ECAT_STATUS returned ret=%d resp='%s'\n", diag_ret,
+         ReceBuff);
   // 变量定义
   float TableData = 0;
   int Drive_Vender, Drive_Device, Drive_Alias;
