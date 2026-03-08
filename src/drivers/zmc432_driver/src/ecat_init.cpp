@@ -42,15 +42,21 @@ int ZAux_BusCmd_SlotScan(ZMC_HANDLE handle, int SlotId, int *pOutTime)
   // 停止总线
   sprintf(cmdbuff, "SLOT_STOP(%d)", SlotId);
   ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
+  printf("DEBUG SLOT_STOP executed, ReceBuff='%s'\n", ReceBuff);
   // 等待200ms
   MyDelayMs(200, pOutTime);
   // 扫描总线
   sprintf(cmdbuff, "SLOT_SCAN(%d) ?return", SlotId);
   Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
+  printf("DEBUG after SLOT_SCAN: Iresult=%d, ReceBuff='%s', condition=%d\n",
+         Iresult, ReceBuff,
+         ((Iresult == 0) || (Iresult == 20003) || (Iresult == 3402)));
   if ((Iresult == 0) || (Iresult == 20003) || (Iresult == 3402))
   {
     // 延时等待扫描结果
     ReceBuff[2] = 0;
+    printf("DEBUG post trim ReceBuff='%s' first_byte=0x%02x\n", ReceBuff,
+           (unsigned char)ReceBuff[0]);
     if (0 == strcmp("-1", ReceBuff))
     {
       ScanOkFlag = 1;
@@ -58,11 +64,14 @@ int ZAux_BusCmd_SlotScan(ZMC_HANDLE handle, int SlotId, int *pOutTime)
     }
     else if (ReceBuff[0] != 0)
     {
+      printf("DEBUG ReceBuff[0]!=0 early, ReceBuff='%s', returning 0\n",
+             ReceBuff);
       ScanOkFlag = 0;
       return ScanOkFlag;
     }
     else
     {
+      printf("DEBUG ReceBuff empty, will wait 500ms\n");
       MyDelayMs(500, pOutTime);
     }
     while (*pOutTime > 0)
@@ -70,6 +79,8 @@ int ZAux_BusCmd_SlotScan(ZMC_HANDLE handle, int SlotId, int *pOutTime)
       // 读取在线命令的应答， 对没有接收应答的命令有用
       Iresult += ZMC_ExecuteGetReceive(handle, ReceBuff, 1000, &puiread,
                                        &pbifExcuteDown);
+      printf("DEBUG while recv: ReceBuff='%s', Iresult=%d, timeout=%d\n",
+             ReceBuff, Iresult, *pOutTime);
       if ((ReceBuff[0] != 0) &&
           ((Iresult == 0) || (Iresult == 20003) || (Iresult == 3402)))
       {
