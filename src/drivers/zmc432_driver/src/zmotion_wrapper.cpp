@@ -203,9 +203,16 @@ void ZMotionWrapper::ZMotionWrapperPrivate::disconnect()
 std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::set_units(
     int _axis, double _units)
 {
-  if (!ensure_axis_configured(_axis))
+  if (!handle)
   {
-    return "Axis " + std::to_string(_axis) + " not configured";
+    last_error = "Controller not connected";
+    return last_error;
+  }
+
+  if (_axis < 0 || _axis >= static_cast<int>(axis_configs.size()))
+  {
+    last_error = "Axis index out of range: " + std::to_string(_axis);
+    return last_error;
   }
 
   int32_t ret = ZAux_Direct_SetUnits(handle, _axis, static_cast<float>(_units));
@@ -223,6 +230,18 @@ std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::set_units(
 std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::set_speed(
     int _axis, double _speed)
 {
+  if (!handle)
+  {
+    last_error = "Controller not connected";
+    return last_error;
+  }
+
+  if (_axis < 0 || _axis >= static_cast<int>(axis_configs.size()))
+  {
+    last_error = "Axis index out of range: " + std::to_string(_axis);
+    return last_error;
+  }
+
   int32_t ret = ZAux_Direct_SetSpeed(handle, _axis, static_cast<float>(_speed));
   if (ret != ERR_OK)
   {
@@ -237,6 +256,18 @@ std::optional<std::string>
 ZMotionWrapper::ZMotionWrapperPrivate::set_acceleration(int _axis,
                                                         double _accel)
 {
+  if (!handle)
+  {
+    last_error = "Controller not connected";
+    return last_error;
+  }
+
+  if (_axis < 0 || _axis >= static_cast<int>(axis_configs.size()))
+  {
+    last_error = "Axis index out of range: " + std::to_string(_axis);
+    return last_error;
+  }
+
   int32_t ret = ZAux_Direct_SetAccel(handle, _axis, static_cast<float>(_accel));
   if (ret != ERR_OK)
   {
@@ -251,6 +282,18 @@ std::optional<std::string>
 ZMotionWrapper::ZMotionWrapperPrivate::set_deceleration(int _axis,
                                                         double _decel)
 {
+  if (!handle)
+  {
+    last_error = "Controller not connected";
+    return last_error;
+  }
+
+  if (_axis < 0 || _axis >= static_cast<int>(axis_configs.size()))
+  {
+    last_error = "Axis index out of range: " + std::to_string(_axis);
+    return last_error;
+  }
+
   int32_t ret = ZAux_Direct_SetDecel(handle, _axis, static_cast<float>(_decel));
   if (ret != ERR_OK)
   {
