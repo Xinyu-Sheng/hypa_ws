@@ -267,14 +267,6 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
   ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
   MyDelayMs(100, &OutTime);
 
-  // 总线完全复位：清除所有从站状态
-  printf("[ecat_init] executing bus reset commands...\n");
-  sprintf(cmdbuff, "SLOT_RESET(%d)", SlotId);
-  int reset_ret = ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
-  printf("[ecat_init] SLOT_RESET returned %d, response='%s'\n", reset_ret,
-         ReceBuff);
-  MyDelayMs(200, &OutTime);
-
   // ═══════════════════════════════════════════════════════════════════
   // 【步骤 2】SLOT_SCAN 物理扫描
   // 操作目标：控制器 + EtherCAT总线
@@ -319,14 +311,10 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
       }
     }
   }
-  // 5、DC偏移时间设置后，需要再次扫描总线驱动器
-  for (int i = 0; i < 3; ++i)
-  {
-    ScanOkFlag = ZAux_BusCmd_SlotScan(handle, SlotId, &OutTime);
-    Iresult = 0;
-    if (1 == ScanOkFlag)
-      break;
-  }
+  // 【跳过 DC 偏移后的二次扫描，简化调试流程】
+  printf(
+      "[ecat_init] skipping second SLOT_SCAN loop for DC offset (simplifying "
+      "debug)\n");
   // 6、扫描到ECAT从站设备
   if (1 == ScanOkFlag)  // 如果有扫描到驱动器
   {
