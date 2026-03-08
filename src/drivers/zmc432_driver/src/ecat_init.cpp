@@ -42,21 +42,15 @@ int ZAux_BusCmd_SlotScan(ZMC_HANDLE handle, int SlotId, int *pOutTime)
   // 停止总线
   sprintf(cmdbuff, "SLOT_STOP(%d)", SlotId);
   ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
-  printf("DEBUG SLOT_STOP executed, ReceBuff='%s'\n", ReceBuff);
   // 等待200ms
   MyDelayMs(200, pOutTime);
   // 扫描总线
   sprintf(cmdbuff, "SLOT_SCAN(%d) ?return", SlotId);
   Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
-  printf("DEBUG after SLOT_SCAN: Iresult=%d, ReceBuff='%s', condition=%d\n",
-         Iresult, ReceBuff,
-         ((Iresult == 0) || (Iresult == 20003) || (Iresult == 3402)));
   if ((Iresult == 0) || (Iresult == 20003) || (Iresult == 3402))
   {
     // 延时等待扫描结果
     ReceBuff[2] = 0;
-    printf("DEBUG post trim ReceBuff='%s' first_byte=0x%02x\n", ReceBuff,
-           (unsigned char)ReceBuff[0]);
     if (0 == strcmp("-1", ReceBuff))
     {
       ScanOkFlag = 1;
@@ -64,14 +58,11 @@ int ZAux_BusCmd_SlotScan(ZMC_HANDLE handle, int SlotId, int *pOutTime)
     }
     else if (ReceBuff[0] != 0)
     {
-      printf("DEBUG ReceBuff[0]!=0 early, ReceBuff='%s', returning 0\n",
-             ReceBuff);
       ScanOkFlag = 0;
       return ScanOkFlag;
     }
     else
     {
-      printf("DEBUG ReceBuff empty, will wait 500ms\n");
       MyDelayMs(500, pOutTime);
     }
     while (*pOutTime > 0)
@@ -79,8 +70,6 @@ int ZAux_BusCmd_SlotScan(ZMC_HANDLE handle, int SlotId, int *pOutTime)
       // 读取在线命令的应答， 对没有接收应答的命令有用
       Iresult += ZMC_ExecuteGetReceive(handle, ReceBuff, 1000, &puiread,
                                        &pbifExcuteDown);
-      printf("DEBUG while recv: ReceBuff='%s', Iresult=%d, timeout=%d\n",
-             ReceBuff, Iresult, *pOutTime);
       if ((ReceBuff[0] != 0) &&
           ((Iresult == 0) || (Iresult == 20003) || (Iresult == 3402)))
       {
@@ -123,15 +112,6 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
   uint8 pbifExcuteDown;
   char ReceBuff[256];
   char cmdbuff[2048];
-  /* debug */
-  printf("DEBUG ZAux_BusCmd_EcatInit slot=%d ApiOutTime=%d\n", SlotId,
-         ApiOutTime);
-  // EtherCAT 诊断：查询模块状态
-  printf("[ecat_init] querying ECAT_STATUS...\n");
-  sprintf(cmdbuff, "?ECAT_STATUS");
-  int diag_ret = ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
-  printf("[ecat_init] ECAT_STATUS returned ret=%d resp='%s'\n", diag_ret,
-         ReceBuff);
   // 变量定义
   float TableData = 0;
   int Drive_Vender, Drive_Device, Drive_Alias;
@@ -253,19 +233,9 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
 
   if (ERR_OK != Iresult)
   {
-    printf("DEBUG ZAux_BusCmd_EcatInit early exit, Iresult=%d\n", Iresult);
     // 阶段错误码拦截！
     return Iresult;
   }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // 【步骤 2 前置】总线状态完全复位
-  // 操作目标：EtherCAT总线
-  // 说明：确保每次调用都从干净状态开始，避免重复调用时从站状态机未复位
-  // ═══════════════════════════════════════════════════════════════════
-  sprintf(cmdbuff, "SLOT_STOP(%d)", SlotId);
-  ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
-  MyDelayMs(100, &OutTime);
 
   // ═══════════════════════════════════════════════════════════════════
   // 【步骤 2】SLOT_SCAN 物理扫描
@@ -276,9 +246,7 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
   int ScanOkFlag = 0;
   for (int i = 0; i < 3; ++i)
   {
-    printf("DEBUG scan loop attempt %d\n", i);
     ScanOkFlag = ZAux_BusCmd_SlotScan(handle, SlotId, &OutTime);
-    printf("DEBUG scan loop result ScanOkFlag=%d\n", ScanOkFlag);
     Iresult = 0;
     if (1 == ScanOkFlag)
       break;
@@ -289,7 +257,6 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
     sprintf(cmdbuff, "?NODE_COUNT(%d)", SlotId);
     Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
     ScanNodeNum = std::atoi(ReceBuff);
-    printf("DEBUG scanned node count=%f\n", ScanNodeNum);
     for (int i = 0; i < ScanNodeNum; ++i)
     {
       // 判断是否需要设置DC偏移时间
@@ -311,10 +278,14 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
       }
     }
   }
-  // 【跳过 DC 偏移后的二次扫描，简化调试流程】
-  printf(
-      "[ecat_init] skipping second SLOT_SCAN loop for DC offset (simplifying "
-      "debug)\n");
+  // 5、DC偏移时间设置后，需要再次扫描总线驱动器
+  for (int i = 0; i < 3; ++i)
+  {
+    ScanOkFlag = ZAux_BusCmd_SlotScan(handle, SlotId, &OutTime);
+    Iresult = 0;
+    if (1 == ScanOkFlag)
+      break;
+  }
   // 6、扫描到ECAT从站设备
   if (1 == ScanOkFlag)  // 如果有扫描到驱动器
   {
@@ -327,8 +298,6 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
       // 判断节点数目是否正确
       if ((int)ScanNodeNum != EcatInfo.EcatNodeNum)
       {
-        printf("DEBUG WrongNodeNum expected=%d actual=%d\n",
-               EcatInfo.EcatNodeNum, (int)ScanNodeNum);
         // 节点数目不一致
         return WrongNodeNum;
       }
@@ -349,8 +318,6 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
       // 判断轴数目是否正确
       if (BusAxisNum != EcatInfo.DriveAxisNum)
       {
-        printf("DEBUG WrongAxisNum expected=%d actual=%d\n",
-               EcatInfo.DriveAxisNum, BusAxisNum);
         // 驱动器轴数目不一致
         return WrongAxisNum;
       }
@@ -401,7 +368,6 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
         if (((ServoPeriod * 1000 * EcatInfo.DcOffsetTime[i] - ZmlInfo) > 5) ||
             (ZmlInfo != NodeInfo))
         {
-          printf("DEBUG DcShiftSetFailu slot=%d node=%d\n", SlotId, i);
           return DcShiftSetFailu;  // DC偏移设置失败
         }
       }
@@ -646,33 +612,19 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
     //      Mode=8: OP (正式运行，实时周期250us)
     // ═══════════════════════════════════════════════════════════════════
     MyDelayMs(100, &OutTime);
-    // 【诊断：SLOT_START 前的状态检查】
-    printf("[ecat_init] ===== SLOT_START 前诊断 =====\n");
-    printf("[ecat_init] BusAxisNum=%d Iresult=%d\n", BusAxisNum, Iresult);
-    printf("[ecat_init] 驱动器信息: Vender=0x%x Device=0x%x Alias=%d\n",
-           Drive_Vender, Drive_Device, Drive_Alias);
-    printf("[ecat_init] 执行 SLOT_START(0, 4) 进入 PREOP 模式...\n");
     sprintf(cmdbuff, "SLOT_START(%d, 4)", SlotId);
     Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
     MyDelayMs(1000, &OutTime);
     EcatScanOutTime = OutTime;
-    printf("[ecat_init] PREOP mode entered, Iresult after SLOT_START(0,4)=%d\n",
-           Iresult);
-    printf("[ecat_init] 等待 1000ms 后执行 SLOT_START(0, 8) 进入 OP 模式\n");
     sprintf(cmdbuff, "SLOT_START(%d, 8)  ?return", SlotId);
     Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
     ReceBuff[2] = 0;
     if (0 == strcmp("-1", ReceBuff))
     {
-      printf("DEBUG SLOT_START returned -1 success\n");
       EcatScanOutTime = 0;
     }
     else
     {
-      printf(
-          "[ecat_init] SLOT_START(%d, 8) response: ReceBuff='%s' strlen=%zu "
-          "first_char_hex=%02x\n",
-          SlotId, ReceBuff, strlen(ReceBuff), (unsigned char)ReceBuff[0]);
       MyDelayMs(500, &OutTime);
       EcatScanOutTime = EcatScanOutTime - 500;
     }
@@ -765,11 +717,9 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
     }
     else
     {
-      printf("DEBUG returning EcatStartFailu\n");
       return EcatStartFailu;  // 总线开启失败
     }
   }
   // 未扫描到驱动器
-  printf("DEBUG returning NotScanNode\n");
   return NotScanNode;
 }
