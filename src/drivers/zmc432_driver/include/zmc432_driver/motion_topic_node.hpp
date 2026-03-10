@@ -7,6 +7,11 @@
 
 #include "hypa_msgs/msg/motion_command.hpp"
 #include "hypa_msgs/msg/motion_status.hpp"
+#include "rclcpp/node_interfaces/node_base_interface.hpp"
+#include "rclcpp/node_interfaces/node_logging_interface.hpp"
+#include "rclcpp/node_interfaces/node_parameters_interface.hpp"
+#include "rclcpp/node_interfaces/node_timers_interface.hpp"
+#include "rclcpp/node_interfaces/node_topics_interface.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "zmc432_driver/motion_controller.hpp"
 
@@ -22,10 +27,15 @@ namespace zmc432_driver
 class MotionTopicNode
 {
   public:
-  MotionTopicNode(const std::shared_ptr<rclcpp::Node> &_node,
-                  std::shared_ptr<MotionController> _controller,
-                  const std::string &_command_topic = "motion_command",
-                  const std::string &_status_topic = "motion_status");
+  MotionTopicNode(
+      rclcpp::node_interfaces::NodeBaseInterface::SharedPtr _node_base,
+      rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr _node_topics,
+      rclcpp::node_interfaces::NodeLoggingInterface::SharedPtr _node_logging,
+      rclcpp::node_interfaces::NodeTimersInterface::SharedPtr _node_timers,
+      rclcpp::node_interfaces::NodeParametersInterface::SharedPtr _node_params,
+      std::shared_ptr<MotionController> _controller,
+      const std::string &_command_topic = "motion_command",
+      const std::string &_status_topic = "motion_status");
 
   ~MotionTopicNode();
 
@@ -40,7 +50,11 @@ class MotionTopicNode
   class MotionTopicNodePrivate;
   std::unique_ptr<MotionTopicNodePrivate> pimpl_;
 
-  std::shared_ptr<rclcpp::Node> node_;
+  rclcpp::node_interfaces::NodeBaseInterface::SharedPtr node_base_;
+  rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr node_topics_;
+  rclcpp::node_interfaces::NodeLoggingInterface::SharedPtr node_logging_;
+  rclcpp::node_interfaces::NodeTimersInterface::SharedPtr node_timers_;
+  rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_params_;
   std::shared_ptr<MotionController> controller_;
   std::string command_topic_;
   std::string status_topic_;

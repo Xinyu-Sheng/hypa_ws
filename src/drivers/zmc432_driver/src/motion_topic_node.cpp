@@ -7,11 +7,19 @@ namespace zmc432_driver
 class MotionTopicNode::MotionTopicNodePrivate
 {
   public:
-  MotionTopicNodePrivate(const std::shared_ptr<rclcpp::Node> &_node,
-                         std::shared_ptr<MotionController> _controller,
-                         const std::string &_command_topic,
-                         const std::string &_status_topic)
-      : node(_node),
+  MotionTopicNodePrivate(
+      rclcpp::node_interfaces::NodeBaseInterface::SharedPtr _node_base,
+      rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr _node_topics,
+      rclcpp::node_interfaces::NodeLoggingInterface::SharedPtr _node_logging,
+      rclcpp::node_interfaces::NodeTimersInterface::SharedPtr _node_timers,
+      rclcpp::node_interfaces::NodeParametersInterface::SharedPtr _node_params,
+      std::shared_ptr<MotionController> _controller,
+      const std::string &_command_topic, const std::string &_status_topic)
+      : node_base(_node_base),
+        node_topics(_node_topics),
+        node_logging(_node_logging),
+        node_timers(_node_timers),
+        node_params(_node_params),
         controller(_controller),
         command_topic(_command_topic),
         status_topic(_status_topic),
@@ -28,7 +36,11 @@ class MotionTopicNode::MotionTopicNodePrivate
   MotionTopicNodePrivate(const MotionTopicNodePrivate &) = delete;
   MotionTopicNodePrivate &operator=(const MotionTopicNodePrivate &) = delete;
 
-  std::shared_ptr<rclcpp::Node> node;
+  rclcpp::node_interfaces::NodeBaseInterface::SharedPtr node_base;
+  rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr node_topics;
+  rclcpp::node_interfaces::NodeLoggingInterface::SharedPtr node_logging;
+  rclcpp::node_interfaces::NodeTimersInterface::SharedPtr node_timers;
+  rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_params;
   std::shared_ptr<MotionController> controller;
   std::string command_topic;
   std::string status_topic;
@@ -56,13 +68,22 @@ class MotionTopicNode::MotionTopicNodePrivate
 };
 
 // Public interface implementations
-MotionTopicNode::MotionTopicNode(const std::shared_ptr<rclcpp::Node> &_node,
-                                 std::shared_ptr<MotionController> _controller,
-                                 const std::string &_command_topic,
-                                 const std::string &_status_topic)
+MotionTopicNode::MotionTopicNode(
+    rclcpp::node_interfaces::NodeBaseInterface::SharedPtr _node_base,
+    rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr _node_topics,
+    rclcpp::node_interfaces::NodeLoggingInterface::SharedPtr _node_logging,
+    rclcpp::node_interfaces::NodeTimersInterface::SharedPtr _node_timers,
+    rclcpp::node_interfaces::NodeParametersInterface::SharedPtr _node_params,
+    std::shared_ptr<MotionController> _controller,
+    const std::string &_command_topic, const std::string &_status_topic)
     : pimpl_(std::make_unique<MotionTopicNodePrivate>(
-          _node, _controller, _command_topic, _status_topic)),
-      node_(_node),
+          _node_base, _node_topics, _node_logging, _node_timers, _node_params,
+          _controller, _command_topic, _status_topic)),
+      node_base_(_node_base),
+      node_topics_(_node_topics),
+      node_logging_(_node_logging),
+      node_timers_(_node_timers),
+      node_params_(_node_params),
       controller_(_controller),
       command_topic_(_command_topic),
       status_topic_(_status_topic)
@@ -93,12 +114,12 @@ bool MotionTopicNode::MotionTopicNodePrivate::initialize()
   { this->handle_command(_msg); };
 
   this->command_subscription =
-      this->node->create_subscription<hypa_msgs::msg::MotionCommand>(
-          this->command_topic, 10, command_callback);
+      rclcpp::create_subscription<hypa_msgs::msg::MotionCommand>(
+          this->node_topics, this->command_topic, 10, command_callback);
 
   if (!this->command_subscription)
   {
-    RCLCPP_ERROR(this->node->get_logger(),
+    RCLCPP_ERROR(this->node_logging->get_logger(),
                  "Failed to create command subscription on topic '%s'",
                  this->command_topic.c_str());
     return false;
@@ -106,29 +127,31 @@ bool MotionTopicNode::MotionTopicNodePrivate::initialize()
 
   // 创建状态发布器
   this->status_publisher =
-      this->node->create_publisher<hypa_msgs::msg::MotionStatus>(
-          this->status_topic, 10);
+      rclcpp::create_publisher<hypa_msgs::msg::MotionStatus>(
+          this->node_topics, this->status_topic, 10);
 
   if (!this->status_publisher)
   {
-    RCLCPP_ERROR(this->node->get_logger(),
+    RCLCPP_ERROR(this->node_logging->get_logger(),
                  "Failed to create status publisher on topic '%s'",
                  this->status_topic.c_str());
     return false;
   }
 
   // 创建定时器以定期发布状态（50ms 间隔，20Hz）
-  this->status_timer = this->node->create_wall_timer(
-      std::chrono::milliseconds(50), [this]() { this->publish_status(); });
+  this->status_timer = rclcpp::create_wall_timer(
+      std::chrono::milliseconds(50), [this]() { this->publish_status(); },
+      nullptr, this->node_base.get(), this->node_timers.get());
 
   if (!this->status_timer)
   {
-    RCLCPP_ERROR(this->node->get_logger(), "Failed to create status timer");
+    RCLCPP_ERROR(this->node_logging->get_logger(),
+                 "Failed to create status timer");
     return false;
   }
 
   this->running = true;
-  RCLCPP_INFO(this->node->get_logger(),
+  RCLCPP_INFO(this->node_logging->get_logger(),
               "Motion topic node initialized (command_topic='%s', "
               "status_topic='%s')",
               this->command_topic.c_str(), this->status_topic.c_str());
@@ -146,7 +169,7 @@ void MotionTopicNode::MotionTopicNodePrivate::shutdown()
     }
     this->command_subscription.reset();
     this->status_publisher.reset();
-    RCLCPP_INFO(this->node->get_logger(), "Motion topic node shutdown");
+    RCLCPP_INFO(this->node_logging->get_logger(), "Motion topic node shutdown");
   }
 }
 
@@ -155,12 +178,12 @@ void MotionTopicNode::MotionTopicNodePrivate::handle_command(
 {
   if (!this->running)
   {
-    RCLCPP_WARN(this->node->get_logger(),
+    RCLCPP_WARN(this->node_logging->get_logger(),
                 "Received command but node is not running");
     return;
   }
 
-  RCLCPP_INFO(this->node->get_logger(), "Received motion command");
+  RCLCPP_INFO(this->node_logging->get_logger(), "Received motion command");
 
   // 转换消息为命令
   MotionController::MotionCommand cmd = this->convert_msg_to_command(_msg);
@@ -169,7 +192,7 @@ void MotionTopicNode::MotionTopicNodePrivate::handle_command(
   if (cmd.axes.empty() || cmd.positions.empty() || cmd.velocities.empty())
   {
     RCLCPP_WARN(
-        this->node->get_logger(),
+        this->node_logging->get_logger(),
         "Invalid command: axes, positions, and velocities must not be empty");
     return;
   }
@@ -178,7 +201,7 @@ void MotionTopicNode::MotionTopicNodePrivate::handle_command(
       cmd.axes.size() != cmd.velocities.size())
   {
     RCLCPP_WARN(
-        this->node->get_logger(),
+        this->node_logging->get_logger(),
         "Invalid command: axes, positions, and velocities array size mismatch");
     return;
   }
@@ -186,11 +209,13 @@ void MotionTopicNode::MotionTopicNodePrivate::handle_command(
   // 提交命令到控制器
   if (!this->controller->queue_motion(cmd))
   {
-    RCLCPP_ERROR(this->node->get_logger(), "Failed to queue motion command");
+    RCLCPP_ERROR(this->node_logging->get_logger(),
+                 "Failed to queue motion command");
     return;
   }
 
-  RCLCPP_INFO(this->node->get_logger(), "Motion command queued successfully");
+  RCLCPP_INFO(this->node_logging->get_logger(),
+              "Motion command queued successfully");
 }
 
 void MotionTopicNode::MotionTopicNodePrivate::publish_status()

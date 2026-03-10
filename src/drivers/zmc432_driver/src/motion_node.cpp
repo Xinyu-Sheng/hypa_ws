@@ -42,7 +42,8 @@ int main(int argc, char **argv)
   int axis_count = node->get_parameter("axis_count").as_int();
   if (axis_count < 0)
   {
-    RCLCPP_WARN(node->get_logger(), "axis_count negative (%d), treating as 0", axis_count);
+    RCLCPP_WARN(node->get_logger(), "axis_count negative (%d), treating as 0",
+                axis_count);
     axis_count = 0;
   }
 
@@ -73,7 +74,10 @@ int main(int argc, char **argv)
               controller_ip.c_str());
 
   // helper pointer used for parameter utilities
-  auto node_base = std::dynamic_pointer_cast<rclcpp::Node>(node);
+  // note: LifecycleNode can't be dynamic_pointer_cast to Node, but we use
+  // interfaces now. node_base is only kept for ecat initialization
+  // compatibility if needed.
+  auto node_base_ptr = node->get_node_base_interface();
 
   // EtherCAT 初始化参数
   node->declare_parameter<bool>("perform_ecat_init", false);
@@ -85,7 +89,8 @@ int main(int argc, char **argv)
 
   if (node->get_parameter("perform_ecat_init").as_bool())
   {
-    auto info = zmc432_driver::EcatInitInfo::from_node(node_base.get(), "ecat");
+    auto info = zmc432_driver::EcatInitInfo::from_node(
+        node->get_node_parameters_interface(), "ecat");
     int slot = node->get_parameter("ecat_slot_id").as_int();
     int tout = node->get_parameter("ecat_timeout_ms").as_int();
     auto err = controller->initialize_bus(info, slot, tout);
@@ -127,14 +132,7 @@ int main(int argc, char **argv)
 
   RCLCPP_INFO(node->get_logger(), "Motion controller started");
 
-  // 创建 Topic Node（获取 Node 接口）  // 使用之前定义的 node_base
-  if (!node_base)
-  {
-    RCLCPP_FATAL(node->get_logger(),
-                 "Failed to get Node interface from LifecycleNode");
-    return 1;
-  }
-
+  // 创建 Topic Node（通过接口注入，不再依赖 dynamic_pointer_cast）
   // 声明主题参数
   node->declare_parameter<std::string>("motion_command_topic",
                                        "motion_command");
@@ -159,8 +157,11 @@ int main(int argc, char **argv)
     status_topic = "/" + robot_name + "/" + status_topic;
   }
 
-  zmc432_driver::MotionTopicNode topic_node(node_base, controller,
-                                            command_topic, status_topic);
+  zmc432_driver::MotionTopicNode topic_node(
+      node->get_node_base_interface(), node->get_node_topics_interface(),
+      node->get_node_logging_interface(), node->get_node_timers_interface(),
+      node->get_node_parameters_interface(), controller, command_topic,
+      status_topic);
   if (!topic_node.initialize())
   {
     RCLCPP_FATAL(node->get_logger(), "Failed to initialize motion topic node");

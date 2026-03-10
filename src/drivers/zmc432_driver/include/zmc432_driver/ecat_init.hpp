@@ -109,8 +109,7 @@
 #include <array>
 #include <string>
 
-#include <rclcpp/rclcpp.hpp>
-
+#include "rclcpp/node_interfaces/node_parameters_interface.hpp"
 #include "zmc432_driver/zmotion_ecat.h"
 
 namespace zmc432_driver
@@ -174,22 +173,52 @@ struct EcatInitInfo
     return out;
   }
 
-  static EcatInitInfo from_node(const rclcpp::Node *node,
-                                const std::string &prefix = "ecat")
+  static EcatInitInfo from_node(
+      rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_params,
+      const std::string &prefix = "ecat")
   {
     EcatInitInfo info;
-    node->get_parameter_or(prefix + ".use_defaults", info.use_defaults, true);
-    node->get_parameter_or(prefix + ".local_axis_id", info.local_axis_id, 0);
-    node->get_parameter_or(prefix + ".local_axis_num", info.local_axis_num, 0);
-    node->get_parameter_or(prefix + ".drive_axis_start", info.drive_axis_start,
-                           0);
-    node->get_parameter_or(prefix + ".drive_axis_num", info.drive_axis_num, -1);
-    node->get_parameter_or(prefix + ".drive_io_stara", info.drive_io_stara,
-                           256);
-    node->get_parameter_or(prefix + ".drive_io_spa", info.drive_io_spa, 16);
-    node->get_parameter_or(prefix + ".drive_enable", info.drive_enable, 1);
-    node->get_parameter_or(prefix + ".ecat_node_num", info.ecat_node_num, -1);
-    node->get_parameter_or(prefix + ".sys_clock_mode", info.sys_clock_mode, 1);
+    info.use_defaults = node_params
+                            ->declare_parameter(prefix + ".use_defaults",
+                                                rclcpp::ParameterValue(true))
+                            .get<bool>();
+    info.local_axis_id = node_params
+                             ->declare_parameter(prefix + ".local_axis_id",
+                                                 rclcpp::ParameterValue(0))
+                             .get<int>();
+    info.local_axis_num = node_params
+                              ->declare_parameter(prefix + ".local_axis_num",
+                                                  rclcpp::ParameterValue(0))
+                              .get<int>();
+    info.drive_axis_start =
+        node_params
+            ->declare_parameter(prefix + ".drive_axis_start",
+                                rclcpp::ParameterValue(0))
+            .get<int>();
+    info.drive_axis_num = node_params
+                              ->declare_parameter(prefix + ".drive_axis_num",
+                                                  rclcpp::ParameterValue(-1))
+                              .get<int>();
+    info.drive_io_stara = node_params
+                              ->declare_parameter(prefix + ".drive_io_stara",
+                                                  rclcpp::ParameterValue(256))
+                              .get<int>();
+    info.drive_io_spa = node_params
+                            ->declare_parameter(prefix + ".drive_io_spa",
+                                                rclcpp::ParameterValue(16))
+                            .get<int>();
+    info.drive_enable = node_params
+                            ->declare_parameter(prefix + ".drive_enable",
+                                                rclcpp::ParameterValue(1))
+                            .get<int>();
+    info.ecat_node_num = node_params
+                             ->declare_parameter(prefix + ".ecat_node_num",
+                                                 rclcpp::ParameterValue(-1))
+                             .get<int>();
+    info.sys_clock_mode = node_params
+                              ->declare_parameter(prefix + ".sys_clock_mode",
+                                                  rclcpp::ParameterValue(1))
+                              .get<int>();
     // arrays are not parameterized individually; advanced users can fill
     // manually
     return info;
