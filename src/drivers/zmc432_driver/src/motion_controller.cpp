@@ -130,6 +130,10 @@ std::optional<std::string> MotionController::configure_axis(
   config.configured = true;
   this->pimpl_->axis_configs[_axis] = config;
 
+  // 同步底层 ZMotionWrapper 的轴配置标志，
+  // 避免 ensure_axis_configured 用默认值覆盖已有配置
+  this->pimpl_->zmotion->mark_axis_configured(_axis);
+
   // 默认清零轴位置
   this->pimpl_->zmotion->set_dpos(_axis, 0.0);
   this->pimpl_->zmotion->set_mpos(_axis, 0.0);

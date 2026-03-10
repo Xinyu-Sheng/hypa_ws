@@ -348,9 +348,10 @@ std::optional<std::string> ZMotionWrapper::ecat_init(int slot_id,
 std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::move_absolute(
     int _axis, double _position)
 {
-  if (!ensure_axis_configured(_axis))
+  auto config_err = ensure_axis_configured(_axis);
+  if (config_err)
   {
-    return "Axis " + std::to_string(_axis) + " not configured";
+    return config_err;
   }
 
   int64_t pulses = physical_to_pulses(_axis, _position);
@@ -370,9 +371,10 @@ std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::move_absolute(
 std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::move_relative(
     int _axis, double _distance)
 {
-  if (!ensure_axis_configured(_axis))
+  auto config_err = ensure_axis_configured(_axis);
+  if (config_err)
   {
-    return "Axis " + std::to_string(_axis) + " not configured";
+    return config_err;
   }
 
   int64_t pulses = physical_to_pulses(_axis, _distance);
@@ -392,9 +394,10 @@ std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::move_relative(
 std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::move_velocity(
     int _axis, double _velocity)
 {
-  if (!ensure_axis_configured(_axis))
+  auto config_err = ensure_axis_configured(_axis);
+  if (config_err)
   {
-    return "Axis " + std::to_string(_axis) + " not configured";
+    return config_err;
   }
 
   int direction = (_velocity >= 0) ? 1 : -1;
@@ -430,9 +433,10 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_line_absolute(
 
   for (int axis : _axes)
   {
-    if (!ensure_axis_configured(axis))
+    auto config_err = ensure_axis_configured(axis);
+    if (config_err)
     {
-      return "Axis " + std::to_string(axis) + " not configured";
+      return config_err;
     }
   }
 
@@ -471,9 +475,10 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_line_relative(
 
   for (int axis : _axes)
   {
-    if (!ensure_axis_configured(axis))
+    auto config_err = ensure_axis_configured(axis);
+    if (config_err)
     {
-      return "Axis " + std::to_string(axis) + " not configured";
+      return config_err;
     }
   }
 
@@ -517,9 +522,10 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_circular_absolute(
 
   for (int axis : _axes)
   {
-    if (!ensure_axis_configured(axis))
+    auto config_err = ensure_axis_configured(axis);
+    if (config_err)
     {
-      return "Axis " + std::to_string(axis) + " not configured";
+      return config_err;
     }
   }
 
@@ -582,9 +588,10 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_spiral_absolute(
 
   for (int axis : _axes)
   {
-    if (!ensure_axis_configured(axis))
+    auto config_err = ensure_axis_configured(axis);
+    if (config_err)
     {
-      return "Axis " + std::to_string(axis) + " not configured";
+      return config_err;
     }
   }
 
@@ -651,9 +658,10 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_eclipse_absolute(
 
   for (int axis : _axes)
   {
-    if (!ensure_axis_configured(axis))
+    auto config_err = ensure_axis_configured(axis);
+    if (config_err)
     {
-      return "Axis " + std::to_string(axis) + " not configured";
+      return config_err;
     }
   }
 
@@ -715,9 +723,10 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_spherical_absolute(
 
   for (int axis : _axes)
   {
-    if (!ensure_axis_configured(axis))
+    auto config_err = ensure_axis_configured(axis);
+    if (config_err)
     {
-      return "Axis " + std::to_string(axis) + " not configured";
+      return config_err;
     }
   }
 
@@ -775,9 +784,10 @@ std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::buffer_move(
 
   for (int axis : _axes)
   {
-    if (!ensure_axis_configured(axis))
+    auto config_err = ensure_axis_configured(axis);
+    if (config_err)
     {
-      return "Axis " + std::to_string(axis) + " not configured";
+      return config_err;
     }
   }
 
@@ -1106,6 +1116,19 @@ double ZMotionWrapper::ZMotionWrapperPrivate::CurrentUnits(int _axis) const
     return axis_configs[_axis].units;
   }
   return 1.0;
+}
+
+void ZMotionWrapper::ZMotionWrapperPrivate::mark_axis_configured(int _axis)
+{
+  if (_axis >= 0 && _axis < static_cast<int>(axis_configs.size()))
+  {
+    axis_configs[_axis].configured = true;
+  }
+}
+
+void ZMotionWrapper::mark_axis_configured(int _axis)
+{
+  pimpl_->mark_axis_configured(_axis);
 }
 
 }  // namespace zmc432_driver

@@ -102,6 +102,7 @@ class ZMotionWrapper
     bool is_axis_moving(int _axis);
     std::optional<std::string> set_axis_enable(int _axis, bool _enable);
     std::optional<bool> get_axis_enable(int _axis) const;
+    void mark_axis_configured(int _axis);
 
     // internal implementation for EtherCAT 总线初始化
     std::optional<std::string> ecat_init(int slot_id, const EcatInitInfo &info,
@@ -160,6 +161,7 @@ class ZMotionWrapper
   bool is_axis_moving(int _axis);
   std::optional<std::string> set_axis_enable(int _axis, bool _enable);
   std::optional<bool> get_axis_enable(int _axis) const;
+  void mark_axis_configured(int _axis);
 
   // EtherCAT bus initialization
   std::optional<std::string> ecat_init(int slot_id, const EcatInitInfo &info,
