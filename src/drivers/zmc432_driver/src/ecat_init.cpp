@@ -251,6 +251,18 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
     if (1 == ScanOkFlag)
       break;
   }
+  // 添加log：第一次SLOT_SCAN扫描结果
+  if (ScanOkFlag == 1)
+  {
+    sprintf(cmdbuff, "?NODE_COUNT(%d)", SlotId);
+    Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
+    ScanNodeNum = std::atoi(ReceBuff);
+    printf("[ECAT_INIT] 第一次SLOT_SCAN成功，发现节点数: %.0f\n", ScanNodeNum);
+  }
+  else
+  {
+    printf("[ECAT_INIT] 第一次SLOT_SCAN失败，未发现驱动器\n");
+  }
   if (ScanOkFlag == 1)  // 如果有扫描到驱动器
   {
     // 【节点数目判断】
