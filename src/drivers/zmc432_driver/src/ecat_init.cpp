@@ -135,7 +135,7 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
     EcatInfo.DriveIoSpa =
         16;  // 一个驱动器映射多少个IO到控制器上，需要是8的倍数
     memset(
-        EcatInfo.DrivePdoMode, 12,
+        EcatInfo.DrivePdoMode, 1,
         sizeof(
             EcatInfo
                 .DrivePdoMode));  // 轴PDO模式，详情参考RTBasic手册的drive_profile的指令说明,默认设置成12表示需要监控驱动器的PDO

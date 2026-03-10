@@ -7,6 +7,7 @@
 #include <deque>
 #include <iostream>
 #include <mutex>
+#include <sstream>
 #include <thread>
 
 namespace zmc432_driver
@@ -539,17 +540,73 @@ void MotionController::MotionControllerPrivate::execution_loop(
     }
     else
     {
-      std::cout << "Motion command completed: type="
-                << static_cast<int>(cmd.motion_type) << ", axes=[";
+      std::ostringstream axes_stream;
+      axes_stream << "[";
       for (std::size_t i = 0; i < cmd.axes.size(); ++i)
       {
         if (i > 0)
         {
-          std::cout << ",";
+          axes_stream << ",";
         }
-        std::cout << cmd.axes[i];
+        axes_stream << cmd.axes[i];
       }
-      std::cout << "]" << std::endl;
+      axes_stream << "]";
+      const std::string axes = axes_stream.str();
+
+      std::cout << "Motion command dispatched: type="
+                << static_cast<int>(cmd.motion_type) << ", axes=" << axes
+                << std::endl;
+
+      constexpr int kPhysicalCompleteTimeoutMs = 60000;
+      const auto wait_start = std::chrono::steady_clock::now();
+      bool physically_completed = false;
+      bool timed_out = false;
+
+      while (running && !cancel_requested)
+      {
+        if (is_motion_complete(cmd))
+        {
+          physically_completed = true;
+          break;
+        }
+
+        const auto elapsed_ms =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - wait_start)
+                .count();
+        if (elapsed_ms >= kPhysicalCompleteTimeoutMs)
+        {
+          timed_out = true;
+          break;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      }
+
+      if (physically_completed)
+      {
+        std::cout << "Motion command physically completed: type="
+                  << static_cast<int>(cmd.motion_type) << ", axes=" << axes
+                  << std::endl;
+      }
+      else if (cancel_requested)
+      {
+        std::cout << "Motion command interrupted by cancel: type="
+                  << static_cast<int>(cmd.motion_type) << ", axes=" << axes
+                  << std::endl;
+      }
+      else if (!running)
+      {
+        std::cout << "Motion command interrupted by stop: type="
+                  << static_cast<int>(cmd.motion_type) << ", axes=" << axes
+                  << std::endl;
+      }
+      else if (timed_out)
+      {
+        std::cerr << "Motion command physical completion timeout: type="
+                  << static_cast<int>(cmd.motion_type) << ", axes=" << axes
+                  << std::endl;
+      }
     }
 
     // 标记执行完成
@@ -791,37 +848,42 @@ double MotionController::MotionControllerPrivate::calculate_progress(
 bool MotionController::MotionControllerPrivate::is_motion_complete(
     const MotionController::MotionCommand &_cmd) const
 {
+  if (!zmotion)
+  {
+    return false;
+  }
+
+  // 判定物理完成的容差：位置和速度都满足才算完成
+  const double POSITION_TOLERANCE = 0.001;
+  const double SPEED_TOLERANCE = 0.001;
+
   for (size_t i = 0; i < _cmd.axes.size(); ++i)
   {
     int axis = _cmd.axes[i];
     double target = _cmd.positions[i];
 
-    // 获取当前位置
-    double current = 0.0;
-    if (zmotion)
-    {
-      auto pos_opt = zmotion->Position(axis);
-      if (pos_opt)
-      {
-        current = pos_opt.value();
-      }
-      else
-      {
-        // 无法读取位置，认为未完成
-        return false;
-      }
-    }
-
-    // 检查是否到达目标位置（考虑精度）
-    // 1um  tolerance
-    const double POSITION_TOLERANCE = 0.001;
-    if (std::abs(current - target) > POSITION_TOLERANCE)
+    // 获取反馈位置和反馈速度
+    auto feedback_opt = zmotion->Feedback(axis);
+    if (!feedback_opt)
     {
       return false;
     }
 
-    // 检查轴是否还在运动
-    if (zmotion && zmotion->is_axis_moving(axis))
+    auto speed_opt = zmotion->Speed(axis);
+    if (!speed_opt)
+    {
+      return false;
+    }
+
+    const double feedback = feedback_opt.value();
+    const double speed = speed_opt.value();
+
+    if (std::abs(feedback - target) > POSITION_TOLERANCE)
+    {
+      return false;
+    }
+
+    if (std::abs(speed) > SPEED_TOLERANCE)
     {
       return false;
     }
