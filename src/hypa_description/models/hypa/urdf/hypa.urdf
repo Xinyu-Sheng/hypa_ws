@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="hypa">
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="-1.207E-09 3.1784E-09 -0.085377"
+        rpy="0 0 0" />
+      <mass
+        value="386.11" />
+      <inertia
+        ixx="9.9128"
+        ixy="0.13248"
+        ixz="-9.8621E-08"
+        iyy="9.881"
+        iyz="-1.8585E-07"
+        izz="18.221" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://hypa/meshes/base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://hypa/meshes/base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="main_link">
+    <inertial>
+      <origin
+        xyz="1.5384E-06 -7.9647E-06 -0.081467"
+        rpy="0 0 0" />
+      <mass
+        value="2317.1" />
+      <inertia
+        ixx="2152"
+        ixy="-0.00081995"
+        ixz="-0.00016841"
+        iyy="11953"
+        iyz="0.0011132"
+        izz="13870" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://hypa/meshes/main_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://hypa/meshes/main_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="dummy_link_joint"
+    type="prismatic">
+    <origin
+      xyz="0 0 -4.2"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="main_link" />
+    <axis
+      xyz="-0.5863 -0.21593 0.78078" />
+    <limit
+      lower="0"
+      upper="0"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="secondary_link">
+    <inertial>
+      <origin
+        xyz="9.2715E-05 4.4503E-05 -0.0068453"
+        rpy="0 0 0" />
+      <mass
+        value="926.8" />
+      <inertia
+        ixx="912.74"
+        ixy="6.0283E-08"
+        ixz="3.2016E-13"
+        iyy="12.877"
+        iyz="-6.4402E-11"
+        izz="907.59" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://hypa/meshes/secondary_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0 0 0 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://hypa/meshes/secondary_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="secondary_link_joint"
+    type="prismatic">
+    <origin
+      xyz="0 0 -0.7202"
+      rpy="0 0 0" />
+    <parent
+      link="main_link" />
+    <child
+      link="secondary_link" />
+    <axis
+      xyz="-1 0 0" />
+    <limit
+      lower="0"
+      upper="0"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="slide_link">
+    <inertial>
+      <origin
+        xyz="0.021957 0.010531 1.5253"
+        rpy="0 0 0" />
+      <mass
+        value="34539" />
+      <inertia
+        ixx="83582"
+        ixy="490.34"
+        ixz="1014.2"
+        iyy="174690"
+        iyz="163.74"
+        izz="189290" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://hypa/meshes/slide_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://hypa/meshes/slide_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="slide_link_joint"
+    type="prismatic">
+    <origin
+      xyz="0 0 -3.7798"
+      rpy="0 0 0" />
+    <parent
+      link="secondary_link" />
+    <child
+      link="slide_link" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="0"
+      upper="0"
+      effort="0"
+      velocity="0" />
+  </joint>
+</robot>

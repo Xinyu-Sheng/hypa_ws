@@ -1,0 +1,1 @@
+controller_joint_names: ['', 'dummy_link_joint', 'secondary_link_joint', 'slide_link_joint', ]
