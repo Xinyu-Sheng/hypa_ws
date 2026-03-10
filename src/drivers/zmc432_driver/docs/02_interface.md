@@ -28,15 +28,15 @@
 
 ## MotionStatus 字段
 
-| 字段名               | 类型        | 说明                               |
-| -------------------- | ----------- | ---------------------------------- |
-| `current_positions`  | `float64[]` | 规划位置（DPOS）                   |
-| `feedback_positions` | `float64[]` | 反馈位置（MPOS）                   |
-| `current_velocities` | `float64[]` | 当前速度                           |
-| `axis_statuses`      | `uint32[]`  | 轴状态字（含告警、到位、使能位等） |
-| `axis_enabled`       | `bool[]`    | 实时使能状态（基础功能）           |
-| `progress`           | `float64`   | 任务进度（0–100 %）                |
-| `executing_axis`     | `int32[]`   | 当前正在执行运动的轴               |
+| 字段名               | 类型        | 说明                                 |
+| -------------------- | ----------- | ------------------------------------ |
+| `current_positions`  | `float64[]` | 规划位置（DPOS）                     |
+| `feedback_positions` | `float64[]` | 反馈位置（MPOS）                     |
+| `current_velocities` | `float64[]` | 当前速度                             |
+| `axis_statuses`      | `uint32[]`  | 轴状态字（含告警、到位、使能位等）   |
+| `axis_enabled`       | `bool[]`    | 实时使能状态（基础功能）             |
+| `progress`           | `float64`   | 任务进度（0–100 %）                  |
+| `executing_axis`     | `int32[]`   | 当前执行命令涉及的轴（无执行时为空） |
 
 > 轴状态字由驱动器提供，若要解码请参考 AKD 手册。
 

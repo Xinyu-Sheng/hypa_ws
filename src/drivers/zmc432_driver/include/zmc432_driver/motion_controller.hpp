@@ -56,7 +56,7 @@ class MotionController
   {
     double position = 0.0;     // 规划位置
     double feedback = 0.0;     // 反馈位置
-    double speed = 0.0;        // 当前速度
+    double speed = 0.0;        // 实时反馈速度 (MSPEED)
     uint32_t status_word = 0;  // 状态字
     int type = 0;              // 轴类型 (ATYPE)
     bool moving = false;       // 是否在运动
@@ -67,6 +67,7 @@ class MotionController
   struct ControllerStatus
   {
     std::map<int, AxisStatus> axis_statuses;
+    std::vector<int> executing_axes;  // 当前执行命令涉及的轴
     bool executing = false;
     bool stop_requested = false;
     double progress = 0.0;  // 0-100%

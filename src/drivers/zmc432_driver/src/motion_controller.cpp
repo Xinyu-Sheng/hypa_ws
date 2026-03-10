@@ -28,6 +28,7 @@ class MotionController::MotionControllerPrivate
   std::mutex buffer_mutex;
   std::condition_variable buffer_cv;
   std::deque<MotionController::MotionCommand> command_buffer;
+  std::vector<int> active_axes;
   std::atomic<bool> running{false};
   std::atomic<bool> executing{false};
   std::atomic<bool> cancel_requested{false};
@@ -232,6 +233,10 @@ bool MotionController::start()
   this->pimpl_->running = true;
   this->pimpl_->executing = false;
   this->pimpl_->cancel_requested = false;
+  {
+    std::lock_guard<std::mutex> lock(this->pimpl_->buffer_mutex);
+    this->pimpl_->active_axes.clear();
+  }
 
   // 启动执行线程
   this->pimpl_->execution_thread =
@@ -336,6 +341,10 @@ MotionController::ControllerStatus MotionController::CurrentStatus() const
   ControllerStatus status;
   status.executing = this->pimpl_->executing;
   status.stop_requested = this->pimpl_->cancel_requested;
+  {
+    std::lock_guard<std::mutex> lock(this->pimpl_->buffer_mutex);
+    status.executing_axes = this->pimpl_->active_axes;
+  }
 
   // 读取所有已配置轴的状态
   for (const auto &[axis, config] : this->pimpl_->axis_configs)
@@ -498,6 +507,7 @@ void MotionController::MotionControllerPrivate::execution_loop(
       command_buffer.pop_front();
       executing = true;
       cancel_requested = false;
+      active_axes = cmd.axes;
     }
 
     // 执行命令
@@ -532,6 +542,7 @@ void MotionController::MotionControllerPrivate::execution_loop(
     {
       std::lock_guard<std::mutex> lock(buffer_mutex);
       executing = false;
+      active_axes.clear();
     }
   }
 }
