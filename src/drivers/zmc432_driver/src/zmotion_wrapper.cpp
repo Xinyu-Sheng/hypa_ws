@@ -135,6 +135,16 @@ std::optional<std::string> ZMotionWrapper::stop_continuous()
   return pimpl_->stop_continuous();
 }
 
+std::optional<std::string> ZMotionWrapper::set_dpos(int _axis, double _position)
+{
+  return pimpl_->set_dpos(_axis, _position);
+}
+
+std::optional<std::string> ZMotionWrapper::set_mpos(int _axis, double _position)
+{
+  return pimpl_->set_mpos(_axis, _position);
+}
+
 std::optional<double> ZMotionWrapper::Position(int _axis) const
 {
   return pimpl_->Position(_axis);
@@ -898,6 +908,46 @@ ZMotionWrapper::ZMotionWrapperPrivate::emergency_stop()
   if (ret != ERR_OK)
   {
     last_error = "Emergency stop failed (error: " + std::to_string(ret) + ")";
+    return last_error;
+  }
+  return std::nullopt;
+}
+
+std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::set_dpos(
+    int _axis, double _position)
+{
+  if (!handle)
+  {
+    last_error = "Controller not connected";
+    return last_error;
+  }
+
+  int32_t ret =
+      ZAux_Direct_SetDpos(handle, _axis, static_cast<float>(_position));
+  if (ret != ERR_OK)
+  {
+    last_error = "Set DPOS failed for axis " + std::to_string(_axis) +
+                 " (error: " + std::to_string(ret) + ")";
+    return last_error;
+  }
+  return std::nullopt;
+}
+
+std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::set_mpos(
+    int _axis, double _position)
+{
+  if (!handle)
+  {
+    last_error = "Controller not connected";
+    return last_error;
+  }
+
+  int32_t ret =
+      ZAux_Direct_SetMpos(handle, _axis, static_cast<float>(_position));
+  if (ret != ERR_OK)
+  {
+    last_error = "Set MPOS failed for axis " + std::to_string(_axis) +
+                 " (error: " + std::to_string(ret) + ")";
     return last_error;
   }
   return std::nullopt;

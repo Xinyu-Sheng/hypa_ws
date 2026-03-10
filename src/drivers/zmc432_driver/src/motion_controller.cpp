@@ -124,7 +124,27 @@ std::optional<std::string> MotionController::configure_axis(
   config.configured = true;
   this->pimpl_->axis_configs[_axis] = config;
 
+  // 默认清零轴位置
+  this->pimpl_->zmotion->set_dpos(_axis, 0.0);
+  this->pimpl_->zmotion->set_mpos(_axis, 0.0);
+
   return std::nullopt;
+}
+
+std::optional<std::string> MotionController::reset_axis_position(
+    int _axis, double _position)
+{
+  if (!this->pimpl_->zmotion || !this->pimpl_->zmotion->is_connected())
+  {
+    return "Controller not connected";
+  }
+
+  auto res1 = this->pimpl_->zmotion->set_dpos(_axis, _position);
+  auto res2 = this->pimpl_->zmotion->set_mpos(_axis, _position);
+
+  if (res1)
+    return res1;
+  return res2;
 }
 
 std::optional<std::string> MotionController::enable_axis(int _axis,

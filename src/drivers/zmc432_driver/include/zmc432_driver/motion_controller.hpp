@@ -87,6 +87,8 @@ class MotionController
   std::optional<std::string> configure_axis(int _axis, double _units,
                                             double _speed, double _accel,
                                             double _decel);
+  std::optional<std::string> reset_axis_position(int _axis,
+                                                 double _position = 0.0);
   std::optional<std::string> enable_axis(int _axis, bool _enable);
   std::optional<std::string> enable_all_axes(bool _enable);
   std::optional<bool> get_axis_enable(int _axis) const;
