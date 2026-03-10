@@ -2,7 +2,10 @@ cmake_minimum_required(VERSION 3.8)
 project(zmc432_driver)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic)
+  # suppress warnings coming from vendor headers (e.g. zmcaux.h) such as
+  # "/*" within comment (-Wcomment).  We cannot modify those headers, so
+  # add a blanket disable for this warning locally.
+  add_compile_options(-Wall -Wextra -Wpedantic -Wno-comment)
 endif()
 
 # find dependencies
