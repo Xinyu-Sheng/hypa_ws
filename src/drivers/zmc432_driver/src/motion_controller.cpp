@@ -102,6 +102,12 @@ std::optional<std::string> MotionController::configure_axis(
   if (result)
     return result;
 
+  // 强制设置轴类型为 EtherCAT 伺服 (65)
+  // 如果你的系统中有步进电机或其他类型，这里可能需要参数化
+  result = this->pimpl_->zmotion->set_atype(_axis, 65);
+  if (result)
+    return result;
+
   // 设置速度、加速度、减速度
   result = this->pimpl_->zmotion->set_speed(_axis, _speed);
   if (result)
@@ -339,6 +345,7 @@ MotionController::ControllerStatus MotionController::CurrentStatus() const
       axis_status.feedback =
           this->pimpl_->zmotion->Feedback(axis).value_or(0.0);
       axis_status.speed = this->pimpl_->zmotion->Speed(axis).value_or(0.0);
+      axis_status.type = this->pimpl_->zmotion->get_atype(axis).value_or(0);
       auto status_opt = this->pimpl_->zmotion->AxisStatus(axis);
       if (status_opt)
       {

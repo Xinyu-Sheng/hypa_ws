@@ -58,6 +58,7 @@ class MotionController
     double feedback = 0.0;     // 反馈位置
     double speed = 0.0;        // 当前速度
     uint32_t status_word = 0;  // 状态字
+    int type = 0;              // 轴类型 (ATYPE)
     bool moving = false;       // 是否在运动
     bool error = false;        // 是否有错误
     bool enabled = false;      // 是否使能

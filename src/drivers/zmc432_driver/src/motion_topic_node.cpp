@@ -268,6 +268,7 @@ MotionTopicNode::MotionTopicNodePrivate::convert_status_to_msg(
     msg.feedback_positions.push_back(axis_status.feedback);
     msg.current_velocities.push_back(axis_status.speed);
     msg.axis_statuses.push_back(axis_status.status_word);
+    msg.axis_atypes.push_back(axis_status.type);
     msg.axis_enabled.push_back(axis_status.enabled);
     msg.executing_axis.push_back(axis);
   }

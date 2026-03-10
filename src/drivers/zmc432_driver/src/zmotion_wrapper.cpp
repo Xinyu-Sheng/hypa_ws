@@ -145,6 +145,16 @@ std::optional<std::string> ZMotionWrapper::set_mpos(int _axis, double _position)
   return pimpl_->set_mpos(_axis, _position);
 }
 
+std::optional<int> ZMotionWrapper::get_atype(int _axis) const
+{
+  return pimpl_->get_atype(_axis);
+}
+
+std::optional<std::string> ZMotionWrapper::set_atype(int _axis, int _atype)
+{
+  return pimpl_->set_atype(_axis, _atype);
+}
+
 std::optional<double> ZMotionWrapper::Position(int _axis) const
 {
   return pimpl_->Position(_axis);
@@ -947,6 +957,44 @@ std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::set_mpos(
   if (ret != ERR_OK)
   {
     last_error = "Set MPOS failed for axis " + std::to_string(_axis) +
+                 " (error: " + std::to_string(ret) + ")";
+    return last_error;
+  }
+  return std::nullopt;
+}
+
+std::optional<int> ZMotionWrapper::ZMotionWrapperPrivate::get_atype(
+    int _axis) const
+{
+  if (!handle)
+  {
+    return std::nullopt;
+  }
+
+  int atype = 0;
+  int32_t ret = ZAux_Direct_GetAtype(handle, _axis, &atype);
+  if (ret != ERR_OK)
+  {
+    last_error = "Get atype failed for axis " + std::to_string(_axis) +
+                 " (error: " + std::to_string(ret) + ")";
+    return std::nullopt;
+  }
+  return atype;
+}
+
+std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::set_atype(
+    int _axis, int _atype)
+{
+  if (!handle)
+  {
+    last_error = "Controller not connected";
+    return last_error;
+  }
+
+  int32_t ret = ZAux_Direct_SetAtype(handle, _axis, _atype);
+  if (ret != ERR_OK)
+  {
+    last_error = "Set atype failed for axis " + std::to_string(_axis) +
                  " (error: " + std::to_string(ret) + ")";
     return last_error;
   }

@@ -93,6 +93,8 @@ class ZMotionWrapper
     std::optional<std::string> emergency_stop();
     std::optional<std::string> set_dpos(int _axis, double _position);
     std::optional<std::string> set_mpos(int _axis, double _position);
+    std::optional<int> get_atype(int _axis) const;
+    std::optional<std::string> set_atype(int _axis, int _atype);
     std::optional<double> Position(int _axis) const;
     std::optional<double> Feedback(int _axis) const;
     std::optional<double> Speed(int _axis) const;
@@ -147,6 +149,8 @@ class ZMotionWrapper
   std::optional<std::string> stop_continuous();
   std::optional<std::string> set_dpos(int _axis, double _position);
   std::optional<std::string> set_mpos(int _axis, double _position);
+  std::optional<int> get_atype(int _axis) const;
+  std::optional<std::string> set_atype(int _axis, int _atype);
   std::optional<std::string> stop_all();
   std::optional<std::string> emergency_stop();
   std::optional<double> Position(int _axis) const;
