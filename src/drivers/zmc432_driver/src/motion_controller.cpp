@@ -537,6 +537,20 @@ void MotionController::MotionControllerPrivate::execution_loop(
     {
       std::cerr << "Motion execution failed: " << result.value() << std::endl;
     }
+    else
+    {
+      std::cout << "Motion command completed: type="
+                << static_cast<int>(cmd.motion_type) << ", axes=[";
+      for (std::size_t i = 0; i < cmd.axes.size(); ++i)
+      {
+        if (i > 0)
+        {
+          std::cout << ",";
+        }
+        std::cout << cmd.axes[i];
+      }
+      std::cout << "]" << std::endl;
+    }
 
     // 标记执行完成
     {
