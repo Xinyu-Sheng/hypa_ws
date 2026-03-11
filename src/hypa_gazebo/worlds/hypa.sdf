@@ -134,7 +134,7 @@
         <parent>crane_hook_base</parent>
         <child>crane_hook</child>
         <physics>
-          <damping>1</damping> <!-- 设置阻尼系数，值可以根据需求调整 -->
+          <damping>50</damping> <!-- 设置阻尼系数，值可以根据需求调整 -->
         </physics>
       </joint>
       <plugin
@@ -791,7 +791,7 @@
         filename="gz-sim-joint-position-controller-system"
         name="gz::sim::systems::JointPositionController">
         <joint_name>prismatic_cable_hook_fl</joint_name>
-        <p_gain>10000000</p_gain> <!-- 极高的 P 增益 -->
+        <p_gain>1000000</p_gain> <!-- 极高的 P 增益 -->
         <i_gain>1.0</i_gain>
         <d_gain>500000</d_gain>
         <cmd_min>-1000000</cmd_min> <!-- 这里的范围要与 effort 对应 -->
@@ -803,7 +803,7 @@
         filename="gz-sim-joint-position-controller-system"
         name="gz::sim::systems::JointPositionController">
         <joint_name>prismatic_cable_hook_fr</joint_name>
-        <p_gain>10000000</p_gain> <!-- 极高的 P 增益 -->
+        <p_gain>1000000</p_gain> <!-- 极高的 P 增益 -->
         <i_gain>1.0</i_gain>
         <d_gain>500000</d_gain>
         <cmd_min>-1000000</cmd_min> <!-- 这里的范围要与 effort 对应 -->
@@ -815,7 +815,7 @@
         filename="gz-sim-joint-position-controller-system"
         name="gz::sim::systems::JointPositionController">
         <joint_name>prismatic_cable_hook_bl</joint_name>
-        <p_gain>10000000</p_gain> <!-- 极高的 P 增益 -->
+        <p_gain>1000000</p_gain> <!-- 极高的 P 增益 -->
         <i_gain>1.0</i_gain>
         <d_gain>500000</d_gain>
         <cmd_min>-1000000</cmd_min> <!-- 这里的范围要与 effort 对应 -->
@@ -827,7 +827,7 @@
         filename="gz-sim-joint-position-controller-system"
         name="gz::sim::systems::JointPositionController">
         <joint_name>prismatic_cable_hook_br</joint_name>
-        <p_gain>10000000</p_gain> <!-- 极高的 P 增益 -->
+        <p_gain>1000000</p_gain> <!-- 极高的 P 增益 -->
         <i_gain>1.0</i_gain>
         <d_gain>500000</d_gain>
         <cmd_min>-1000000</cmd_min> <!-- 这里的范围要与 effort 对应 -->
@@ -1030,8 +1030,7 @@
         <pose>0 0 -8.6999999999999993 0 0 0</pose>
         <inertial>
           <pose>0.021957000000000001 0.010531 1.5253000000000001 0 0 0</pose>
-          <mass>3453</mass>
-          <!-- <mass>34539</mass> -->
+          <mass>34539</mass>
           <inertia>
             <ixx>83582</ixx>
             <ixy>490.33999999999997</ixy>
@@ -1205,7 +1204,7 @@
         filename="gz-sim-joint-position-controller-system"
         name="gz::sim::systems::JointPositionController">
         <joint_name>secondary_link_joint</joint_name>
-        <p_gain>10000000</p_gain> <!-- 极高的 P 增益 -->
+        <p_gain>1000000</p_gain> <!-- 极高的 P 增益 -->
         <i_gain>1.0</i_gain>
         <d_gain>500000</d_gain>
         <cmd_min>-1000000</cmd_min> <!-- 这里的范围要与 effort 对应 -->
@@ -1217,7 +1216,7 @@
         filename="gz-sim-joint-position-controller-system"
         name="gz::sim::systems::JointPositionController">
         <joint_name>slide_link_joint</joint_name>
-        <p_gain>10000000</p_gain> <!-- 极高的 P 增益 -->
+        <p_gain>1000000</p_gain> <!-- 极高的 P 增益 -->
         <i_gain>1.0</i_gain>
         <d_gain>500000</d_gain>
         <cmd_min>-1000000</cmd_min> <!-- 这里的范围要与 effort 对应 -->
