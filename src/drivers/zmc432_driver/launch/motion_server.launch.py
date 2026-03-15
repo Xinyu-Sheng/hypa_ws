@@ -1,7 +1,7 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import Node
+from launch_ros.actions import LifecycleNode
 
 
 def generate_launch_description():
@@ -77,7 +77,7 @@ def generate_launch_description():
                 default_value="5000",
                 description="Timeout (ms) for EtherCAT init operations",
             ),
-            Node(
+            LifecycleNode(
                 package="zmc432_driver",
                 executable="motion_node",
                 name="motion_hardware_node",
@@ -102,6 +102,7 @@ def generate_launch_description():
                     {"ecat_slot_id": LaunchConfiguration("ecat_slot_id")},
                     {"ecat_timeout_ms": LaunchConfiguration("ecat_timeout_ms")},
                 ],
+                autostart=True,
             ),
         ]
     )

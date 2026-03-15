@@ -1,3 +1,6 @@
+#include <memory>
+#include <string>
+
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_lifecycle/lifecycle_node.hpp>
 
@@ -5,164 +8,245 @@
 #include "zmc432_driver/motion_controller.hpp"
 #include "zmc432_driver/motion_topic_node.hpp"
 
+namespace zmc432_driver
+{
+
+class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
+{
+public:
+  explicit MotionHardwareNode(const std::string &node_name)
+      : LifecycleNode(node_name)
+  {
+    // 声明必需参数（多机器人支持）
+    // use_sim_time 由 LifecycleNode 自动声明，无需重复声明
+    this->declare_parameter<std::string>("namespace", "");
+    this->declare_parameter<std::string>("robot_name", "hypa");
+
+    // 声明应用参数
+    this->declare_parameter<std::string>("controller_ip", "192.168.0.11");
+    this->declare_parameter<std::string>("motion_command_topic",
+                                         "motion_command");
+    this->declare_parameter<std::string>("motion_status_topic", "motion_status");
+    this->declare_parameter<double>("default_units", 1.0);
+    this->declare_parameter<double>("default_speed", 10.0);
+    this->declare_parameter<double>("default_accel", 100.0);
+    this->declare_parameter<double>("default_decel", 100.0);
+    this->declare_parameter<int>("axis_count", 1);
+
+    // EtherCAT 相关参数
+    this->declare_parameter<bool>("perform_ecat_init", false);
+    this->declare_parameter<int>("ecat_slot_id", 0);
+    this->declare_parameter<int>("ecat_timeout_ms", 5000);
+  }
+
+  ~MotionHardwareNode() override = default;
+
+protected:
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  on_configure(const rclcpp_lifecycle::State &) override
+  {
+    using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
+
+    // 读取参数
+    namespace_ = this->get_parameter("namespace").as_string();
+    robot_name_ = this->get_parameter("robot_name").as_string();
+    controller_ip_ = this->get_parameter("controller_ip").as_string();
+    command_topic_ = this->get_parameter("motion_command_topic").as_string();
+    status_topic_ = this->get_parameter("motion_status_topic").as_string();
+    default_units_ = this->get_parameter("default_units").as_double();
+    default_speed_ = this->get_parameter("default_speed").as_double();
+    default_accel_ = this->get_parameter("default_accel").as_double();
+    default_decel_ = this->get_parameter("default_decel").as_double();
+    axis_count_ = this->get_parameter("axis_count").as_int();
+
+    if (axis_count_ < 0)
+    {
+      RCLCPP_WARN(this->get_logger(), "axis_count negative (%d), treating as 0",
+                  axis_count_);
+      axis_count_ = 0;
+    }
+
+    RCLCPP_INFO(this->get_logger(), "Motion hardware node starting...");
+    RCLCPP_INFO(this->get_logger(), "Namespace: %s, Robot: %s",
+                namespace_.c_str(), robot_name_.c_str());
+    RCLCPP_INFO(this->get_logger(), "Controller IP: %s", controller_ip_.c_str());
+    RCLCPP_INFO(
+        this->get_logger(),
+        "Default motion parameters: units=%.3f, speed=%.3f, accel=%.3f, decel=%.3f",
+        default_units_, default_speed_, default_accel_, default_decel_);
+    RCLCPP_INFO(this->get_logger(), "Axis count: %d", axis_count_);
+
+    controller_ = std::make_shared<MotionController>();
+
+    // 初始化控制器（连接 ZMC432）
+    auto init_result = controller_->initialize(controller_ip_);
+    if (init_result)
+    {
+      RCLCPP_FATAL(this->get_logger(),
+                   "Failed to initialize motion controller: %s",
+                   init_result->c_str());
+      return CallbackReturn::FAILURE;
+    }
+
+    RCLCPP_INFO(this->get_logger(), "Connected to ZMC432 at %s",
+                controller_ip_.c_str());
+
+    // EtherCAT 初始化（可选）
+    if (this->get_parameter("perform_ecat_init").as_bool())
+    {
+      auto info = EcatInitInfo::from_node(
+          this->get_node_parameters_interface(), "ecat");
+      int slot = this->get_parameter("ecat_slot_id").as_int();
+      int tout = this->get_parameter("ecat_timeout_ms").as_int();
+      auto err = controller_->initialize_bus(info, slot, tout);
+      if (err)
+      {
+        RCLCPP_FATAL(this->get_logger(), "ECAT init failed: %s", err->c_str());
+        return CallbackReturn::FAILURE;
+      }
+      RCLCPP_INFO(this->get_logger(), "EtherCAT bus initialised");
+    }
+
+    // 轴参数配置
+    for (int axis = 0; axis < axis_count_; ++axis)
+    {
+      auto config_result = controller_->configure_axis(
+          axis, default_units_, default_speed_, default_accel_, default_decel_);
+      if (config_result)
+      {
+        RCLCPP_WARN(this->get_logger(), "Failed to configure axis %d: %s", axis,
+                    config_result->c_str());
+      }
+      else
+      {
+        RCLCPP_INFO(
+            this->get_logger(),
+            "Axis %d configured: units=%.3f, speed=%.3f, accel=%.3f, decel=%.3f",
+            axis, default_units_, default_speed_, default_accel_,
+            default_decel_);
+      }
+    }
+
+    // 根据命名空间/机器人名称设置主题前缀
+    if (!namespace_.empty())
+    {
+      command_topic_ = "/" + namespace_ + "/" + robot_name_ + "/" + command_topic_;
+      status_topic_ = "/" + namespace_ + "/" + robot_name_ + "/" + status_topic_;
+    }
+    else if (!robot_name_.empty() && robot_name_ != "hypa")
+    {
+      command_topic_ = "/" + robot_name_ + "/" + command_topic_;
+      status_topic_ = "/" + robot_name_ + "/" + status_topic_;
+    }
+
+    topic_node_ = std::make_unique<MotionTopicNode>(
+        this->get_node_base_interface(), this->get_node_topics_interface(),
+        this->get_node_logging_interface(), this->get_node_timers_interface(),
+        this->get_node_parameters_interface(), controller_, command_topic_,
+        status_topic_);
+
+    if (!topic_node_->initialize())
+    {
+      RCLCPP_FATAL(this->get_logger(), "Failed to initialize motion topic node");
+      return CallbackReturn::FAILURE;
+    }
+
+    RCLCPP_INFO(this->get_logger(),
+                "Motion topic node ready (command_topic='%s', status_topic='%s')",
+                command_topic_.c_str(), status_topic_.c_str());
+    RCLCPP_INFO(this->get_logger(), "Listening for motion commands...");
+
+    return CallbackReturn::SUCCESS;
+  }
+
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  on_activate(const rclcpp_lifecycle::State &) override
+  {
+    if (!controller_)
+    {
+      RCLCPP_ERROR(this->get_logger(),
+                   "Cannot activate: controller not initialized");
+      return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::FAILURE;
+    }
+
+    if (!controller_->start())
+    {
+      RCLCPP_FATAL(this->get_logger(),
+                   "Failed to start motion controller execution thread");
+      return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::FAILURE;
+    }
+
+    RCLCPP_INFO(this->get_logger(), "Motion controller started");
+    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+  }
+
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  on_deactivate(const rclcpp_lifecycle::State &) override
+  {
+    if (topic_node_)
+    {
+      topic_node_->shutdown();
+    }
+    if (controller_)
+    {
+      controller_->stop();
+    }
+    RCLCPP_INFO(this->get_logger(), "Motion hardware node deactivated");
+    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+  }
+
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  on_cleanup(const rclcpp_lifecycle::State &) override
+  {
+    topic_node_.reset();
+    controller_.reset();
+    RCLCPP_INFO(this->get_logger(), "Motion hardware node cleaned up");
+    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+  }
+
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  on_shutdown(const rclcpp_lifecycle::State &) override
+  {
+    if (topic_node_)
+    {
+      topic_node_->shutdown();
+    }
+    if (controller_)
+    {
+      controller_->stop();
+    }
+    RCLCPP_INFO(this->get_logger(), "Motion hardware node shutting down");
+    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+  }
+
+private:
+  std::string namespace_;
+  std::string robot_name_;
+  std::string controller_ip_;
+  std::string command_topic_;
+  std::string status_topic_;
+  double default_units_ = 1.0;
+  double default_speed_ = 10.0;
+  double default_accel_ = 100.0;
+  double default_decel_ = 100.0;
+  int axis_count_ = 1;
+
+  std::shared_ptr<MotionController> controller_;
+  std::unique_ptr<MotionTopicNode> topic_node_;
+};
+
+}  // namespace zmc432_driver
+
 int main(int argc, char **argv)
 {
-  // 初始化 ROS2
   rclcpp::init(argc, argv);
 
-  // 创建生命周期节点
-  auto node =
-      std::make_shared<rclcpp_lifecycle::LifecycleNode>("motion_hardware_node");
+  auto node = std::make_shared<zmc432_driver::MotionHardwareNode>(
+      "motion_hardware_node");
 
-  // 声明必需参数（多机器人支持）
-  // use_sim_time 由 LifecycleNode 自动声明，无需重复声明
-  node->declare_parameter<std::string>("namespace", "");
-  node->declare_parameter<std::string>("robot_name", "hypa");
-  // 声明应用参数
-  node->declare_parameter<std::string>("controller_ip", "192.168.0.11");
-  node->declare_parameter<std::string>("motion_command_topic",
-                                       "motion_command");
-  node->declare_parameter<std::string>("motion_status_topic", "motion_status");
-  node->declare_parameter<double>("default_units", 1.0);
-  node->declare_parameter<double>("default_speed", 10.0);
-  node->declare_parameter<double>("default_accel", 100.0);
-  node->declare_parameter<double>("default_decel", 100.0);
-  node->declare_parameter<int>("axis_count", 1);
-
-  // 获取必需参数
-  auto namespace_val = node->get_parameter("namespace").as_string();
-  auto robot_name = node->get_parameter("robot_name").as_string();
-  std::string controller_ip = node->get_parameter("controller_ip").as_string();
-  std::string command_topic =
-      node->get_parameter("motion_command_topic").as_string();
-  std::string status_topic =
-      node->get_parameter("motion_status_topic").as_string();
-  double default_units = node->get_parameter("default_units").as_double();
-  double default_speed = node->get_parameter("default_speed").as_double();
-  double default_accel = node->get_parameter("default_accel").as_double();
-  double default_decel = node->get_parameter("default_decel").as_double();
-
-  int axis_count = node->get_parameter("axis_count").as_int();
-  if (axis_count < 0)
-  {
-    RCLCPP_WARN(node->get_logger(), "axis_count negative (%d), treating as 0",
-                axis_count);
-    axis_count = 0;
-  }
-
-  // 打印配置信息
-  RCLCPP_INFO(node->get_logger(), "Motion hardware node starting...");
-  RCLCPP_INFO(node->get_logger(), "Namespace: %s, Robot: %s",
-              namespace_val.c_str(), robot_name.c_str());
-  RCLCPP_INFO(node->get_logger(), "Controller IP: %s", controller_ip.c_str());
-  RCLCPP_INFO(node->get_logger(),
-              "Default motion parameters: units=%.3f, speed=%.3f, accel=%.3f, "
-              "decel=%.3f",
-              default_units, default_speed, default_accel, default_decel);
-  RCLCPP_INFO(node->get_logger(), "Axis count: %d", axis_count);
-
-  // 创建运动控制器
-  auto controller = std::make_shared<zmc432_driver::MotionController>();
-
-  // 初始化控制器（连接 ZMC432）
-  auto init_result = controller->initialize(controller_ip);
-  if (init_result)
-  {
-    RCLCPP_FATAL(node->get_logger(),
-                 "Failed to initialize motion controller: %s",
-                 init_result->c_str());
-    return 1;
-  }
-  RCLCPP_INFO(node->get_logger(), "Connected to ZMC432 at %s",
-              controller_ip.c_str());
-
-  // EtherCAT 初始化参数
-  node->declare_parameter<bool>("perform_ecat_init", false);
-  node->declare_parameter<int>("ecat_slot_id", 0);
-  node->declare_parameter<int>("ecat_timeout_ms", 5000);
-  if (node->get_parameter("perform_ecat_init").as_bool())
-  {
-    auto info = zmc432_driver::EcatInitInfo::from_node(
-        node->get_node_parameters_interface(), "ecat");
-    int slot = node->get_parameter("ecat_slot_id").as_int();
-    int tout = node->get_parameter("ecat_timeout_ms").as_int();
-    auto err = controller->initialize_bus(info, slot, tout);
-    if (err)
-    {
-      RCLCPP_FATAL(node->get_logger(), "ECAT init failed: %s", err->c_str());
-      return 1;
-    }
-    RCLCPP_INFO(node->get_logger(), "EtherCAT bus initialised");
-  }
-
-  // 配置默认轴参数（这里可以配置所有可能使用的轴）
-  // 实际配置数量由 axis_count 参数决定
-  for (int axis = 0; axis < axis_count; ++axis)
-  {
-    auto config_result = controller->configure_axis(
-        axis, default_units, default_speed, default_accel, default_decel);
-    if (config_result)
-    {
-      RCLCPP_WARN(node->get_logger(), "Failed to configure axis %d: %s", axis,
-                  config_result->c_str());
-    }
-    else
-    {
-      RCLCPP_INFO(
-          node->get_logger(),
-          "Axis %d configured: units=%.3f, speed=%.3f, accel=%.3f, decel=%.3f",
-          axis, default_units, default_speed, default_accel, default_decel);
-    }
-  }
-
-  // 启动控制器执行线程
-  if (!controller->start())
-  {
-    RCLCPP_FATAL(node->get_logger(),
-                 "Failed to start motion controller execution thread");
-    return 1;
-  }
-
-  RCLCPP_INFO(node->get_logger(), "Motion controller started");
-
-  // 使用机器人名称前缀主题（如果指定了命名空间）
-  if (!namespace_val.empty())
-  {
-    command_topic =
-        "/" + namespace_val + "/" + robot_name + "/" + command_topic;
-    status_topic = "/" + namespace_val + "/" + robot_name + "/" + status_topic;
-  }
-  else if (!robot_name.empty() && robot_name != "hypa")
-  {
-    command_topic = "/" + robot_name + "/" + command_topic;
-    status_topic = "/" + robot_name + "/" + status_topic;
-  }
-
-  zmc432_driver::MotionTopicNode topic_node(
-      node->get_node_base_interface(), node->get_node_topics_interface(),
-      node->get_node_logging_interface(), node->get_node_timers_interface(),
-      node->get_node_parameters_interface(), controller, command_topic,
-      status_topic);
-  if (!topic_node.initialize())
-  {
-    RCLCPP_FATAL(node->get_logger(), "Failed to initialize motion topic node");
-    return 1;
-  }
-
-  RCLCPP_INFO(node->get_logger(),
-              "Motion topic node ready (command_topic='%s', status_topic='%s')",
-              command_topic.c_str(), status_topic.c_str());
-  RCLCPP_INFO(node->get_logger(), "Listening for motion commands...");
-
-  // 运行 ROS2 spin（对于 LifecycleNode 使用 get_node_base_interface）
   rclcpp::executors::MultiThreadedExecutor executor;
   executor.add_node(node->get_node_base_interface());
   executor.spin();
-
-  // 清理
-  RCLCPP_INFO(node->get_logger(), "Shutting down motion hardware node");
-  topic_node.shutdown();
-  controller->stop();
 
   rclcpp::shutdown();
   return 0;
