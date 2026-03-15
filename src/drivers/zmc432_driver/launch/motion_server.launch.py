@@ -62,6 +62,21 @@ def generate_launch_description():
                 default_value="1",
                 description="Number of motion axes to configure",
             ),
+            DeclareLaunchArgument(
+                "perform_ecat_init",
+                default_value="false",
+                description="Whether to run EtherCAT bus init on node startup",
+            ),
+            DeclareLaunchArgument(
+                "ecat_slot_id",
+                default_value="0",
+                description="EtherCAT slot ID to use for bus init",
+            ),
+            DeclareLaunchArgument(
+                "ecat_timeout_ms",
+                default_value="5000",
+                description="Timeout (ms) for EtherCAT init operations",
+            ),
             Node(
                 package="zmc432_driver",
                 executable="motion_node",
@@ -83,6 +98,9 @@ def generate_launch_description():
                     },
                     {"motion_status_topic": LaunchConfiguration("motion_status_topic")},
                     {"axis_count": LaunchConfiguration("axis_count")},
+                    {"perform_ecat_init": LaunchConfiguration("perform_ecat_init")},
+                    {"ecat_slot_id": LaunchConfiguration("ecat_slot_id")},
+                    {"ecat_timeout_ms": LaunchConfiguration("ecat_timeout_ms")},
                 ],
             ),
         ]

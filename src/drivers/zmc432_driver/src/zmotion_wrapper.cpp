@@ -175,6 +175,11 @@ std::optional<uint32_t> ZMotionWrapper::AxisStatus(int _axis) const
   return pimpl_->AxisStatus(_axis);
 }
 
+std::optional<bool> ZMotionWrapper::is_axis_idle(int _axis) const
+{
+  return pimpl_->is_axis_idle(_axis);
+}
+
 bool ZMotionWrapper::is_axis_moving(int _axis)
 {
   return pimpl_->is_axis_moving(_axis);
@@ -896,6 +901,28 @@ std::optional<uint32_t> ZMotionWrapper::ZMotionWrapperPrivate::AxisStatus(
     return std::nullopt;
   }
   return static_cast<uint32_t>(status);
+}
+
+std::optional<bool> ZMotionWrapper::ZMotionWrapperPrivate::is_axis_idle(
+    int _axis) const
+{
+  if (!handle)
+  {
+    last_error = "Controller not connected";
+    return std::nullopt;
+  }
+
+  int32_t value = 0;
+  int32_t ret = ZAux_Direct_GetIfIdle(handle, _axis, &value);
+  if (ret != ERR_OK)
+  {
+    last_error = "Get idle status failed for axis " + std::to_string(_axis) +
+                 " (error: " + std::to_string(ret) + ")";
+    return std::nullopt;
+  }
+
+  // ZMC: 0 表示运动中，-1 表示停止/空闲
+  return (value == -1);
 }
 
 bool ZMotionWrapper::ZMotionWrapperPrivate::is_axis_moving(int _axis)

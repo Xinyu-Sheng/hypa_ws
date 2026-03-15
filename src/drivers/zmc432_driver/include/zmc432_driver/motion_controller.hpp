@@ -116,7 +116,8 @@ class MotionController
       const MotionCommand &_cmd);
   void update_status();
   double calculate_progress(const MotionCommand &_cmd) const;
-  bool is_motion_complete(const MotionCommand &_cmd) const;
+  bool is_motion_complete(const MotionCommand &_cmd,
+                           bool use_idle_check = true) const;
 };
 
 }  // namespace zmc432_driver

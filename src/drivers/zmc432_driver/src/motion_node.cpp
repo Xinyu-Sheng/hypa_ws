@@ -15,30 +15,33 @@ int main(int argc, char **argv)
       std::make_shared<rclcpp_lifecycle::LifecycleNode>("motion_hardware_node");
 
   // 声明必需参数（多机器人支持）
-  node->declare_parameter<std::string>("namespace", "");
   // use_sim_time 由 LifecycleNode 自动声明，无需重复声明
+  node->declare_parameter<std::string>("namespace", "");
   node->declare_parameter<std::string>("robot_name", "hypa");
-
   // 声明应用参数
   node->declare_parameter<std::string>("controller_ip", "192.168.0.11");
+  node->declare_parameter<std::string>("motion_command_topic",
+                                       "motion_command");
+  node->declare_parameter<std::string>("motion_status_topic", "motion_status");
   node->declare_parameter<double>("default_units", 1.0);
   node->declare_parameter<double>("default_speed", 10.0);
   node->declare_parameter<double>("default_accel", 100.0);
   node->declare_parameter<double>("default_decel", 100.0);
-  // 最多配置的轴数量，默认 4
-  node->declare_parameter<int>("axis_count", 4);
+  node->declare_parameter<int>("axis_count", 1);
 
   // 获取必需参数
   auto namespace_val = node->get_parameter("namespace").as_string();
   auto robot_name = node->get_parameter("robot_name").as_string();
-  // use_sim_time 由 ROS 2 框架自动处理，获取后不需要显式使用
-
-  // 获取应用参数
   std::string controller_ip = node->get_parameter("controller_ip").as_string();
+  std::string command_topic =
+      node->get_parameter("motion_command_topic").as_string();
+  std::string status_topic =
+      node->get_parameter("motion_status_topic").as_string();
   double default_units = node->get_parameter("default_units").as_double();
   double default_speed = node->get_parameter("default_speed").as_double();
   double default_accel = node->get_parameter("default_accel").as_double();
   double default_decel = node->get_parameter("default_decel").as_double();
+
   int axis_count = node->get_parameter("axis_count").as_int();
   if (axis_count < 0)
   {
@@ -47,6 +50,7 @@ int main(int argc, char **argv)
     axis_count = 0;
   }
 
+  // 打印配置信息
   RCLCPP_INFO(node->get_logger(), "Motion hardware node starting...");
   RCLCPP_INFO(node->get_logger(), "Namespace: %s, Robot: %s",
               namespace_val.c_str(), robot_name.c_str());
@@ -69,24 +73,13 @@ int main(int argc, char **argv)
                  init_result->c_str());
     return 1;
   }
-
   RCLCPP_INFO(node->get_logger(), "Connected to ZMC432 at %s",
               controller_ip.c_str());
-
-  // helper pointer used for parameter utilities
-  // note: LifecycleNode can't be dynamic_pointer_cast to Node, but we use
-  // interfaces now. node_base is only kept for ecat initialization
-  // compatibility if needed.
-  auto node_base_ptr = node->get_node_base_interface();
 
   // EtherCAT 初始化参数
   node->declare_parameter<bool>("perform_ecat_init", false);
   node->declare_parameter<int>("ecat_slot_id", 0);
   node->declare_parameter<int>("ecat_timeout_ms", 5000);
-  // some common fields, advanced users can still call API manually
-  node->declare_parameter<int>("ecat.drive_axis_start", 0);
-  node->declare_parameter<int>("ecat.drive_axis_num", -1);
-
   if (node->get_parameter("perform_ecat_init").as_bool())
   {
     auto info = zmc432_driver::EcatInitInfo::from_node(
@@ -131,18 +124,6 @@ int main(int argc, char **argv)
   }
 
   RCLCPP_INFO(node->get_logger(), "Motion controller started");
-
-  // 创建 Topic Node（通过接口注入，不再依赖 dynamic_pointer_cast）
-  // 声明主题参数
-  node->declare_parameter<std::string>("motion_command_topic",
-                                       "motion_command");
-  node->declare_parameter<std::string>("motion_status_topic", "motion_status");
-
-  // 获取主题名称
-  std::string command_topic =
-      node->get_parameter("motion_command_topic").as_string();
-  std::string status_topic =
-      node->get_parameter("motion_status_topic").as_string();
 
   // 使用机器人名称前缀主题（如果指定了命名空间）
   if (!namespace_val.empty())

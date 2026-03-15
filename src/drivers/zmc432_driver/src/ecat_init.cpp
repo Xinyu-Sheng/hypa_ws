@@ -134,11 +134,10 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
         256;  // 总线驱动器IO映射到控制器上后当前驱动器IO的起始编号，IO起始地址需要是8的倍数，不能和其他IO地址冲突
     EcatInfo.DriveIoSpa =
         16;  // 一个驱动器映射多少个IO到控制器上，需要是8的倍数
-    memset(
-        EcatInfo.DrivePdoMode, 1,
-        sizeof(
-            EcatInfo
-                .DrivePdoMode));  // 轴PDO模式，详情参考RTBasic手册的drive_profile的指令说明,默认设置成12表示需要监控驱动器的PDO
+    memset(EcatInfo.DrivePdoMode, -1,
+           sizeof(EcatInfo.DrivePdoMode));  // 轴PDO模式 //TODO:
+                                            // 测试不同的效果，-1应当是通过查询/协商从站使用从站的默认PDO模式（意味着得提前确认驱动器设置正确的），其他模式是主站“强加”给从站（通过主站写入从站的
+                                            // PDO 映射）
     EcatInfo.DriveEnable =
         1;  ////总线初始化后驱动器是否自动上使能，1自动上使能，0不上使能
 

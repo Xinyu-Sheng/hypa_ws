@@ -59,7 +59,8 @@ class MotionController::MotionControllerPrivate
   // 辅助方法
   void update_status();
   double calculate_progress(const MotionController::MotionCommand &_cmd) const;
-  bool is_motion_complete(const MotionController::MotionCommand &_cmd) const;
+  bool is_motion_complete(const MotionController::MotionCommand &_cmd,
+                            bool use_idle_check = true) const;
 };
 
 // Public interface implementations
@@ -471,9 +472,10 @@ double MotionController::calculate_progress(const MotionCommand &_cmd) const
   return this->pimpl_->calculate_progress(_cmd);
 }
 
-bool MotionController::is_motion_complete(const MotionCommand &_cmd) const
+bool MotionController::is_motion_complete(const MotionCommand &_cmd,
+                                            bool use_idle_check) const
 {
-  return this->pimpl_->is_motion_complete(_cmd);
+  return this->pimpl_->is_motion_complete(_cmd, use_idle_check);
 }
 
 // MotionControllerPrivate method implementations
@@ -564,7 +566,8 @@ void MotionController::MotionControllerPrivate::execution_loop(
 
       while (running && !cancel_requested)
       {
-        if (is_motion_complete(cmd))
+        // 优先使用硬件空闲信号判断运动完成，否则回退到位置+速度容差判断
+        if (is_motion_complete(cmd, true))
         {
           physically_completed = true;
           break;
@@ -846,11 +849,40 @@ double MotionController::MotionControllerPrivate::calculate_progress(
 }
 
 bool MotionController::MotionControllerPrivate::is_motion_complete(
-    const MotionController::MotionCommand &_cmd) const
+    const MotionController::MotionCommand &_cmd,
+    bool use_idle_check) const
 {
   if (!zmotion)
   {
     return false;
+  }
+
+  if (use_idle_check)
+  {
+    // 使用硬件空闲信号判断是否完成（更可靠，避免位置/速度抖动导致长时间等待）
+    bool all_idle = true;
+    for (size_t i = 0; i < _cmd.axes.size(); ++i)
+    {
+      int axis = _cmd.axes[i];
+      auto idle_opt = zmotion->is_axis_idle(axis);
+      if (!idle_opt)
+      {
+        // 查询失败，则回退到位置/速度判断
+        all_idle = false;
+        break;
+      }
+      if (!idle_opt.value())
+      {
+        all_idle = false;
+        break;
+      }
+    }
+
+    if (all_idle)
+    {
+      return true;
+    }
+    // 如果空闲判断失败，则继续走位置/速度判断（下面的逻辑）
   }
 
   // 判定物理完成的容差：位置和速度都满足才算完成
@@ -877,6 +909,11 @@ bool MotionController::MotionControllerPrivate::is_motion_complete(
 
     const double feedback = feedback_opt.value();
     const double speed = speed_opt.value();
+
+    // 诊断信息输出，便于定位“命令执行完但仍被认定未完成”的情况
+    std::cerr << "[is_motion_complete] axis=" << axis
+              << " feedback-target=" << (feedback - target)
+              << " speed=" << speed << std::endl;
 
     if (std::abs(feedback - target) > POSITION_TOLERANCE)
     {

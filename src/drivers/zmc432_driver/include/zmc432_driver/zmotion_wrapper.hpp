@@ -99,6 +99,7 @@ class ZMotionWrapper
     std::optional<double> Feedback(int _axis) const;
     std::optional<double> Speed(int _axis) const;
     std::optional<uint32_t> AxisStatus(int _axis) const;
+    std::optional<bool> is_axis_idle(int _axis) const;
     bool is_axis_moving(int _axis);
     std::optional<std::string> set_axis_enable(int _axis, bool _enable);
     std::optional<bool> get_axis_enable(int _axis) const;
@@ -158,6 +159,7 @@ class ZMotionWrapper
   std::optional<double> Feedback(int _axis) const;
   std::optional<double> Speed(int _axis) const;
   std::optional<uint32_t> AxisStatus(int _axis) const;
+  std::optional<bool> is_axis_idle(int _axis) const;
   bool is_axis_moving(int _axis);
   std::optional<std::string> set_axis_enable(int _axis, bool _enable);
   std::optional<bool> get_axis_enable(int _axis) const;

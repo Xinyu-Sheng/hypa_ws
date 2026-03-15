@@ -68,8 +68,7 @@ ros2 param set /motion default_units 0.005
 
 ## EtherCAT 总线
 
-本包假设 EtherCAT 主站已在网络中配置，并且 AKD 驱动器映射到连续轴号。启动节点后，如果设置 `perform_ecat_init:=true`，
-程序会尝试使用 `libzmotion.so` API 执行总线扫描和 PDO/轴映射。此功能仅限高级用户。
+本包假设 EtherCAT 主站已在网络中配置，并且 AKD 驱动器映射到连续轴号。启动节点后，如果设置 `perform_ecat_init:=true`（可通过 launch 参数 `perform_ecat_init` 或 `ros2 param set` 来设置），程序会尝试使用 `libzmotion.so` API执行总线扫描和 PDO/轴映射。此功能仅限高级用户。
 
 > 参考文档：
 > - `ZMC432_V2_User_Manual_v1.6.0.txt`
