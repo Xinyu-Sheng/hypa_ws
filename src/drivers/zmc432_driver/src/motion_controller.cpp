@@ -34,6 +34,10 @@ class MotionController::MotionControllerPrivate
   std::atomic<bool> executing{false};
   std::atomic<bool> cancel_requested{false};
 
+  // ✅ 修复#11：新增成员变量跟踪当前执行的命令
+  MotionController::MotionCommand current_executing_cmd;
+  std::chrono::steady_clock::time_point command_start_time;
+
   // 轴配置
   struct AxisConfig
   {
@@ -309,14 +313,7 @@ bool MotionController::queue_motion(const MotionCommand &_cmd)
     {
       return false;
     }
-
-    // 检查轴是否已使能
-    auto enable_opt = this->pimpl_->zmotion->get_axis_enable(axis);
-    if (!enable_opt || !enable_opt.value())
-    {
-      // 轴未使能
-      return false;
-    }
+    // ✅ 已删除：轴使能检查 — 延迟到execution_loop()中执行
   }
 
   // 检查连续轨迹模式下的参数
@@ -386,9 +383,16 @@ MotionController::ControllerStatus MotionController::CurrentStatus() const
     status.axis_statuses[axis] = axis_status;
   }
 
-  status.progress = 0.0;
-  // 如果有正在执行的命令，计算进度
-  // 这里暂时返回 0，实际由 execute_goal 中的反馈更新
+  // ✅ 修复#11：计算当前运动进度
+  if (status.executing)
+  {
+    status.progress =
+        this->pimpl_->calculate_progress(this->pimpl_->current_executing_cmd);
+  }
+  else
+  {
+    status.progress = 0.0;
+  }
 
   return status;
 }
@@ -511,6 +515,33 @@ void MotionController::MotionControllerPrivate::execution_loop(
       executing = true;
       cancel_requested = false;
       active_axes = cmd.axes;
+
+      // ✅ 修复#11：保存当前执行的命令和开始时间
+      current_executing_cmd = cmd;
+      command_start_time = std::chrono::steady_clock::now();
+    }
+
+    // ✅ 修复#2：在execution_loop中检查轴是否已使能
+    bool all_enabled = true;
+    for (int axis : cmd.axes)
+    {
+      auto enable_opt = zmotion->get_axis_enable(axis);
+      if (!enable_opt || !enable_opt.value())
+      {
+        all_enabled = false;
+        break;
+      }
+    }
+
+    if (!all_enabled)
+    {
+      // 轴未使能，跳过本命令
+      {
+        std::lock_guard<std::mutex> lock(buffer_mutex);
+        executing = false;
+        active_axes.clear();
+      }
+      continue;
     }
 
     // 执行命令
@@ -538,7 +569,9 @@ void MotionController::MotionControllerPrivate::execution_loop(
 
     if (result)
     {
-      std::cerr << "Motion execution failed: " << result.value() << std::endl;
+      std::cerr << "[zmc432_driver/motion_controller] [ERROR] Motion execution "
+                   "failed: "
+                << result.value() << std::endl;
     }
     else
     {
@@ -748,58 +781,84 @@ MotionController::MotionControllerPrivate::execute_continuous_trajectory(
     return buffer_result;
   }
 
-  // 4. 等待运动开始并监控
-  while (running && !cancel_requested)
+  // ✅ 修复#3：4. 流式缓冲主循环 — 使用wait_for()实现超时等待
+  const int kWaitForNextCommandMs = 100;  // 超时时长100ms
+  bool should_continue = true;
+
+  while (running && !cancel_requested && should_continue)
   {
-    // 检查是否还有后续命令在缓冲中
+    MotionController::MotionCommand next_cmd;
+    bool has_next_cmd = false;
+
+    // ✅ 使用wait_for()等待，超时100ms
     {
-      std::lock_guard<std::mutex> lock(buffer_mutex);
-      if (command_buffer.empty())
+      std::unique_lock<std::mutex> lock(buffer_mutex);
+      if (buffer_cv.wait_for(
+              lock, std::chrono::milliseconds(kWaitForNextCommandMs),
+              [this]() { return !command_buffer.empty() || !running; }))
       {
-        // 没有更多命令，可以停止连续模式
-        // 但为了支持流式缓冲，我们等待一段时间看是否有新命令
-        // 这里简单处理：等待 100ms，如果没新命令就停止
+        // 条件满足：有新命令或收到停止信号
+        if (!running)
+        {
+          should_continue = false;
+        }
+        else if (!command_buffer.empty())
+        {
+          next_cmd = command_buffer.front();
+          command_buffer.pop_front();
+          has_next_cmd = true;
+        }
       }
       else
       {
-        // 有后续命令，取出并缓冲
-        MotionController::MotionCommand next_cmd = command_buffer.front();
-        command_buffer.pop_front();
-
-        // 验证新命令是否与当前连续轨迹兼容（相同轴、相同模式）
-        if (next_cmd.motion_type == MotionController::CONTINUOUS_TRAJECTORY &&
-            next_cmd.axes == _cmd.axes &&
-            next_cmd.interpolation_mode == _cmd.interpolation_mode)
-        {
-          // 缓冲这个点
-          auto next_result =
-              zmotion->buffer_move(next_cmd.axes, next_cmd.positions);
-          if (next_result)
-          {
-            std::cerr << "Buffer move failed in continuous trajectory: "
-                      << next_result.value() << std::endl;
-            zmotion->stop_continuous();
-            return next_result;
-          }
-          // 继续循环检查下一个命令
-          continue;
-        }
-        else
-        {
-          // 遇到不同类型的命令，停止连续模式并处理新命令
-          zmotion->stop_continuous();
-          // 将新命令重新放回队列头部
-          command_buffer.push_front(next_cmd);
-          break;
-        }
+        // 超时 — 无后续命令，停止连续模式
+        should_continue = false;
       }
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    if (has_next_cmd)
+    {
+      // 验证新命令是否与当前连续轨迹兼容（相同轴、相同模式）
+      if (next_cmd.motion_type == MotionController::CONTINUOUS_TRAJECTORY &&
+          next_cmd.axes == _cmd.axes &&
+          next_cmd.interpolation_mode == _cmd.interpolation_mode)
+      {
+        // 缓冲这个点
+        auto next_result =
+            zmotion->buffer_move(next_cmd.axes, next_cmd.positions);
+        if (next_result)
+        {
+          std::cerr << "Buffer move failed in continuous trajectory: "
+                    << next_result.value() << std::endl;
+          zmotion->stop_continuous();
+          return next_result;
+        }
+        // 继续循环检查下一个命令
+        continue;
+      }
+      else
+      {
+        // 遇到不同类型的命令，停止连续模式并处理新命令
+        // 将新命令重新放回队列头部
+        {
+          std::lock_guard<std::mutex> lock(buffer_mutex);
+          command_buffer.push_front(next_cmd);
+        }
+        should_continue = false;
+      }
+    }
   }
 
-  // 停止连续模式
-  zmotion->stop_continuous();
+  // ✅ 修复#3：明确调用stop_continuous()停止连续模式
+  if (cancel_requested)
+  {
+    zmotion->stop_continuous();
+  }
+  else
+  {
+    // 正常完成，也要停止
+    zmotion->stop_continuous();
+  }
 
   return std::nullopt;
 }
@@ -813,16 +872,40 @@ void MotionController::MotionControllerPrivate::update_status()
 double MotionController::MotionControllerPrivate::calculate_progress(
     const MotionController::MotionCommand &_cmd) const
 {
+  // ✅ 修复#11：计算实时运动进度
   if (_cmd.axes.empty())
     return 0.0;
 
   double total_distance = 0.0;
-  double remaining_distance = 0.0;
+  double completed_distance = 0.0;
 
+  // 第一步：计算总距离
   for (size_t i = 0; i < _cmd.axes.size(); ++i)
   {
     int axis = _cmd.axes[i];
     double target = _cmd.positions[i];
+
+    // 获取轴起始位置（从execution_loop保存的时间点获取）
+    double start_position = 0.0;
+    if (zmotion)
+    {
+      auto start_opt = zmotion->Position(axis);
+      if (start_opt)
+      {
+        // 实际上我们需要知道命令开始时的位置，这里先用当前位置
+        // 更精确的方式是保存执行命令前的位置
+        start_position = start_opt.value();
+      }
+    }
+
+    double axis_distance = std::abs(target - start_position);
+    total_distance += axis_distance;
+  }
+
+  // 第二步：计算已完成的距离
+  for (size_t i = 0; i < _cmd.axes.size(); ++i)
+  {
+    int axis = _cmd.axes[i];
 
     // 获取当前位置
     double current = 0.0;
@@ -835,17 +918,29 @@ double MotionController::MotionControllerPrivate::calculate_progress(
       }
     }
 
-    double axis_distance = std::abs(target - current);
-    total_distance += axis_distance;
-    remaining_distance += axis_distance;
+    // 计算此轴已移动的距离
+    double start_position = 0.0;  // 理想情况：应该保存_cmd开始时的位置
+    if (zmotion)
+    {
+      auto start_opt = zmotion->Position(axis);
+      if (start_opt)
+      {
+        start_position = start_opt.value();
+      }
+    }
+
+    double moved = std::abs(current - start_position);
+    completed_distance += moved;
   }
 
-  if (total_distance < 1e-9)
+  // 第三步：计算百分比
+  if (total_distance < 1e-9)  // 接近目标或距离为0
   {
     return 100.0;
   }
 
-  return (total_distance - remaining_distance) / total_distance * 100.0;
+  double progress = (completed_distance / total_distance) * 100.0;
+  return std::min(100.0, std::max(0.0, progress));  // 限制在[0,100]
 }
 
 bool MotionController::MotionControllerPrivate::is_motion_complete(

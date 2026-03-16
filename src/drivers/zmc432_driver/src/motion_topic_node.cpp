@@ -9,10 +9,14 @@ class MotionTopicNode::MotionTopicNodePrivate
   public:
   MotionTopicNodePrivate(
       const rclcpp::node_interfaces::NodeBaseInterface::SharedPtr &_node_base,
-      const rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr &_node_topics,
-      const rclcpp::node_interfaces::NodeLoggingInterface::SharedPtr &_node_logging,
-      const rclcpp::node_interfaces::NodeTimersInterface::SharedPtr &_node_timers,
-      const rclcpp::node_interfaces::NodeParametersInterface::SharedPtr &_node_params,
+      const rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr
+          &_node_topics,
+      const rclcpp::node_interfaces::NodeLoggingInterface::SharedPtr
+          &_node_logging,
+      const rclcpp::node_interfaces::NodeTimersInterface::SharedPtr
+          &_node_timers,
+      const rclcpp::node_interfaces::NodeParametersInterface::SharedPtr
+          &_node_params,
       const std::shared_ptr<MotionController> &_controller,
       const std::string &_command_topic, const std::string &_status_topic)
       : node_base(_node_base),
@@ -71,9 +75,11 @@ class MotionTopicNode::MotionTopicNodePrivate
 MotionTopicNode::MotionTopicNode(
     const rclcpp::node_interfaces::NodeBaseInterface::SharedPtr &_node_base,
     const rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr &_node_topics,
-    const rclcpp::node_interfaces::NodeLoggingInterface::SharedPtr &_node_logging,
+    const rclcpp::node_interfaces::NodeLoggingInterface::SharedPtr
+        &_node_logging,
     const rclcpp::node_interfaces::NodeTimersInterface::SharedPtr &_node_timers,
-    const rclcpp::node_interfaces::NodeParametersInterface::SharedPtr &_node_params,
+    const rclcpp::node_interfaces::NodeParametersInterface::SharedPtr
+        &_node_params,
     const std::shared_ptr<MotionController> &_controller,
     const std::string &_command_topic, const std::string &_status_topic)
     : pimpl_(std::make_unique<MotionTopicNodePrivate>(
@@ -256,6 +262,7 @@ MotionTopicNode::MotionTopicNodePrivate::convert_status_to_msg(
   // 从 map 填充数组
   for (const auto &[axis, axis_status] : _status.axis_statuses)
   {
+    msg.axis_numbers.push_back(axis);  // ✅ 修复：保存轴号
     msg.current_positions.push_back(axis_status.position);
     msg.feedback_positions.push_back(axis_status.feedback);
     msg.current_velocities.push_back(axis_status.speed);

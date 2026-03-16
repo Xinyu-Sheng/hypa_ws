@@ -13,7 +13,7 @@ namespace zmc432_driver
 
 class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
 {
-public:
+  public:
   explicit MotionHardwareNode(const std::string &node_name)
       : LifecycleNode(node_name)
   {
@@ -26,7 +26,8 @@ public:
     this->declare_parameter<std::string>("controller_ip", "192.168.0.11");
     this->declare_parameter<std::string>("motion_command_topic",
                                          "motion_command");
-    this->declare_parameter<std::string>("motion_status_topic", "motion_status");
+    this->declare_parameter<std::string>("motion_status_topic",
+                                         "motion_status");
     this->declare_parameter<double>("default_units", 1.0);
     this->declare_parameter<double>("default_speed", 10.0);
     this->declare_parameter<double>("default_accel", 100.0);
@@ -41,11 +42,12 @@ public:
 
   ~MotionHardwareNode() override = default;
 
-protected:
+  protected:
   rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
   on_configure(const rclcpp_lifecycle::State &) override
   {
-    using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
+    using CallbackReturn = rclcpp_lifecycle::node_interfaces::
+        LifecycleNodeInterface::CallbackReturn;
 
     // 读取参数
     namespace_ = this->get_parameter("namespace").as_string();
@@ -59,21 +61,69 @@ protected:
     default_decel_ = this->get_parameter("default_decel").as_double();
     axis_count_ = this->get_parameter("axis_count").as_int();
 
-    if (axis_count_ < 0)
+    // ✅ 修复#5: 读取use_sim_time参数
+    bool use_sim_time = this->get_parameter("use_sim_time").as_bool();
+    if (use_sim_time)
     {
-      RCLCPP_WARN(this->get_logger(), "axis_count negative (%d), treating as 0",
+      RCLCPP_INFO(this->get_logger(),
+                  "use_sim_time enabled - using simulation clock");
+    }
+    else
+    {
+      RCLCPP_INFO(this->get_logger(),
+                  "use_sim_time disabled - using system clock");
+    }
+
+    // ✅ 修复#6: 参数范围验证
+    if (axis_count_ < 0 || axis_count_ > 32)
+    {
+      RCLCPP_WARN(this->get_logger(),
+                  "axis_count=%d out of range [0,32], clamping to valid value",
                   axis_count_);
-      axis_count_ = 0;
+      axis_count_ = std::max(0, std::min(axis_count_, 32));
+    }
+
+    if (default_units_ <= 0)
+    {
+      RCLCPP_WARN(this->get_logger(),
+                  "default_units=%.2f is invalid, using default 1.0",
+                  default_units_);
+      default_units_ = 1.0;
+    }
+
+    if (default_speed_ <= 0)
+    {
+      RCLCPP_WARN(this->get_logger(),
+                  "default_speed=%.2f is invalid, using default 10.0",
+                  default_speed_);
+      default_speed_ = 10.0;
+    }
+
+    if (default_accel_ <= 0)
+    {
+      RCLCPP_WARN(this->get_logger(),
+                  "default_accel=%.2f is invalid, using default 100.0",
+                  default_accel_);
+      default_accel_ = 100.0;
+    }
+
+    if (default_decel_ <= 0)
+    {
+      RCLCPP_WARN(this->get_logger(),
+                  "default_decel=%.2f is invalid, using default 100.0",
+                  default_decel_);
+      default_decel_ = 100.0;
     }
 
     RCLCPP_INFO(this->get_logger(), "Motion hardware node starting...");
     RCLCPP_INFO(this->get_logger(), "Namespace: %s, Robot: %s",
                 namespace_.c_str(), robot_name_.c_str());
-    RCLCPP_INFO(this->get_logger(), "Controller IP: %s", controller_ip_.c_str());
-    RCLCPP_INFO(
-        this->get_logger(),
-        "Default motion parameters: units=%.3f, speed=%.3f, accel=%.3f, decel=%.3f",
-        default_units_, default_speed_, default_accel_, default_decel_);
+    RCLCPP_INFO(this->get_logger(), "Controller IP: %s",
+                controller_ip_.c_str());
+    RCLCPP_INFO(this->get_logger(),
+                "Default motion parameters: units=%.3f, speed=%.3f, "
+                "accel=%.3f, decel=%.3f",
+                default_units_, default_speed_, default_accel_, default_decel_);
     RCLCPP_INFO(this->get_logger(), "Axis count: %d", axis_count_);
 
     controller_ = std::make_shared<MotionController>();
@@ -94,8 +144,8 @@ protected:
     // EtherCAT 初始化（可选）
     if (this->get_parameter("perform_ecat_init").as_bool())
     {
-      auto info = EcatInitInfo::from_node(
-          this->get_node_parameters_interface(), "ecat");
+      auto info = EcatInitInfo::from_node(this->get_node_parameters_interface(),
+                                          "ecat");
       int slot = this->get_parameter("ecat_slot_id").as_int();
       int tout = this->get_parameter("ecat_timeout_ms").as_int();
       auto err = controller_->initialize_bus(info, slot, tout);
@@ -119,25 +169,30 @@ protected:
       }
       else
       {
-        RCLCPP_INFO(
-            this->get_logger(),
-            "Axis %d configured: units=%.3f, speed=%.3f, accel=%.3f, decel=%.3f",
-            axis, default_units_, default_speed_, default_accel_,
-            default_decel_);
+        RCLCPP_INFO(this->get_logger(),
+                    "Axis %d configured: units=%.3f, speed=%.3f, accel=%.3f, "
+                    "decel=%.3f",
+                    axis, default_units_, default_speed_, default_accel_,
+                    default_decel_);
       }
     }
 
-    // 根据命名空间/机器人名称设置主题前缀
+    // ✅ 修复#9：统一topic命名逻辑 — 总是添加robot_name前缀
+    std::string topic_prefix;
+
     if (!namespace_.empty())
     {
-      command_topic_ = "/" + namespace_ + "/" + robot_name_ + "/" + command_topic_;
-      status_topic_ = "/" + namespace_ + "/" + robot_name_ + "/" + status_topic_;
+      topic_prefix = "/" + namespace_ + "/" + robot_name_;
     }
-    else if (!robot_name_.empty() && robot_name_ != "hypa")
+    else
     {
-      command_topic_ = "/" + robot_name_ + "/" + command_topic_;
-      status_topic_ = "/" + robot_name_ + "/" + status_topic_;
+      topic_prefix = "/" + robot_name_;  // 总是添加robot_name前缀
     }
+
+    command_topic_ = topic_prefix + "/" + command_topic_;
+    status_topic_ = topic_prefix + "/" + status_topic_;
+
+    RCLCPP_INFO(this->get_logger(), "Topic prefix: %s", topic_prefix.c_str());
 
     topic_node_ = std::make_unique<MotionTopicNode>(
         this->get_node_base_interface(), this->get_node_topics_interface(),
@@ -147,13 +202,15 @@ protected:
 
     if (!topic_node_->initialize())
     {
-      RCLCPP_FATAL(this->get_logger(), "Failed to initialize motion topic node");
+      RCLCPP_FATAL(this->get_logger(),
+                   "Failed to initialize motion topic node");
       return CallbackReturn::FAILURE;
     }
 
-    RCLCPP_INFO(this->get_logger(),
-                "Motion topic node ready (command_topic='%s', status_topic='%s')",
-                command_topic_.c_str(), status_topic_.c_str());
+    RCLCPP_INFO(
+        this->get_logger(),
+        "Motion topic node ready (command_topic='%s', status_topic='%s')",
+        command_topic_.c_str(), status_topic_.c_str());
     RCLCPP_INFO(this->get_logger(), "Listening for motion commands...");
 
     return CallbackReturn::SUCCESS;
@@ -166,18 +223,21 @@ protected:
     {
       RCLCPP_ERROR(this->get_logger(),
                    "Cannot activate: controller not initialized");
-      return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::FAILURE;
+      return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
+          CallbackReturn::FAILURE;
     }
 
     if (!controller_->start())
     {
       RCLCPP_FATAL(this->get_logger(),
                    "Failed to start motion controller execution thread");
-      return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::FAILURE;
+      return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
+          CallbackReturn::FAILURE;
     }
 
     RCLCPP_INFO(this->get_logger(), "Motion controller started");
-    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
+        CallbackReturn::SUCCESS;
   }
 
   rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
@@ -192,7 +252,8 @@ protected:
       controller_->stop();
     }
     RCLCPP_INFO(this->get_logger(), "Motion hardware node deactivated");
-    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
+        CallbackReturn::SUCCESS;
   }
 
   rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
@@ -201,7 +262,8 @@ protected:
     topic_node_.reset();
     controller_.reset();
     RCLCPP_INFO(this->get_logger(), "Motion hardware node cleaned up");
-    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
+        CallbackReturn::SUCCESS;
   }
 
   rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
@@ -216,10 +278,11 @@ protected:
       controller_->stop();
     }
     RCLCPP_INFO(this->get_logger(), "Motion hardware node shutting down");
-    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
+        CallbackReturn::SUCCESS;
   }
 
-private:
+  private:
   std::string namespace_;
   std::string robot_name_;
   std::string controller_ip_;

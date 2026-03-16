@@ -180,7 +180,7 @@ std::optional<bool> ZMotionWrapper::is_axis_idle(int _axis) const
   return pimpl_->is_axis_idle(_axis);
 }
 
-bool ZMotionWrapper::is_axis_moving(int _axis)
+bool ZMotionWrapper::is_axis_moving(int _axis) const  // ✅ 修复#8：添加const
 {
   return pimpl_->is_axis_moving(_axis);
 }
@@ -941,7 +941,8 @@ std::optional<bool> ZMotionWrapper::ZMotionWrapperPrivate::is_axis_idle(
   return (value == -1);
 }
 
-bool ZMotionWrapper::ZMotionWrapperPrivate::is_axis_moving(int _axis)
+bool ZMotionWrapper::ZMotionWrapperPrivate::is_axis_moving(
+    int _axis) const  // ✅ 修复#8：添加const
 {
   auto status_opt = AxisStatus(_axis);
   if (!status_opt)

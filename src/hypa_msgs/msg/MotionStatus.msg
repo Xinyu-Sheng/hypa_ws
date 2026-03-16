@@ -1,6 +1,7 @@
 # 多轴运动状态消息
 # 发布当前运动状态和反馈信息
 
+int32[] axis_numbers               # 轴号列表（与下列所有数组一一对应，0-31）
 float64[] current_positions        # 各轴的规划位置（DPOS，单位：物理单位）
 float64[] feedback_positions       # 各轴的反馈位置（MPOS，单位：物理单位）
 float64[] current_velocities       # 各轴的当前速度（物理单位/秒）
