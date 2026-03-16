@@ -62,11 +62,11 @@ class HWT9053Parser
 {
   public:
   // HWT9053 CAN ID 定义（按 High_Precision_Sensor_CAN_Protocol.txt）
-  static constexpr uint32_t CAN_ID_TIME = 0x50;    // 时间数据
-  static constexpr uint32_t CAN_ID_ACCEL = 0x51;   // 加速度数据
-  static constexpr uint32_t CAN_ID_GYRO = 0x52;    // 角速度数据
-  static constexpr uint32_t CAN_ID_ANGLE = 0x53;   // 角度数据
-  static constexpr uint32_t CAN_ID_MAGN = 0x54;    // 磁场数据
+  static constexpr uint32_t CAN_ID_TIME = 0x50;   // 时间数据
+  static constexpr uint32_t CAN_ID_ACCEL = 0x51;  // 加速度数据
+  static constexpr uint32_t CAN_ID_GYRO = 0x52;   // 角速度数据
+  static constexpr uint32_t CAN_ID_ANGLE = 0x53;  // 角度数据
+  static constexpr uint32_t CAN_ID_MAGN = 0x54;   // 磁场数据
 
   HWT9053Parser();
   ~HWT9053Parser();
@@ -105,6 +105,8 @@ class HWT9053Parser
   // 内部辅助函数
   int16_t BytesToInt16(uint8_t _high, uint8_t _low) const;
   uint16_t BytesToUInt16(uint8_t _high, uint8_t _low) const;
+  int32_t BytesToInt32(uint8_t _byte0, uint8_t _byte1, uint8_t _byte2,
+                       uint8_t _byte3) const;
   float Int16ToFloat(int16_t _value, float _scale) const;
 };
 

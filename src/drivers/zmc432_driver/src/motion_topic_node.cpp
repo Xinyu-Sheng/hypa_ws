@@ -8,12 +8,12 @@ class MotionTopicNode::MotionTopicNodePrivate
 {
   public:
   MotionTopicNodePrivate(
-      rclcpp::node_interfaces::NodeBaseInterface::SharedPtr _node_base,
-      rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr _node_topics,
-      rclcpp::node_interfaces::NodeLoggingInterface::SharedPtr _node_logging,
-      rclcpp::node_interfaces::NodeTimersInterface::SharedPtr _node_timers,
-      rclcpp::node_interfaces::NodeParametersInterface::SharedPtr _node_params,
-      std::shared_ptr<MotionController> _controller,
+      const rclcpp::node_interfaces::NodeBaseInterface::SharedPtr &_node_base,
+      const rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr &_node_topics,
+      const rclcpp::node_interfaces::NodeLoggingInterface::SharedPtr &_node_logging,
+      const rclcpp::node_interfaces::NodeTimersInterface::SharedPtr &_node_timers,
+      const rclcpp::node_interfaces::NodeParametersInterface::SharedPtr &_node_params,
+      const std::shared_ptr<MotionController> &_controller,
       const std::string &_command_topic, const std::string &_status_topic)
       : node_base(_node_base),
         node_topics(_node_topics),
@@ -61,32 +61,24 @@ class MotionTopicNode::MotionTopicNodePrivate
   void publish_status();
 
   MotionController::MotionCommand convert_msg_to_command(
-      const hypa_msgs::msg::MotionCommand::ConstSharedPtr _msg);
+      const hypa_msgs::msg::MotionCommand::ConstSharedPtr _msg) const;
 
   hypa_msgs::msg::MotionStatus convert_status_to_msg(
-      const MotionController::ControllerStatus &_status);
+      const MotionController::ControllerStatus &_status) const;
 };
 
 // Public interface implementations
 MotionTopicNode::MotionTopicNode(
-    rclcpp::node_interfaces::NodeBaseInterface::SharedPtr _node_base,
-    rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr _node_topics,
-    rclcpp::node_interfaces::NodeLoggingInterface::SharedPtr _node_logging,
-    rclcpp::node_interfaces::NodeTimersInterface::SharedPtr _node_timers,
-    rclcpp::node_interfaces::NodeParametersInterface::SharedPtr _node_params,
-    std::shared_ptr<MotionController> _controller,
+    const rclcpp::node_interfaces::NodeBaseInterface::SharedPtr &_node_base,
+    const rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr &_node_topics,
+    const rclcpp::node_interfaces::NodeLoggingInterface::SharedPtr &_node_logging,
+    const rclcpp::node_interfaces::NodeTimersInterface::SharedPtr &_node_timers,
+    const rclcpp::node_interfaces::NodeParametersInterface::SharedPtr &_node_params,
+    const std::shared_ptr<MotionController> &_controller,
     const std::string &_command_topic, const std::string &_status_topic)
     : pimpl_(std::make_unique<MotionTopicNodePrivate>(
           _node_base, _node_topics, _node_logging, _node_timers, _node_params,
-          _controller, _command_topic, _status_topic)),
-      node_base_(_node_base),
-      node_topics_(_node_topics),
-      node_logging_(_node_logging),
-      node_timers_(_node_timers),
-      node_params_(_node_params),
-      controller_(_controller),
-      command_topic_(_command_topic),
-      status_topic_(_status_topic)
+          _controller, _command_topic, _status_topic))
 {
 }
 
@@ -233,7 +225,7 @@ void MotionTopicNode::MotionTopicNodePrivate::publish_status()
 
 MotionController::MotionCommand
 MotionTopicNode::MotionTopicNodePrivate::convert_msg_to_command(
-    const hypa_msgs::msg::MotionCommand::ConstSharedPtr _msg)
+    const hypa_msgs::msg::MotionCommand::ConstSharedPtr _msg) const
 {
   MotionController::MotionCommand cmd;
 
@@ -254,7 +246,7 @@ MotionTopicNode::MotionTopicNodePrivate::convert_msg_to_command(
 
 hypa_msgs::msg::MotionStatus
 MotionTopicNode::MotionTopicNodePrivate::convert_status_to_msg(
-    const MotionController::ControllerStatus &_status)
+    const MotionController::ControllerStatus &_status) const
 {
   hypa_msgs::msg::MotionStatus msg;
 

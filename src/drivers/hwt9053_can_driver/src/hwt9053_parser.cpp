@@ -44,6 +44,17 @@ uint16_t HWT9053Parser::BytesToUInt16(uint8_t _high, uint8_t _low) const
   return value;
 }
 
+int32_t HWT9053Parser::BytesToInt32(uint8_t _byte0, uint8_t _byte1,
+                                    uint8_t _byte2, uint8_t _byte3) const
+{
+  // 按协议格式组合32位有符号整数：byte0为低位，byte3为高位
+  int32_t value = (static_cast<int32_t>(_byte3) << 24) |
+                  (static_cast<int32_t>(_byte2) << 16) |
+                  (static_cast<int32_t>(_byte1) << 8) |
+                  (static_cast<int32_t>(_byte0));
+  return value;
+}
+
 float HWT9053Parser::Int16ToFloat(int16_t _value, float _scale) const
 {
   return _value * _scale;
@@ -71,7 +82,8 @@ void HWT9053Parser::ParseCANFrame(uint32_t _can_id,
       // 加速度数据格式: [AxL, AxH, AyL, AyH, AzL, AzH, ?, ?]
       // 量程: ±2g, 分辨率: 1/16384 * 4g = 0.000244 m/s^2
       // 正确计算: (2g * 2 * 9.81) / 32768 = ~0.001197 m/s^2
-      constexpr float ACCEL_SCALE = 2.0f * 2.0f * 9.81f / 32768.0f;  // ~0.001197 m/s^2
+      constexpr float ACCEL_SCALE =
+          2.0f * 2.0f * 9.81f / 32768.0f;  // ~0.001197 m/s^2
 
       // 低字节在 Data[0], 高字节在 Data[1]（按 CAN 协议）
       int16_t ax_raw = this->BytesToInt16(_data[1], _data[0]);
@@ -106,19 +118,39 @@ void HWT9053Parser::ParseCANFrame(uint32_t _can_id,
 
     case HWT9053Parser::CAN_ID_ANGLE:
     {
-      // 欧拉角数据格式: [RollL, RollH, PitchL, PitchH, YawL, YawH, ?, ?]
-      // 量程: ±180°, 分辨率: 1/32768 * 360° = 0.011°
-      constexpr float ANGLE_SCALE =
-          180.0f * M_PI / 180.0f / 32768.0f;  // rad, ~0.00053 rad
+      // 欧拉角数据格式（协议: High_Precision_Sensor_CAN_Protocol.txt）
+      // CAN 0x53 帧使用第1字节作为数据指示符:
+      //   0x01: Roll 数据 - _data = [0x01, 0x00, LRollL, LRollH, HRollL,
+      //   HRollH, ?, ?] 0x02: Pitch 数据 - _data = [0x02, 0x00, LPitchL,
+      //   LPitchH, HPitchL, HPitchH, ?, ?] 0x03: Yaw 数据 - _data = [0x03,
+      //   0x00, LYawL, LYawH, HYawL, HYawH, ?, ?]
+      // 计算公式: 角度 = ((byte5<<24) | (byte4<<16) | (byte3<<8) | byte2) /
+      // 1000.0 量程: ±180° (主要用于 9轴算法)
 
-      // 低字节在 Data[0], 高字节在 Data[1]（按 CAN 协议）
-      int16_t roll_raw = this->BytesToInt16(_data[1], _data[0]);
-      int16_t pitch_raw = this->BytesToInt16(_data[3], _data[2]);
-      int16_t yaw_raw = this->BytesToInt16(_data[5], _data[4]);
+      constexpr float ANGLE_SCALE = 1.0f / 1000.0f * M_PI / 180.0f;  // rad
 
-      this->pimpl_->data.roll = this->Int16ToFloat(roll_raw, ANGLE_SCALE);
-      this->pimpl_->data.pitch = this->Int16ToFloat(pitch_raw, ANGLE_SCALE);
-      this->pimpl_->data.yaw = this->Int16ToFloat(yaw_raw, ANGLE_SCALE);
+      uint8_t angle_type = _data[0];  // 获取数据指示符 (0x01/0x02/0x03)
+
+      // 有效数据从 _data[2] 开始，_data[1] 是保留字节
+      int32_t angle_raw =
+          this->BytesToInt32(_data[2], _data[3], _data[4], _data[5]);
+
+      if (angle_type == 0x01)
+      {
+        // Roll 数据
+        this->pimpl_->data.roll = static_cast<float>(angle_raw) * ANGLE_SCALE;
+      }
+      else if (angle_type == 0x02)
+      {
+        // Pitch 数据
+        this->pimpl_->data.pitch = static_cast<float>(angle_raw) * ANGLE_SCALE;
+      }
+      else if (angle_type == 0x03)
+      {
+        // Yaw 数据
+        this->pimpl_->data.yaw = static_cast<float>(angle_raw) * ANGLE_SCALE;
+      }
+
       this->pimpl_->data.angle_valid = true;
       break;
     }
@@ -143,7 +175,7 @@ void HWT9053Parser::ParseCANFrame(uint32_t _can_id,
       break;
     }
 
-    // CAN ID 0x54 按协议应为磁场数据，温度数据更新不常（暂不处理）
+      // CAN ID 0x54 按协议应为磁场数据，温度数据更新不常（暂不处理）
 
     default:
       // 忽略不支持的 CAN ID
