@@ -101,6 +101,12 @@ class ZMotionWrapper
     std::optional<uint32_t> AxisStatus(int _axis) const;
     std::optional<bool> is_axis_idle(int _axis) const;
     bool is_axis_moving(int _axis);
+
+    // 运动缓冲 / 段查询
+    std::optional<int> get_moves_buffered(int _axis) const;
+    std::optional<int> get_remain_buffer(int _axis) const;
+    std::optional<int> get_move_curmark(int _axis) const;
+
     std::optional<std::string> set_axis_enable(int _axis, bool _enable);
     std::optional<bool> get_axis_enable(int _axis) const;
     void mark_axis_configured(int _axis);
@@ -161,6 +167,12 @@ class ZMotionWrapper
   std::optional<uint32_t> AxisStatus(int _axis) const;
   std::optional<bool> is_axis_idle(int _axis) const;
   bool is_axis_moving(int _axis);
+
+  // 运动缓冲 / 段查询
+  std::optional<int> get_moves_buffered(int _axis) const;
+  std::optional<int> get_remain_buffer(int _axis) const;
+  std::optional<int> get_move_curmark(int _axis) const;
+
   std::optional<std::string> set_axis_enable(int _axis, bool _enable);
   std::optional<bool> get_axis_enable(int _axis) const;
   void mark_axis_configured(int _axis);

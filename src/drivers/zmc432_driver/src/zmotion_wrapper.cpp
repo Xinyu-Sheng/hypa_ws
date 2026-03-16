@@ -185,6 +185,22 @@ bool ZMotionWrapper::is_axis_moving(int _axis)
   return pimpl_->is_axis_moving(_axis);
 }
 
+// 运动缓冲 / 段查询
+std::optional<int> ZMotionWrapper::get_moves_buffered(int _axis) const
+{
+  return pimpl_->get_moves_buffered(_axis);
+}
+
+std::optional<int> ZMotionWrapper::get_remain_buffer(int _axis) const
+{
+  return pimpl_->get_remain_buffer(_axis);
+}
+
+std::optional<int> ZMotionWrapper::get_move_curmark(int _axis) const
+{
+  return pimpl_->get_move_curmark(_axis);
+}
+
 std::optional<std::string> ZMotionWrapper::set_axis_enable(int _axis,
                                                            bool _enable)
 {
@@ -933,6 +949,66 @@ bool ZMotionWrapper::ZMotionWrapperPrivate::is_axis_moving(int _axis)
 
   uint32_t status = status_opt.value();
   return (status & 0x00000002) != 0;
+}
+
+std::optional<int> ZMotionWrapper::ZMotionWrapperPrivate::get_moves_buffered(
+    int _axis) const
+{
+  if (!handle)
+  {
+    last_error = "Controller not connected";
+    return std::nullopt;
+  }
+
+  int32_t value = 0;
+  int32_t ret = ZAux_Direct_GetMovesBuffered(handle, _axis, &value);
+  if (ret != ERR_OK)
+  {
+    last_error = "Get moves buffered failed for axis " + std::to_string(_axis) +
+                 " (error: " + std::to_string(ret) + ")";
+    return std::nullopt;
+  }
+  return static_cast<int>(value);
+}
+
+std::optional<int> ZMotionWrapper::ZMotionWrapperPrivate::get_remain_buffer(
+    int _axis) const
+{
+  if (!handle)
+  {
+    last_error = "Controller not connected";
+    return std::nullopt;
+  }
+
+  int32_t value = 0;
+  int32_t ret = ZAux_Direct_GetRemain_Buffer(handle, _axis, &value);
+  if (ret != ERR_OK)
+  {
+    last_error = "Get remain buffer failed for axis " + std::to_string(_axis) +
+                 " (error: " + std::to_string(ret) + ")";
+    return std::nullopt;
+  }
+  return static_cast<int>(value);
+}
+
+std::optional<int> ZMotionWrapper::ZMotionWrapperPrivate::get_move_curmark(
+    int _axis) const
+{
+  if (!handle)
+  {
+    last_error = "Controller not connected";
+    return std::nullopt;
+  }
+
+  int32_t value = 0;
+  int32_t ret = ZAux_Direct_GetMoveCurmark(handle, _axis, &value);
+  if (ret != ERR_OK)
+  {
+    last_error = "Get move curmark failed for axis " + std::to_string(_axis) +
+                 " (error: " + std::to_string(ret) + ")";
+    return std::nullopt;
+  }
+  return static_cast<int>(value);
 }
 
 std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::stop_all()

@@ -60,7 +60,7 @@ class MotionController::MotionControllerPrivate
   void update_status();
   double calculate_progress(const MotionController::MotionCommand &_cmd) const;
   bool is_motion_complete(const MotionController::MotionCommand &_cmd,
-                            bool use_idle_check = true) const;
+                          bool use_idle_check = true) const;
 };
 
 // Public interface implementations
@@ -473,7 +473,7 @@ double MotionController::calculate_progress(const MotionCommand &_cmd) const
 }
 
 bool MotionController::is_motion_complete(const MotionCommand &_cmd,
-                                            bool use_idle_check) const
+                                          bool use_idle_check) const
 {
   return this->pimpl_->is_motion_complete(_cmd, use_idle_check);
 }
@@ -849,12 +849,34 @@ double MotionController::MotionControllerPrivate::calculate_progress(
 }
 
 bool MotionController::MotionControllerPrivate::is_motion_complete(
-    const MotionController::MotionCommand &_cmd,
-    bool use_idle_check) const
+    const MotionController::MotionCommand &_cmd, bool use_idle_check) const
 {
   if (!zmotion)
   {
     return false;
+  }
+
+  // 连续模式：优先确认缓冲区已经消耗完毕（免得中间缓冲断流导致误判完成）
+  if (_cmd.motion_type == MotionController::CONTINUOUS_TRAJECTORY)
+  {
+    for (size_t i = 0; i < _cmd.axes.size(); ++i)
+    {
+      int axis = _cmd.axes[i];
+      auto remain_opt = zmotion->get_remain_buffer(axis);
+      if (!remain_opt)
+      {
+        // 如果无法查询缓冲状态，则退回到后续的空闲/位置判断
+        break;
+      }
+
+      // 还有缓冲数据，说明连续段还未走完
+      if (remain_opt.value() > 0)
+      {
+        return false;
+      }
+    }
+
+    // 如果查询成功且缓冲为 0，则继续走下面的空闲/位置判断
   }
 
   if (use_idle_check)
