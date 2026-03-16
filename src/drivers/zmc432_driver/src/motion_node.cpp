@@ -33,6 +33,7 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
     this->declare_parameter<double>("default_accel", 100.0);
     this->declare_parameter<double>("default_decel", 100.0);
     this->declare_parameter<int>("axis_count", 1);
+    this->declare_parameter<int>("status_publish_rate_ms", 50);
 
     // EtherCAT 相关参数
     this->declare_parameter<bool>("perform_ecat_init", false);
@@ -60,6 +61,7 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
     default_accel_ = this->get_parameter("default_accel").as_double();
     default_decel_ = this->get_parameter("default_decel").as_double();
     axis_count_ = this->get_parameter("axis_count").as_int();
+    status_publish_rate_ms_ = this->get_parameter("status_publish_rate_ms").as_int();
 
     // ✅ 修复#5: 读取use_sim_time参数
     bool use_sim_time = this->get_parameter("use_sim_time").as_bool();
@@ -160,8 +162,31 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
     // 轴参数配置
     for (int axis = 0; axis < axis_count_; ++axis)
     {
-      auto config_result = controller_->configure_axis(
-          axis, default_units_, default_speed_, default_accel_, default_decel_);
+      std::string axis_param_prefix = "axis_" + std::to_string(axis) + ".";
+
+      // 设置默认值
+      double units = default_units_;
+      double speed = default_speed_;
+      double accel = default_accel_;
+      double decel = default_decel_;
+
+      // 声明并获取单轴特定参数，如果未在 YAML 中定义，则使用全局默认值
+      this->declare_parameter<double>(axis_param_prefix + "units",
+                                      default_units_);
+      this->declare_parameter<double>(axis_param_prefix + "speed",
+                                      default_speed_);
+      this->declare_parameter<double>(axis_param_prefix + "accel",
+                                      default_accel_);
+      this->declare_parameter<double>(axis_param_prefix + "decel",
+                                      default_decel_);
+
+      this->get_parameter(axis_param_prefix + "units", units);
+      this->get_parameter(axis_param_prefix + "speed", speed);
+      this->get_parameter(axis_param_prefix + "accel", accel);
+      this->get_parameter(axis_param_prefix + "decel", decel);
+
+      auto config_result =
+          controller_->configure_axis(axis, units, speed, accel, decel);
       if (config_result)
       {
         RCLCPP_WARN(this->get_logger(), "Failed to configure axis %d: %s", axis,
@@ -172,8 +197,7 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
         RCLCPP_INFO(this->get_logger(),
                     "Axis %d configured: units=%.3f, speed=%.3f, accel=%.3f, "
                     "decel=%.3f",
-                    axis, default_units_, default_speed_, default_accel_,
-                    default_decel_);
+                    axis, units, speed, accel, decel);
       }
     }
 
@@ -198,7 +222,7 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
         this->get_node_base_interface(), this->get_node_topics_interface(),
         this->get_node_logging_interface(), this->get_node_timers_interface(),
         this->get_node_parameters_interface(), controller_, command_topic_,
-        status_topic_);
+        status_topic_, status_publish_rate_ms_);
 
     if (!topic_node_->initialize())
     {
@@ -293,6 +317,7 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
   double default_accel_ = 100.0;
   double default_decel_ = 100.0;
   int axis_count_ = 1;
+  int status_publish_rate_ms_ = 50;
 
   std::shared_ptr<MotionController> controller_;
   std::unique_ptr<MotionTopicNode> topic_node_;

@@ -14,10 +14,17 @@ motion_hardware_node:
 
     # --- Default Motion Parameters ---
     # Values depend on your physical system (pulses per unit, speed, etc.)
+    status_publish_rate_ms: 20 # Status update interval in ms
     default_units: 1.0 # Pulse density (Unit/Pulse)
     default_speed: 10.0 # Default speed (Unit/s)
     default_accel: 100.0 # Default acceleration (Unit/s^2)
     default_decel: 100.0 # Default deceleration (Unit/s^2)
+
+    # --- Per-Axis Heterogeneous Configuration (Optional) ---
+    # If not specified, the default parameters above will be used.
+    # axis_0.units: 2.0
+    # axis_0.speed: 5.0
+    # axis_1.accel: 200.0
 
     # --- Communication Topics ---
     # These will be prefixed by /{namespace}/{robot_name}/

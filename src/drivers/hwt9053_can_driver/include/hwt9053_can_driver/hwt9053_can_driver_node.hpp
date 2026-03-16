@@ -72,6 +72,8 @@ class HWT9053CANDriverNode : public rclcpp_lifecycle::LifecycleNode
   std::string can_interface_;
   std::string imu_frame_id_;
   bool log_debug_;
+  double accel_covariance_;
+  double gyro_covariance_;
 };
 
 }  // namespace hwt9053_can_driver

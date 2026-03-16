@@ -36,7 +36,8 @@ class MotionTopicNode
       const rclcpp::node_interfaces::NodeParametersInterface::SharedPtr &_node_params,
       const std::shared_ptr<MotionController> &_controller,
       const std::string &_command_topic = "motion_command",
-      const std::string &_status_topic = "motion_status");
+      const std::string &_status_topic = "motion_status",
+      int _status_publish_rate_ms = 50);
 
   ~MotionTopicNode();
 

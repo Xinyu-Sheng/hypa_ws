@@ -116,6 +116,18 @@ class HWT9053Parser
    */
   void Reset();
 
+  /**
+   * @brief 设置线性加速度协方差
+   * @param _covariance 协方差值 (m/s^2)^2
+   */
+  void SetAccelCovariance(double _covariance);
+
+  /**
+   * @brief 设置角速度协方差
+   * @param _covariance 协方差值 (rad/s)^2
+   */
+  void SetGyroCovariance(double _covariance);
+
   private:
   // PIMPL：私有数据实现
   class Impl;

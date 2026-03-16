@@ -13,5 +13,12 @@ can_bus_topic: "from_can_bus"
 # 日志配置
 log_debug: false
 
+# 传感器协方差（可根据实际标定调整）
+# 线性加速度协方差 (m/s^2)^2
+accel_covariance: 3.4e-5
+
+# 角速度协方差 (rad/s)^2
+gyro_covariance: 5.8e-8
+
 # 参数
 robot_name: "robot"

@@ -31,6 +31,10 @@ class HWT9053Parser::Impl
   bool pitch_ready{false};
   bool yaw_ready{false};
 
+  // 协方差值
+  double accel_covariance{3.4e-5};  // (m/s^2)^2
+  double gyro_covariance{5.8e-8};   // (rad/s)^2
+
   // 重置缓冲状态
   void ResetAngleBuffer()
   {
@@ -256,12 +260,12 @@ sensor_msgs::msg::Imu HWT9053Parser::ToIMUMessage() const
 
   // 协方差矩阵（基于HWT9053硬件规格）
   // 线性加速度协方差：规格值~3.4e-5 (m/s^2)^2
-  constexpr double ACCEL_COVARIANCE = 3.4e-5;  // (m/s^2)^2
+  double accel_covariance = this->pimpl_->accel_covariance;
   for (int i = 0; i < 9; ++i)
   {
     if (i % 4 == 0)
     {
-      msg.linear_acceleration_covariance[i] = ACCEL_COVARIANCE;
+      msg.linear_acceleration_covariance[i] = accel_covariance;
     }
     else
     {
@@ -270,12 +274,12 @@ sensor_msgs::msg::Imu HWT9053Parser::ToIMUMessage() const
   }
 
   // 角速度协方差：规格值~5.8e-8 (rad/s)^2
-  constexpr double GYRO_COVARIANCE = 5.8e-8;  // (rad/s)^2
+  double gyro_covariance = this->pimpl_->gyro_covariance;
   for (int i = 0; i < 9; ++i)
   {
     if (i % 4 == 0)
     {
-      msg.angular_velocity_covariance[i] = GYRO_COVARIANCE;
+      msg.angular_velocity_covariance[i] = gyro_covariance;
     }
     else
     {
@@ -318,6 +322,16 @@ HWT9053Parser::MagneticFieldData HWT9053Parser::GetMagneticFieldData() const
 void HWT9053Parser::Reset()
 {
   this->pimpl_->data = HWT9053Data();
+}
+
+void HWT9053Parser::SetAccelCovariance(double _covariance)
+{
+  this->pimpl_->accel_covariance = _covariance;
+}
+
+void HWT9053Parser::SetGyroCovariance(double _covariance)
+{
+  this->pimpl_->gyro_covariance = _covariance;
 }
 
 }  // namespace hwt9053_can_driver

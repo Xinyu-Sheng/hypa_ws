@@ -18,7 +18,8 @@ class MotionTopicNode::MotionTopicNodePrivate
       const rclcpp::node_interfaces::NodeParametersInterface::SharedPtr
           &_node_params,
       const std::shared_ptr<MotionController> &_controller,
-      const std::string &_command_topic, const std::string &_status_topic)
+      const std::string &_command_topic, const std::string &_status_topic,
+      int _status_publish_rate_ms)
       : node_base(_node_base),
         node_topics(_node_topics),
         node_logging(_node_logging),
@@ -27,6 +28,7 @@ class MotionTopicNode::MotionTopicNodePrivate
         controller(_controller),
         command_topic(_command_topic),
         status_topic(_status_topic),
+        status_publish_rate_ms(_status_publish_rate_ms),
         running(false)
   {
   }
@@ -48,6 +50,7 @@ class MotionTopicNode::MotionTopicNodePrivate
   std::shared_ptr<MotionController> controller;
   std::string command_topic;
   std::string status_topic;
+  int status_publish_rate_ms;
   std::atomic<bool> running;
 
   // ROS 2 发布/订阅
@@ -81,10 +84,11 @@ MotionTopicNode::MotionTopicNode(
     const rclcpp::node_interfaces::NodeParametersInterface::SharedPtr
         &_node_params,
     const std::shared_ptr<MotionController> &_controller,
-    const std::string &_command_topic, const std::string &_status_topic)
+    const std::string &_command_topic, const std::string &_status_topic,
+    int _status_publish_rate_ms)
     : pimpl_(std::make_unique<MotionTopicNodePrivate>(
           _node_base, _node_topics, _node_logging, _node_timers, _node_params,
-          _controller, _command_topic, _status_topic))
+          _controller, _command_topic, _status_topic, _status_publish_rate_ms))
 {
 }
 
@@ -136,10 +140,11 @@ bool MotionTopicNode::MotionTopicNodePrivate::initialize()
     return false;
   }
 
-  // 创建定时器以定期发布状态（50ms 间隔，20Hz）
+  // 创建定时器以定期发布状态
   this->status_timer = rclcpp::create_wall_timer(
-      std::chrono::milliseconds(50), [this]() { this->publish_status(); },
-      nullptr, this->node_base.get(), this->node_timers.get());
+      std::chrono::milliseconds(this->status_publish_rate_ms),
+      [this]() { this->publish_status(); }, nullptr, this->node_base.get(),
+      this->node_timers.get());
 
   if (!this->status_timer)
   {

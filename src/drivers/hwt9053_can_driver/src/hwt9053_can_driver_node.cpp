@@ -32,7 +32,9 @@ HWT9053CANDriverNode::HWT9053CANDriverNode(const rclcpp::NodeOptions &_options)
       robot_name_("robot"),
       can_interface_("can0"),
       imu_frame_id_("imu_link"),
-      log_debug_(false)
+      log_debug_(false),
+      accel_covariance_(3.4e-5),
+      gyro_covariance_(5.8e-8)
 {
   // 声明参数
   this->declare_parameter("use_sim_time", rclcpp::ParameterValue(false));
@@ -43,6 +45,8 @@ HWT9053CANDriverNode::HWT9053CANDriverNode(const rclcpp::NodeOptions &_options)
   this->declare_parameter("can_bus_topic",
                           rclcpp::ParameterValue("from_can_bus"));
   this->declare_parameter("log_debug", rclcpp::ParameterValue(false));
+  this->declare_parameter("accel_covariance", rclcpp::ParameterValue(3.4e-5));
+  this->declare_parameter("gyro_covariance", rclcpp::ParameterValue(5.8e-8));
 }
 
 HWT9053CANDriverNode::~HWT9053CANDriverNode() = default;
@@ -57,6 +61,12 @@ HWT9053CANDriverNode::on_configure(const rclcpp_lifecycle::State &_state)
   this->can_interface_ = this->get_parameter("can_interface").as_string();
   this->imu_frame_id_ = this->get_parameter("imu_frame_id").as_string();
   this->log_debug_ = this->get_parameter("log_debug").as_bool();
+  this->accel_covariance_ = this->get_parameter("accel_covariance").as_double();
+  this->gyro_covariance_ = this->get_parameter("gyro_covariance").as_double();
+
+  // 设置协方差到解析器
+  this->parser_->SetAccelCovariance(this->accel_covariance_);
+  this->parser_->SetGyroCovariance(this->gyro_covariance_);
 
   std::string imu_topic_name =
       this->get_parameter("imu_topic_name").as_string();
@@ -72,6 +82,10 @@ HWT9053CANDriverNode::on_configure(const rclcpp_lifecycle::State &_state)
   RCLCPP_INFO(this->get_logger(), "  imu_topic_name: %s",
               imu_topic_name.c_str());
   RCLCPP_INFO(this->get_logger(), "  can_bus_topic: %s", can_bus_topic.c_str());
+  RCLCPP_INFO(this->get_logger(), "  accel_covariance: %.6e",
+              this->accel_covariance_);
+  RCLCPP_INFO(this->get_logger(), "  gyro_covariance: %.6e",
+              this->gyro_covariance_);
 
   // 创建 CAN 帧订阅（相对话题，自动添加 namespace 和 robot_name）
   auto can_sub_options = rclcpp::SubscriptionOptions();
