@@ -1,0 +1,184 @@
+<sdf version='1.10'>
+    <world name='servo_demo_world'>
+        <physics name='1ms' type='ignored'>
+            <max_step_size>0.001</max_step_size>
+            <real_time_factor>1</real_time_factor>
+        </physics>
+
+        <plugin name='gz::sim::systems::Physics' filename='gz-sim-physics-system' />
+        <plugin name='gz::sim::systems::UserCommands' filename='gz-sim-user-commands-system' />
+        <plugin name='gz::sim::systems::SceneBroadcaster' filename='gz-sim-scene-broadcaster-system' />
+        <plugin name='gz::sim::systems::Contact' filename='gz-sim-contact-system' />
+        <plugin name='gz::sim::systems::Sensors' filename='gz-sim-sensors-system' />
+
+        <magnetic_field>5.5644999999999998e-06 2.2875799999999999e-05 -4.2388400000000002e-05</magnetic_field>
+        <atmosphere type='adiabatic' />
+
+        <scene>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <background>0.8 0.8 0.8 1</background>
+            <shadows>true</shadows>
+            <grid>false</grid>
+        </scene>
+
+        <light name='sun' type='directional'>
+            <visualize>false</visualize>
+            <pose>0 0 50 0 0 0</pose>
+            <cast_shadows>true</cast_shadows>
+            <intensity>2</intensity>
+            <direction>-0.1 -0.5 -0.9</direction>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <attenuation>
+                <range>1000</range>
+                <linear>0.01</linear>
+                <constant>0.9</constant>
+                <quadratic>0.001</quadratic>
+            </attenuation>
+            <spot>
+                <inner_angle>0</inner_angle>
+                <outer_angle>0</outer_angle>
+                <falloff>0</falloff>
+            </spot>
+        </light>
+
+        <!-- Ground plane -->
+        <model name='ground_plane'>
+            <static>true</static>
+            <link name='link'>
+                <pose>0 0 -0.5 0 0 0</pose>
+                <collision name='collision'>
+                    <geometry>
+                        <box>
+                            <size>100 100 1</size>
+                        </box>
+                    </geometry>
+                </collision>
+                <visual name='visual'>
+                    <geometry>
+                        <box>
+                            <size>100 100 1</size>
+                        </box>
+                    </geometry>
+                    <material>
+                        <ambient>0.5 0.5 0.5 1</ambient>
+                        <diffuse>0.5 0.5 0.5 1</diffuse>
+                    </material>
+                </visual>
+            </link>
+        </model>
+
+        <!-- Simple servo demo model -->
+        <model name='servo_demo'>
+            <static>false</static>
+
+            <!-- Base (固定在 world) -->
+            <link name='base_link'>
+                <pose>0 0 0 0 0 0</pose>
+                <inertial>
+                    <mass>5.0</mass>
+                    <inertia>
+                        <ixx>0.04</ixx>
+                        <iyy>0.04</iyy>
+                        <izz>0.04</izz>
+                        <ixy>0</ixy>
+                        <ixz>0</ixz>
+                        <iyz>0</iyz>
+                    </inertia>
+                </inertial>
+                <collision name='base_collision'>
+                    <geometry>
+                        <box>
+                            <size>0.2 0.2 0.1</size>
+                        </box>
+                    </geometry>
+                </collision>
+                <visual name='base_visual'>
+                    <geometry>
+                        <box>
+                            <size>0.2 0.2 0.1</size>
+                        </box>
+                    </geometry>
+                    <material>
+                        <ambient>0 0 1 1</ambient>
+                        <diffuse>0 0 1 1</diffuse>
+                    </material>
+                </visual>
+            </link>
+
+            <!-- Output arm (可通过关节控制旋转) -->
+            <link name='output_link'>
+                <pose>0 0 0.2 0 0 0</pose>
+                <inertial>
+                    <mass>1.0</mass>
+                    <inertia>
+                        <ixx>0.01</ixx>
+                        <iyy>0.01</iyy>
+                        <izz>0.01</izz>
+                        <ixy>0</ixy>
+                        <ixz>0</ixz>
+                        <iyz>0</iyz>
+                    </inertia>
+                </inertial>
+                <collision name='output_collision'>
+                    <geometry>
+                        <box>
+                            <size>0.05 0.05 0.4</size>
+                        </box>
+                    </geometry>
+                </collision>
+                <visual name='output_visual'>
+                    <geometry>
+                        <box>
+                            <size>0.05 0.05 0.4</size>
+                        </box>
+                    </geometry>
+                    <material>
+                        <ambient>1 0 0 1</ambient>
+                        <diffuse>1 0 0 1</diffuse>
+                    </material>
+                </visual>
+            </link>
+
+            <!-- 固定 base_link 到 world -->
+            <joint name='base_to_world' type='fixed'>
+                <parent>world</parent>
+                <child>base_link</child>
+            </joint>
+
+            <!-- 伺服关节: revolute 轴沿 X 方向旋转 -->
+            <joint name='servo_joint' type='revolute'>
+                <parent>base_link</parent>
+                <child>output_link</child>
+                <pose>0 0 0 0 0 0</pose>
+                <axis>
+                    <xyz>0 0 1</xyz>
+                    <limit>
+                        <lower>-inf</lower>
+                        <upper>inf</upper>
+                        <effort>100</effort>
+                        <velocity>200</velocity>
+                    </limit>
+                    <dynamics>
+                        <damping>0.1</damping>
+                    </dynamics>
+                </axis>
+            </joint>
+
+            <!-- Joint Position Controller Plugin -->
+            <plugin
+                filename="gz-sim-joint-position-controller-system"
+                name="gz::sim::systems::JointPositionController">
+                <joint_name>servo_joint</joint_name>
+                <topic>servo_joint</topic>
+                <p_gain>500</p_gain>
+                <i_gain>0.1</i_gain>
+                <d_gain>1</d_gain>
+                <cmd_min>-1000000</cmd_min>
+                <cmd_max>1000000</cmd_max>
+                <initial_position>0</initial_position>
+                <use_velocity_commands>false</use_velocity_commands>
+            </plugin>
+        </model>
+    </world>
+</sdf>
