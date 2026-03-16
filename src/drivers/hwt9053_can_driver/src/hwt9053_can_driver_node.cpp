@@ -176,11 +176,11 @@ void HWT9053CANDriverNode::CanFrameCallback(
 
   // 验证 CAN ID 是否为 HWT9053 支持的 ID
   uint32_t can_id = _msg->id;
-  if (can_id != HWT9053Parser::CAN_ID_ACCEL &&
+  if (can_id != HWT9053Parser::CAN_ID_TIME &&
+      can_id != HWT9053Parser::CAN_ID_ACCEL &&
       can_id != HWT9053Parser::CAN_ID_GYRO &&
       can_id != HWT9053Parser::CAN_ID_ANGLE &&
-      can_id != HWT9053Parser::CAN_ID_MAGN &&
-      can_id != HWT9053Parser::CAN_ID_STATUS)
+      can_id != HWT9053Parser::CAN_ID_MAGN)
   {
     if (this->log_debug_)
     {

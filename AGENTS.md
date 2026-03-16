@@ -35,6 +35,7 @@ ros2 --version
 - ✅ 无伪代码、假API、缺失头文件
 - ✅ 仅使用ROS 2（禁止ROS 1概念混合）
 - ✅ 遵守ROS 2包边界
+- ✅ 驱动类使用LifecycleNode
 
 ### 节点参数支持
 

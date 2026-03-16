@@ -60,15 +60,23 @@ void HWT9053Parser::ParseCANFrame(uint32_t _can_id,
 
   switch (_can_id)
   {
+    case HWT9053Parser::CAN_ID_TIME:
+    {
+      // 时间数据（当前并不使用）
+      break;
+    }
+
     case HWT9053Parser::CAN_ID_ACCEL:
     {
-      // 加速度数据格式: [ax_high, ax_low, ay_high, ay_low, az_high, az_low, ?,
-      // ?] 量程: ±16g, 分辨率: 1/2048 g = 0.0048 m/s^2
-      constexpr float ACCEL_SCALE = 16.0f * 9.81f / 32768.0f;  // ~0.00476 m/s^2
+      // 加速度数据格式: [AxL, AxH, AyL, AyH, AzL, AzH, ?, ?]
+      // 量程: ±2g, 分辨率: 1/16384 * 4g = 0.000244 m/s^2
+      // 正确计算: (2g * 2 * 9.81) / 32768 = ~0.001197 m/s^2
+      constexpr float ACCEL_SCALE = 2.0f * 2.0f * 9.81f / 32768.0f;  // ~0.001197 m/s^2
 
-      int16_t ax_raw = this->BytesToInt16(_data[0], _data[1]);
-      int16_t ay_raw = this->BytesToInt16(_data[2], _data[3]);
-      int16_t az_raw = this->BytesToInt16(_data[4], _data[5]);
+      // 低字节在 Data[0], 高字节在 Data[1]（按 CAN 协议）
+      int16_t ax_raw = this->BytesToInt16(_data[1], _data[0]);
+      int16_t ay_raw = this->BytesToInt16(_data[3], _data[2]);
+      int16_t az_raw = this->BytesToInt16(_data[5], _data[4]);
 
       this->pimpl_->data.accel_x = this->Int16ToFloat(ax_raw, ACCEL_SCALE);
       this->pimpl_->data.accel_y = this->Int16ToFloat(ay_raw, ACCEL_SCALE);
@@ -79,14 +87,15 @@ void HWT9053Parser::ParseCANFrame(uint32_t _can_id,
 
     case HWT9053Parser::CAN_ID_GYRO:
     {
-      // 角速度数据格式: [gx_high, gx_low, gy_high, gy_low, gz_high, gz_low, ?,
-      // ?] 量程: ±2000°/s, 分辨率: 1/16.4 °/s = 0.061 °/s = 0.00106 rad/s
+      // 角速度数据格式: [GxL, GxH, GyL, GyH, GzL, GzH, ?, ?]
+      // 量程: ±2000°/s, 分辨率: 1/16.4 °/s = 0.061 °/s = 0.00106 rad/s
       constexpr float GYRO_SCALE =
           2000.0f * M_PI / 180.0f / 32768.0f;  // ~0.00106 rad/s
 
-      int16_t gx_raw = this->BytesToInt16(_data[0], _data[1]);
-      int16_t gy_raw = this->BytesToInt16(_data[2], _data[3]);
-      int16_t gz_raw = this->BytesToInt16(_data[4], _data[5]);
+      // 低字节在 Data[0], 高字节在 Data[1]（按 CAN 协议）
+      int16_t gx_raw = this->BytesToInt16(_data[1], _data[0]);
+      int16_t gy_raw = this->BytesToInt16(_data[3], _data[2]);
+      int16_t gz_raw = this->BytesToInt16(_data[5], _data[4]);
 
       this->pimpl_->data.gyro_x = this->Int16ToFloat(gx_raw, GYRO_SCALE);
       this->pimpl_->data.gyro_y = this->Int16ToFloat(gy_raw, GYRO_SCALE);
@@ -97,14 +106,15 @@ void HWT9053Parser::ParseCANFrame(uint32_t _can_id,
 
     case HWT9053Parser::CAN_ID_ANGLE:
     {
-      // 欧拉角数据格式: [roll_high, roll_low, pitch_high, pitch_low, yaw_high,
-      // yaw_low, ?, ?] 量程: ±180°, 分辨率: 1/32768 * 360° = 0.011°
+      // 欧拉角数据格式: [RollL, RollH, PitchL, PitchH, YawL, YawH, ?, ?]
+      // 量程: ±180°, 分辨率: 1/32768 * 360° = 0.011°
       constexpr float ANGLE_SCALE =
           180.0f * M_PI / 180.0f / 32768.0f;  // rad, ~0.00053 rad
 
-      int16_t roll_raw = this->BytesToInt16(_data[0], _data[1]);
-      int16_t pitch_raw = this->BytesToInt16(_data[2], _data[3]);
-      int16_t yaw_raw = this->BytesToInt16(_data[4], _data[5]);
+      // 低字节在 Data[0], 高字节在 Data[1]（按 CAN 协议）
+      int16_t roll_raw = this->BytesToInt16(_data[1], _data[0]);
+      int16_t pitch_raw = this->BytesToInt16(_data[3], _data[2]);
+      int16_t yaw_raw = this->BytesToInt16(_data[5], _data[4]);
 
       this->pimpl_->data.roll = this->Int16ToFloat(roll_raw, ANGLE_SCALE);
       this->pimpl_->data.pitch = this->Int16ToFloat(pitch_raw, ANGLE_SCALE);
@@ -115,13 +125,16 @@ void HWT9053Parser::ParseCANFrame(uint32_t _can_id,
 
     case HWT9053Parser::CAN_ID_MAGN:
     {
-      // 磁场数据格式: [mx_high, mx_low, my_high, my_low, mz_high, mz_low, ?, ?]
-      // 量程: ±4900 uT, 分辨率: 1/32768 * 9800 uT
-      constexpr float MAG_SCALE = 4900.0f * 2.0f / 32768.0f;  // uT, ~0.299 uT
+      // 磁场数据格式: [MxL, MxH, MyL, MyH, MzL, MzH, ?, ?]
+      // 量程: ±400uT, 分辨率: 13nT/LSB = 0.013 μT/LSB (按 HWT9053 产品规格)
+      // 正确计算: (400uT * 2) / 32768 = 0.0244 μT (2半量程)
+      // 但根据产业规格，分辨率应为 0.013 μT/LSB
+      constexpr float MAG_SCALE = 0.013f;  // uT/LSB
 
-      int16_t mx_raw = this->BytesToInt16(_data[0], _data[1]);
-      int16_t my_raw = this->BytesToInt16(_data[2], _data[3]);
-      int16_t mz_raw = this->BytesToInt16(_data[4], _data[5]);
+      // 低字节在 Data[0], 高字节在 Data[1]（按 CAN 协议）
+      int16_t mx_raw = this->BytesToInt16(_data[1], _data[0]);
+      int16_t my_raw = this->BytesToInt16(_data[3], _data[2]);
+      int16_t mz_raw = this->BytesToInt16(_data[5], _data[4]);
 
       this->pimpl_->data.mag_x = this->Int16ToFloat(mx_raw, MAG_SCALE);
       this->pimpl_->data.mag_y = this->Int16ToFloat(my_raw, MAG_SCALE);
@@ -130,18 +143,10 @@ void HWT9053Parser::ParseCANFrame(uint32_t _can_id,
       break;
     }
 
-    case HWT9053Parser::CAN_ID_STATUS:
-    {
-      // 温度数据格式: [temp_high, temp_low, ?, ?, ?, ?, ?, ?]
-      // 范围: -40~125°C, 分辨率: 1/100°C
-      constexpr float TEMP_SCALE = 0.01f;
-
-      int16_t temp_raw = this->BytesToInt16(_data[0], _data[1]);
-      this->pimpl_->data.temperature = this->Int16ToFloat(temp_raw, TEMP_SCALE);
-      break;
-    }
+    // CAN ID 0x54 按协议应为磁场数据，温度数据更新不常（暂不处理）
 
     default:
+      // 忽略不支持的 CAN ID
       break;
   }
 }

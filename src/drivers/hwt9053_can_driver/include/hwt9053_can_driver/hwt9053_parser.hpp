@@ -28,27 +28,27 @@ namespace hwt9053_can_driver
 struct HWT9053Data
 {
   // 加速度 (m/s^2)
-  float accel_x;
-  float accel_y;
-  float accel_z;
+  float accel_x = 0.0f;
+  float accel_y = 0.0f;
+  float accel_z = 0.0f;
 
   // 角速度 (rad/s)
-  float gyro_x;
-  float gyro_y;
-  float gyro_z;
+  float gyro_x = 0.0f;
+  float gyro_y = 0.0f;
+  float gyro_z = 0.0f;
 
   // 欧拉角 (rad)
-  float roll;
-  float pitch;
-  float yaw;
+  float roll = 0.0f;
+  float pitch = 0.0f;
+  float yaw = 0.0f;
 
   // 磁场 (uT)
-  float mag_x;
-  float mag_y;
-  float mag_z;
+  float mag_x = 0.0f;
+  float mag_y = 0.0f;
+  float mag_z = 0.0f;
 
   // 温度 (°C)
-  float temperature;
+  float temperature = 0.0f;
 
   // 数据有效标志
   bool accel_valid{false};
@@ -61,12 +61,12 @@ struct HWT9053Data
 class HWT9053Parser
 {
   public:
-  // HWT9053 CAN ID 定义
-  static constexpr uint32_t CAN_ID_ACCEL = 0x50;   // 加速度数据
-  static constexpr uint32_t CAN_ID_GYRO = 0x51;    // 角速度数据
-  static constexpr uint32_t CAN_ID_ANGLE = 0x52;   // 角度数据
-  static constexpr uint32_t CAN_ID_MAGN = 0x53;    // 磁场数据
-  static constexpr uint32_t CAN_ID_STATUS = 0x54;  // 温度和状态
+  // HWT9053 CAN ID 定义（按 High_Precision_Sensor_CAN_Protocol.txt）
+  static constexpr uint32_t CAN_ID_TIME = 0x50;    // 时间数据
+  static constexpr uint32_t CAN_ID_ACCEL = 0x51;   // 加速度数据
+  static constexpr uint32_t CAN_ID_GYRO = 0x52;    // 角速度数据
+  static constexpr uint32_t CAN_ID_ANGLE = 0x53;   // 角度数据
+  static constexpr uint32_t CAN_ID_MAGN = 0x54;    // 磁场数据
 
   HWT9053Parser();
   ~HWT9053Parser();
