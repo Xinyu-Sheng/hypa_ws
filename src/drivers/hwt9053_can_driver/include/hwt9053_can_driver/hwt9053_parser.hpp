@@ -18,6 +18,7 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 
 #include "sensor_msgs/msg/imu.hpp"
 
@@ -50,6 +51,9 @@ struct HWT9053Data
   // 温度 (°C)
   float temperature = 0.0f;
 
+  // 硬件时间戳 (ms)
+  uint32_t hw_timestamp = 0;
+
   // 数据有效标志
   bool accel_valid{false};
   bool gyro_valid{false};
@@ -76,8 +80,9 @@ class HWT9053Parser
    * @param _can_id CAN ID
    * @param _data CAN 数据字节数组
    * @param _dlc 数据长度
+   * @return 解析成功返回 true，失败返回 false（如 DLC 无效）
    */
-  void ParseCANFrame(uint32_t _can_id, const std::array<uint8_t, 8> &_data,
+  bool ParseCANFrame(uint32_t _can_id, const std::array<uint8_t, 8> &_data,
                      uint8_t _dlc);
 
   /**
@@ -91,6 +96,20 @@ class HWT9053Parser
    * @return HWT9053Data 结构体
    */
   const HWT9053Data &GetData() const;
+
+  /**
+   * @brief 获取磁场数据快照（线程安全）
+   * @return 返回磁场数据副本
+   */
+  struct MagneticFieldData
+  {
+    float mag_x;
+    float mag_y;
+    float mag_z;
+    bool mag_valid;
+  };
+
+  MagneticFieldData GetMagneticFieldData() const;
 
   /**
    * @brief 重置数据

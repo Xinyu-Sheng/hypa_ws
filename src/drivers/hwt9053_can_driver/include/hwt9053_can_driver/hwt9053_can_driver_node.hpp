@@ -23,6 +23,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "sensor_msgs/msg/imu.hpp"
+#include "sensor_msgs/msg/magnetic_field.hpp"
 
 namespace hwt9053_can_driver
 {
@@ -63,6 +64,8 @@ class HWT9053CANDriverNode : public rclcpp_lifecycle::LifecycleNode
   rclcpp::Subscription<can_msgs::msg::Frame>::SharedPtr can_sub_;
   rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::Imu>::SharedPtr
       imu_pub_;
+  rclcpp_lifecycle::LifecyclePublisher<
+      sensor_msgs::msg::MagneticField>::SharedPtr mag_pub_;
 
   // 参数
   std::string robot_name_;

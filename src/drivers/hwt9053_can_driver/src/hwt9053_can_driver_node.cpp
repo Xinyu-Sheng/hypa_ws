@@ -35,6 +35,7 @@ HWT9053CANDriverNode::HWT9053CANDriverNode(const rclcpp::NodeOptions &_options)
       log_debug_(false)
 {
   // 声明参数
+  this->declare_parameter("use_sim_time", rclcpp::ParameterValue(false));
   this->declare_parameter("robot_name", rclcpp::ParameterValue("robot"));
   this->declare_parameter("can_interface", rclcpp::ParameterValue("can0"));
   this->declare_parameter("imu_frame_id", rclcpp::ParameterValue("imu_link"));
@@ -82,13 +83,6 @@ HWT9053CANDriverNode::on_configure(const rclcpp_lifecycle::State &_state)
                 std::placeholders::_1),
       can_sub_options);
 
-  // 创建 IMU 发布器（需要在 activate 时创建）
-  auto imu_pub_options = rclcpp::PublisherOptions();
-  imu_pub_options.qos_overriding_options = rclcpp::QosOverridingOptions();
-
-  this->imu_pub_ = this->create_publisher<sensor_msgs::msg::Imu>(
-      imu_topic_name, rclcpp::QoS(10), imu_pub_options);
-
   RCLCPP_INFO(this->get_logger(), "HWT9053 CAN 驱动节点配置完成");
 
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
@@ -100,10 +94,40 @@ HWT9053CANDriverNode::on_activate(const rclcpp_lifecycle::State &_state)
 {
   RCLCPP_INFO(this->get_logger(), "正在激活 HWT9053 CAN 驱动节点");
 
+  // 在激活阶段创建 Publisher（生命周期规范）
+  if (!this->imu_pub_)
+  {
+    auto imu_pub_options = rclcpp::PublisherOptions();
+    imu_pub_options.qos_overriding_options = rclcpp::QosOverridingOptions();
+
+    std::string imu_topic_name =
+        this->get_parameter("imu_topic_name").as_string();
+
+    this->imu_pub_ = this->create_publisher<sensor_msgs::msg::Imu>(
+        imu_topic_name, rclcpp::QoS(10), imu_pub_options);
+  }
+
+  if (!this->mag_pub_)
+  {
+    auto mag_pub_options = rclcpp::PublisherOptions();
+    mag_pub_options.qos_overriding_options = rclcpp::QosOverridingOptions();
+
+    std::string imu_topic_name =
+        this->get_parameter("imu_topic_name").as_string();
+
+    this->mag_pub_ = this->create_publisher<sensor_msgs::msg::MagneticField>(
+        imu_topic_name + "_mag", rclcpp::QoS(10), mag_pub_options);
+  }
+
   // 激活发布器
   if (this->imu_pub_)
   {
     this->imu_pub_->on_activate();
+  }
+
+  if (this->mag_pub_)
+  {
+    this->mag_pub_->on_activate();
   }
 
   RCLCPP_INFO(this->get_logger(),
@@ -124,6 +148,11 @@ HWT9053CANDriverNode::on_deactivate(const rclcpp_lifecycle::State &_state)
     this->imu_pub_->on_deactivate();
   }
 
+  if (this->mag_pub_)
+  {
+    this->mag_pub_->on_deactivate();
+  }
+
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
       CallbackReturn::SUCCESS;
 }
@@ -135,6 +164,7 @@ HWT9053CANDriverNode::on_cleanup(const rclcpp_lifecycle::State &_state)
 
   this->can_sub_.reset();
   this->imu_pub_.reset();
+  this->mag_pub_.reset();
   this->parser_.reset();
 
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
@@ -148,6 +178,7 @@ HWT9053CANDriverNode::on_shutdown(const rclcpp_lifecycle::State &_state)
 
   this->can_sub_.reset();
   this->imu_pub_.reset();
+  this->mag_pub_.reset();
   this->parser_.reset();
 
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
@@ -203,7 +234,15 @@ void HWT9053CANDriverNode::CanFrameCallback(
   }
 
   // 解析 CAN 帧
-  this->parser_->ParseCANFrame(can_id, data, _msg->dlc);
+  bool parse_success = this->parser_->ParseCANFrame(can_id, data, _msg->dlc);
+
+  if (!parse_success)
+  {
+    RCLCPP_WARN(this->get_logger(),
+                "CAN 帧解析失败: ID=0x%x, DLC=%u (期望 DLC=8)", can_id,
+                _msg->dlc);
+    return;
+  }
 
   // 转换为 IMU 消息并发布
   auto imu_msg = this->parser_->ToIMUMessage();
@@ -211,6 +250,36 @@ void HWT9053CANDriverNode::CanFrameCallback(
   imu_msg.header.frame_id = this->imu_frame_id_;
 
   this->imu_pub_->publish(imu_msg);
+
+  // 获取磁场数据（线程安全）
+  auto mag_data = this->parser_->GetMagneticFieldData();
+
+  // 发布磁场消息（如果数据有效）
+  if (mag_data.mag_valid && this->mag_pub_ && this->mag_pub_->is_activated())
+  {
+    sensor_msgs::msg::MagneticField mag_msg;
+    mag_msg.header.stamp = _msg->header.stamp;
+    mag_msg.header.frame_id = this->imu_frame_id_;
+    mag_msg.magnetic_field.x = mag_data.mag_x;
+    mag_msg.magnetic_field.y = mag_data.mag_y;
+    mag_msg.magnetic_field.z = mag_data.mag_z;
+
+    // 磁场协方差矩阵 (μT^2)
+    constexpr double MAG_COVARIANCE = 0.0001;  // 单位: (μT)^2
+    for (int i = 0; i < 9; ++i)
+    {
+      if (i % 4 == 0)
+      {
+        mag_msg.magnetic_field_covariance[i] = MAG_COVARIANCE;
+      }
+      else
+      {
+        mag_msg.magnetic_field_covariance[i] = 0.0;
+      }
+    }
+
+    this->mag_pub_->publish(mag_msg);
+  }
 
   if (this->log_debug_)
   {

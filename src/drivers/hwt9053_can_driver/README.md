@@ -1,8 +1,13 @@
 # HWT9053 CAN IMU 驱动
 
+**版本**: v0.0.2 ✅ 生产就绪  
+**最后更新**: 2026-03-16
+
 这是一个完整的 ROS 2 驱动，用于 HWT9053 CAN IMU 传感器，支持多机器人、Gazebo 仿真和真机硬件。
 
 ## 🚀 快速开始
+
+**⏱️ 5分钟上手？查看 [QUICKSTART.md](./docs/QUICKSTART.md)**
 
 ### 1. 安装依赖
 
@@ -40,9 +45,22 @@ ros2 launch hwt9053_can_driver hwt9053_driver.launch.py robot_name:=robot can_in
 ```bash
 # 查看 IMU 数据
 ros2 topic echo /robot/imu/data
+
+# 运行硬件测试脚本
+python3 src/drivers/hwt9053_can_driver/scripts/hardware_test.py --robot robot1 --duration 30
 ```
 
 ## 📚 详细文档
+
+| 文档                                                      | 内容                          | 目标用户 |
+| --------------------------------------------------------- | ----------------------------- | -------- |
+| [QUICKSTART.md](./docs/QUICKSTART.md)                     | ⚡ 5分钟快速开始、基本验证     | 新用户   |
+| [API_REFERENCE.md](./docs/API_REFERENCE.md)               | 📖 C++ API详细说明、代码示例   | 开发者   |
+| [HARDWARE_INTEGRATION.md](./docs/HARDWARE_INTEGRATION.md) | 🔧 硬件部署、CAN配置、多机器人 | 系统集成 |
+| [TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)           | 🚨 故障排查、诊断指南          | 技术支持 |
+| [RELEASE_NOTES.md](./docs/RELEASE_NOTES.md)               | 📝 v0.0.2版本改进汇总          | 维护者   |
+
+**新用户请从 [QUICKSTART.md](./docs/QUICKSTART.md) 开始！**
 
 完整的实施指导请参考 [IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)（中文）
 
@@ -55,6 +73,12 @@ ros2 topic echo /robot/imu/data
 
 ## 🎯 主要特性
 
+✅ **生产级代码质量** (v0.0.2)
+- ✅ 所有P0/P1级审计问题已修复
+- ✅ 线程安全（mutex保护临界区）
+- ✅ 完整的硬件时间戳支持
+- ✅ 磁场数据完整利用
+
 ✅ **遵循 HYPA 代码规范**
 - 使用 `this->` 访问成员
 - 函数参数下划线前缀
@@ -63,16 +87,19 @@ ros2 topic echo /robot/imu/data
 ✅ **多机器人支持**
 - 自动命名空间隔离
 - 参数化 `robot_name`
+- 共享CAN总线的多传感器协调
 
 ✅ **灵活配置**
 - 支持自定义 CAN 接口
 - 调整 IMU frame id
 - 调试日志选项
+- 仿真时钟支持 (use_sim_time)
 
 ✅ **生产就绪**
 - 生命周期节点管理
-- 异常处理
-- 数据校验
+- 异常处理和错误日志
+- 完整的数据校验
+- 自动化硬件测试脚本
 
 ## 🔗 话题接口
 
@@ -180,10 +207,16 @@ candump can0 -c -n 100
 
 维护者: Xinyu Sheng <sheng.xin.yu@faxmail.com>
 
+**获取帮助**: 
+- 遇到问题？查看 [TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)
+- 运行硬件测试: `python3 scripts/hardware_test.py --robot robot1`
+
 ## 📄 许可证
 
 Apache License 2.0
 
 ---
 
-**注意**: 完整的实施指导（包含所有依赖安装步骤和调试技巧）请参考 [IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)
+**版本**: v0.0.2  
+**状态**: ✅ 生产就绪  
+**最后更新**: 2026-03-16

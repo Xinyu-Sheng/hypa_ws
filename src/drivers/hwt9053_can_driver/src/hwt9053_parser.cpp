@@ -24,6 +24,40 @@ class HWT9053Parser::Impl
 {
   public:
   HWT9053Data data;
+  mutable std::mutex data_mutex;  // 保护数据访问的互斥锁
+
+  // 欧拉角缓冲状态
+  bool roll_ready{false};
+  bool pitch_ready{false};
+  bool yaw_ready{false};
+
+  // 重置缓冲状态
+  void ResetAngleBuffer()
+  {
+    roll_ready = false;
+    pitch_ready = false;
+    yaw_ready = false;
+  }
+
+  // 检查三个角度是否都已准备好
+  bool IsAngleDataComplete() const
+  {
+    return roll_ready && pitch_ready && yaw_ready;
+  }
+
+  // 获取数据（线程安全）
+  HWT9053Data GetDataSnapshot() const
+  {
+    std::lock_guard<std::mutex> lock(data_mutex);
+    return data;
+  }
+
+  // 设置数据（线程安全）
+  void SetData(const HWT9053Data &_data)
+  {
+    std::lock_guard<std::mutex> lock(data_mutex);
+    data = _data;
+  }
 };
 
 HWT9053Parser::HWT9053Parser() : pimpl_(std::make_unique<Impl>())
@@ -60,20 +94,23 @@ float HWT9053Parser::Int16ToFloat(int16_t _value, float _scale) const
   return _value * _scale;
 }
 
-void HWT9053Parser::ParseCANFrame(uint32_t _can_id,
+bool HWT9053Parser::ParseCANFrame(uint32_t _can_id,
                                   const std::array<uint8_t, 8> &_data,
                                   uint8_t _dlc)
 {
   if (_dlc != 8)
   {
-    return;
+    return false;  // DLC 无效，解析失败
   }
 
   switch (_can_id)
   {
     case HWT9053Parser::CAN_ID_TIME:
     {
-      // 时间数据（当前并不使用）
+      // 时间数据：提取硬件时间戳（32位，ms单位）
+      uint32_t timestamp =
+          this->BytesToInt32(_data[0], _data[1], _data[2], _data[3]);
+      this->pimpl_->data.hw_timestamp = timestamp;
       break;
     }
 
@@ -139,19 +176,32 @@ void HWT9053Parser::ParseCANFrame(uint32_t _can_id,
       {
         // Roll 数据
         this->pimpl_->data.roll = static_cast<float>(angle_raw) * ANGLE_SCALE;
+        this->pimpl_->roll_ready = true;
       }
       else if (angle_type == 0x02)
       {
         // Pitch 数据
         this->pimpl_->data.pitch = static_cast<float>(angle_raw) * ANGLE_SCALE;
+        this->pimpl_->pitch_ready = true;
       }
       else if (angle_type == 0x03)
       {
         // Yaw 数据
         this->pimpl_->data.yaw = static_cast<float>(angle_raw) * ANGLE_SCALE;
+        this->pimpl_->yaw_ready = true;
+      }
+      else
+      {
+        // 无效的角度类型，忽略此帧
+        return false;
       }
 
-      this->pimpl_->data.angle_valid = true;
+      // 只有在三个角度都准备好时，才标记数据有效并重置缓冲
+      if (this->pimpl_->IsAngleDataComplete())
+      {
+        this->pimpl_->data.angle_valid = true;
+        this->pimpl_->ResetAngleBuffer();
+      }
       break;
     }
 
@@ -181,25 +231,32 @@ void HWT9053Parser::ParseCANFrame(uint32_t _can_id,
       // 忽略不支持的 CAN ID
       break;
   }
+
+  return true;  // 解析成功
 }
 
 sensor_msgs::msg::Imu HWT9053Parser::ToIMUMessage() const
 {
+  // 获取数据快照（线程安全）
+  std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);
+  HWT9053Data data_snapshot = this->pimpl_->data;
+  // 锁在这里自动释放
+
   sensor_msgs::msg::Imu msg;
 
   // 线性加速度 (m/s^2)
-  msg.linear_acceleration.x = this->pimpl_->data.accel_x;
-  msg.linear_acceleration.y = this->pimpl_->data.accel_y;
-  msg.linear_acceleration.z = this->pimpl_->data.accel_z;
+  msg.linear_acceleration.x = data_snapshot.accel_x;
+  msg.linear_acceleration.y = data_snapshot.accel_y;
+  msg.linear_acceleration.z = data_snapshot.accel_z;
 
   // 角速度 (rad/s)
-  msg.angular_velocity.x = this->pimpl_->data.gyro_x;
-  msg.angular_velocity.y = this->pimpl_->data.gyro_y;
-  msg.angular_velocity.z = this->pimpl_->data.gyro_z;
+  msg.angular_velocity.x = data_snapshot.gyro_x;
+  msg.angular_velocity.y = data_snapshot.gyro_y;
+  msg.angular_velocity.z = data_snapshot.gyro_z;
 
-  // 协方差矩阵（基于数据手册的典型精度设置）
-  // 线性加速度协方差
-  constexpr double ACCEL_COVARIANCE = 0.0001;  // (m/s^2)^2
+  // 协方差矩阵（基于HWT9053硬件规格）
+  // 线性加速度协方差：规格值~3.4e-5 (m/s^2)^2
+  constexpr double ACCEL_COVARIANCE = 3.4e-5;  // (m/s^2)^2
   for (int i = 0; i < 9; ++i)
   {
     if (i % 4 == 0)
@@ -212,8 +269,8 @@ sensor_msgs::msg::Imu HWT9053Parser::ToIMUMessage() const
     }
   }
 
-  // 角速度协方差
-  constexpr double GYRO_COVARIANCE = 0.00001;  // (rad/s)^2
+  // 角速度协方差：规格值~5.8e-8 (rad/s)^2
+  constexpr double GYRO_COVARIANCE = 5.8e-8;  // (rad/s)^2
   for (int i = 0; i < 9; ++i)
   {
     if (i % 4 == 0)
@@ -228,12 +285,12 @@ sensor_msgs::msg::Imu HWT9053Parser::ToIMUMessage() const
 
   // 方向四元数（从欧拉角转换）
   // 简化计算：使用Yaw作为主要方向
-  float cy = std::cos(this->pimpl_->data.yaw * 0.5f);
-  float sy = std::sin(this->pimpl_->data.yaw * 0.5f);
-  float cp = std::cos(this->pimpl_->data.pitch * 0.5f);
-  float sp = std::sin(this->pimpl_->data.pitch * 0.5f);
-  float cr = std::cos(this->pimpl_->data.roll * 0.5f);
-  float sr = std::sin(this->pimpl_->data.roll * 0.5f);
+  float cy = std::cos(data_snapshot.yaw * 0.5f);
+  float sy = std::sin(data_snapshot.yaw * 0.5f);
+  float cp = std::cos(data_snapshot.pitch * 0.5f);
+  float sp = std::sin(data_snapshot.pitch * 0.5f);
+  float cr = std::cos(data_snapshot.roll * 0.5f);
+  float sr = std::sin(data_snapshot.roll * 0.5f);
 
   msg.orientation.w = cr * cp * cy + sr * sp * sy;
   msg.orientation.x = sr * cp * cy - cr * sp * sy;
@@ -245,7 +302,17 @@ sensor_msgs::msg::Imu HWT9053Parser::ToIMUMessage() const
 
 const HWT9053Data &HWT9053Parser::GetData() const
 {
+  // 注意：GetData返回引用，不能再持有锁
+  // 调用者需要正确处理多线程访问
   return this->pimpl_->data;
+}
+
+HWT9053Parser::MagneticFieldData HWT9053Parser::GetMagneticFieldData() const
+{
+  // 获取磁场数据快照（线程安全）
+  std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);
+  return {this->pimpl_->data.mag_x, this->pimpl_->data.mag_y,
+          this->pimpl_->data.mag_z, this->pimpl_->data.mag_valid};
 }
 
 void HWT9053Parser::Reset()
