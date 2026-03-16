@@ -14,6 +14,12 @@ def generate_launch_description():
                     # "/model/servo_demo/joint/servo_joint/state@std_msgs/msg/Float64@gz.msgs.Double",
                 ],
                 output="screen",
-            )
+            ),
+            Node(
+                package="hypa_tests",
+                executable="servo_joint_forward",
+                name="servo_joint_forward",
+                output="screen",
+            ),
         ]
     )

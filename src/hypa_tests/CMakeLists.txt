@@ -7,6 +7,9 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(hypa_msgs REQUIRED)
 
 # uncomment the following section in order to fill in
 # further dependencies manually.
@@ -25,9 +28,21 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
+add_executable(servo_joint_forward src/servo_joint_forward.cpp)
+ament_target_dependencies(
+  servo_joint_forward
+  rclcpp
+  std_msgs
+  hypa_msgs
+)
+
 ament_package()
 
-# Install launch files
+# Install executables and launch files
+install(TARGETS servo_joint_forward
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 install(DIRECTORY launch/
   DESTINATION share/${PROJECT_NAME}/
 )
