@@ -1,3 +1,5 @@
+import os
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
@@ -5,8 +7,16 @@ from launch_ros.actions import LifecycleNode
 
 
 def generate_launch_description():
+    pkg_dir = get_package_share_directory("zmc432_driver")
+    default_params_file = os.path.join(pkg_dir, "config", "zmc432_params.yaml")
+
     return LaunchDescription(
         [
+            DeclareLaunchArgument(
+                "params_file",
+                default_value=default_params_file,
+                description="Full path to the ROS2 parameters file to use",
+            ),
             DeclareLaunchArgument(
                 "namespace",
                 default_value="",
@@ -83,24 +93,27 @@ def generate_launch_description():
                 name="motion_hardware_node",
                 output="screen",
                 parameters=[
-                    {"namespace": LaunchConfiguration("namespace")},
-                    {"use_sim_time": LaunchConfiguration("use_sim_time")},
-                    {"robot_name": LaunchConfiguration("robot_name")},
-                    {"controller_ip": LaunchConfiguration("controller_ip")},
-                    {"default_units": LaunchConfiguration("default_units")},
-                    {"default_speed": LaunchConfiguration("default_speed")},
-                    {"default_accel": LaunchConfiguration("default_accel")},
-                    {"default_decel": LaunchConfiguration("default_decel")},
+                    LaunchConfiguration("params_file"),
                     {
+                        "namespace": LaunchConfiguration("namespace"),
+                        "use_sim_time": LaunchConfiguration("use_sim_time"),
+                        "robot_name": LaunchConfiguration("robot_name"),
+                        "controller_ip": LaunchConfiguration("controller_ip"),
+                        "default_units": LaunchConfiguration("default_units"),
+                        "default_speed": LaunchConfiguration("default_speed"),
+                        "default_accel": LaunchConfiguration("default_accel"),
+                        "default_decel": LaunchConfiguration("default_decel"),
                         "motion_command_topic": LaunchConfiguration(
                             "motion_command_topic"
-                        )
+                        ),
+                        "motion_status_topic": LaunchConfiguration(
+                            "motion_status_topic"
+                        ),
+                        "axis_count": LaunchConfiguration("axis_count"),
+                        "perform_ecat_init": LaunchConfiguration("perform_ecat_init"),
+                        "ecat_slot_id": LaunchConfiguration("ecat_slot_id"),
+                        "ecat_timeout_ms": LaunchConfiguration("ecat_timeout_ms"),
                     },
-                    {"motion_status_topic": LaunchConfiguration("motion_status_topic")},
-                    {"axis_count": LaunchConfiguration("axis_count")},
-                    {"perform_ecat_init": LaunchConfiguration("perform_ecat_init")},
-                    {"ecat_slot_id": LaunchConfiguration("ecat_slot_id")},
-                    {"ecat_timeout_ms": LaunchConfiguration("ecat_timeout_ms")},
                 ],
                 autostart=True,
             ),

@@ -68,6 +68,10 @@ install(DIRECTORY launch/
   DESTINATION share/${PROJECT_NAME}/launch
 )
 
+install(DIRECTORY config/
+  DESTINATION share/${PROJECT_NAME}/config
+)
+
 # 安装 ZMotion SDK 库文件
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/lib/libzmotion.so
   DESTINATION lib/${PROJECT_NAME}

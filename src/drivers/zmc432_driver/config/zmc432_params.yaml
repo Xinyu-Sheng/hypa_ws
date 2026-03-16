@@ -1,0 +1,31 @@
+# ZMC432 Controller Parameters
+# This file is used by the motion_hardware_node in zmc432_driver package
+
+motion_hardware_node:
+  ros__parameters:
+    # --- Identification ---
+    namespace: "" # User namespace for this robot
+    robot_name: "hypa" # Robot prefix for topics
+    use_sim_time: false # Use system clock by default
+
+    # --- Hardware Connection ---
+    controller_ip: "192.168.0.11"
+    axis_count: 4 # Number of axes to manage (0-32)
+
+    # --- Default Motion Parameters ---
+    # Values depend on your physical system (pulses per unit, speed, etc.)
+    default_units: 1.0 # Pulse density (Unit/Pulse)
+    default_speed: 10.0 # Default speed (Unit/s)
+    default_accel: 100.0 # Default acceleration (Unit/s^2)
+    default_decel: 100.0 # Default deceleration (Unit/s^2)
+
+    # --- Communication Topics ---
+    # These will be prefixed by /{namespace}/{robot_name}/
+    motion_command_topic: "motion_command"
+    motion_status_topic: "motion_status"
+
+    # --- EtherCAT Initialization ---
+    # Enable this if you need the node to perform EtherCAT bus setup
+    perform_ecat_init: false
+    ecat_slot_id: 0
+    ecat_timeout_ms: 5000
