@@ -107,10 +107,7 @@ bool HWT9053Parser::ParseCANFrame(uint32_t _can_id,
     case HWT9053Parser::CAN_ID_ACCEL:
     {
       // 加速度数据格式: [AxL, AxH, AyL, AyH, AzL, AzH, ?, ?]
-      // 量程: ±2g, 分辨率: 1/16384 * 4g = 0.000244 m/s^2
-      // 正确计算: (2g * 2 * 9.81) / 32768 = ~0.001197 m/s^2
-      constexpr float ACCEL_SCALE =
-          2.0f * 2.0f * 9.81f / 32768.0f;  // ~0.001197 m/s^2
+      constexpr float ACCEL_SCALE = 16.0f * 9.81f / 32768.0f;  // m/s^2 per LSB
 
       // 低字节在 Data[0], 高字节在 Data[1]（按 CAN 协议）
       int16_t ax_raw = this->BytesToInt16(_data[1], _data[0]);
