@@ -28,6 +28,14 @@ add_library(${PROJECT_NAME} STATIC
   src/ecat_init.cpp
 )
 
+# 为第三方库文件抑制编译警告（zmcaux.cpp 和 ecat_init.cpp 来自 ZMotion SDK，禁止修改）
+set_source_files_properties(
+  src/zmcaux.cpp
+  src/ecat_init.cpp
+  PROPERTIES
+  COMPILE_FLAGS "-w"
+)
+
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
