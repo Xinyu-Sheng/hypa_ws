@@ -10,6 +10,9 @@
         <plugin name='gz::sim::systems::SceneBroadcaster' filename='gz-sim-scene-broadcaster-system' />
         <plugin name='gz::sim::systems::Contact' filename='gz-sim-contact-system' />
         <plugin name='gz::sim::systems::Sensors' filename='gz-sim-sensors-system' />
+        <plugin name='gz::sim::systems::Imu' filename='gz-sim-imu-system' />
+        <plugin name='gz::sim::systems::ForceTorque' filename='gz-sim-forcetorque-system' />
+        <plugin name='gz::sim::systems::AirPressure' filename='gz-sim-air-pressure-system' />
 
         <magnetic_field>5.5644999999999998e-06 2.2875799999999999e-05 -4.2388400000000002e-05</magnetic_field>
         <atmosphere type='adiabatic' />
@@ -138,6 +141,13 @@
                         <diffuse>1 0 0 1</diffuse>
                     </material>
                 </visual>
+                <sensor name="imu" type="imu">
+                    <always_on>1</always_on>
+                    <update_rate>100</update_rate>
+                    <visualize>true</visualize>
+                    <topic>imu</topic>
+                    <enable_metrics>true</enable_metrics>
+                </sensor>
             </link>
 
             <!-- 固定 base_link 到 world -->

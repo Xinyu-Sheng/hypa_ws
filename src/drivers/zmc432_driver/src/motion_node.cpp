@@ -61,7 +61,8 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
     default_accel_ = this->get_parameter("default_accel").as_double();
     default_decel_ = this->get_parameter("default_decel").as_double();
     axis_count_ = this->get_parameter("axis_count").as_int();
-    status_publish_rate_ms_ = this->get_parameter("status_publish_rate_ms").as_int();
+    status_publish_rate_ms_ =
+        this->get_parameter("status_publish_rate_ms").as_int();
 
     // ✅ 修复#5: 读取use_sim_time参数
     bool use_sim_time = this->get_parameter("use_sim_time").as_bool();

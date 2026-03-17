@@ -5,15 +5,14 @@
 #include <mutex>
 #include <string>
 
+#include "hypa_msgs/msg/motion_command.hpp"
+#include "hypa_msgs/msg/motion_status.hpp"
 #include "rclcpp/node_interfaces/node_base_interface.hpp"
 #include "rclcpp/node_interfaces/node_logging_interface.hpp"
 #include "rclcpp/node_interfaces/node_parameters_interface.hpp"
 #include "rclcpp/node_interfaces/node_timers_interface.hpp"
 #include "rclcpp/node_interfaces/node_topics_interface.hpp"
 #include "rclcpp/rclcpp.hpp"
-
-#include "hypa_msgs/msg/motion_command.hpp"
-#include "hypa_msgs/msg/motion_status.hpp"
 #include "zmc432_driver/motion_controller.hpp"
 
 namespace zmc432_driver
@@ -30,10 +29,14 @@ class MotionTopicNode
   public:
   MotionTopicNode(
       const rclcpp::node_interfaces::NodeBaseInterface::SharedPtr &_node_base,
-      const rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr &_node_topics,
-      const rclcpp::node_interfaces::NodeLoggingInterface::SharedPtr &_node_logging,
-      const rclcpp::node_interfaces::NodeTimersInterface::SharedPtr &_node_timers,
-      const rclcpp::node_interfaces::NodeParametersInterface::SharedPtr &_node_params,
+      const rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr
+          &_node_topics,
+      const rclcpp::node_interfaces::NodeLoggingInterface::SharedPtr
+          &_node_logging,
+      const rclcpp::node_interfaces::NodeTimersInterface::SharedPtr
+          &_node_timers,
+      const rclcpp::node_interfaces::NodeParametersInterface::SharedPtr
+          &_node_params,
       const std::shared_ptr<MotionController> &_controller,
       const std::string &_command_topic = "motion_command",
       const std::string &_status_topic = "motion_status",
