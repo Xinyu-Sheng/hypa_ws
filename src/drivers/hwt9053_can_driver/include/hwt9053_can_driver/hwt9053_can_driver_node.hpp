@@ -71,6 +71,8 @@ class HWT9053CANDriverNode : public rclcpp_lifecycle::LifecycleNode
   std::string robot_name_;
   std::string can_interface_;
   std::string imu_frame_id_;
+  std::string imu_topic_name_;
+  std::string can_bus_topic_;
   bool log_debug_;
   double accel_covariance_;
   double gyro_covariance_;

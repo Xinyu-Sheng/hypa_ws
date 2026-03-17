@@ -97,7 +97,8 @@ std::optional<std::string> MotionController::initialize(
 }
 
 std::optional<std::string> MotionController::configure_axis(
-    int _axis, double _units, double _speed, double _accel, double _decel)
+    int _axis, double _units, double _speed, double _accel, double _decel,
+    bool _reset_position)
 {
   if (!this->pimpl_->zmotion || !this->pimpl_->zmotion->is_connected())
   {
@@ -141,9 +142,12 @@ std::optional<std::string> MotionController::configure_axis(
   // 避免 ensure_axis_configured 用默认值覆盖已有配置
   this->pimpl_->zmotion->mark_axis_configured(_axis);
 
-  // 默认清零轴位置
-  this->pimpl_->zmotion->set_dpos(_axis, 0.0);
-  this->pimpl_->zmotion->set_mpos(_axis, 0.0);
+  // 可选：清零轴位置
+  if (_reset_position)
+  {
+    this->pimpl_->zmotion->set_dpos(_axis, 0.0);
+    this->pimpl_->zmotion->set_mpos(_axis, 0.0);
+  }
 
   return std::nullopt;
 }

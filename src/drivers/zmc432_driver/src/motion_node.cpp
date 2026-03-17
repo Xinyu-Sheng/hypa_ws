@@ -32,6 +32,7 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
     this->declare_parameter<double>("default_speed", 10.0);
     this->declare_parameter<double>("default_accel", 100.0);
     this->declare_parameter<double>("default_decel", 100.0);
+    this->declare_parameter<bool>("reset_position_on_configure", true);
     this->declare_parameter<int>("axis_count", 1);
     this->declare_parameter<int>("status_publish_rate_ms", 50);
 
@@ -60,6 +61,8 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
     default_speed_ = this->get_parameter("default_speed").as_double();
     default_accel_ = this->get_parameter("default_accel").as_double();
     default_decel_ = this->get_parameter("default_decel").as_double();
+    reset_position_on_configure_ =
+        this->get_parameter("reset_position_on_configure").as_bool();
     axis_count_ = this->get_parameter("axis_count").as_int();
     status_publish_rate_ms_ =
         this->get_parameter("status_publish_rate_ms").as_int();
@@ -128,6 +131,8 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
                 "accel=%.3f, decel=%.3f",
                 default_units_, default_speed_, default_accel_, default_decel_);
     RCLCPP_INFO(this->get_logger(), "Axis count: %d", axis_count_);
+    RCLCPP_INFO(this->get_logger(), "reset_position_on_configure: %s",
+                reset_position_on_configure_ ? "true" : "false");
 
     controller_ = std::make_shared<MotionController>();
 
@@ -187,7 +192,8 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
       this->get_parameter(axis_param_prefix + "decel", decel);
 
       auto config_result =
-          controller_->configure_axis(axis, units, speed, accel, decel);
+          controller_->configure_axis(axis, units, speed, accel, decel,
+                                      reset_position_on_configure_);
       if (config_result)
       {
         RCLCPP_WARN(this->get_logger(), "Failed to configure axis %d: %s", axis,
@@ -317,6 +323,7 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
   double default_speed_ = 10.0;
   double default_accel_ = 100.0;
   double default_decel_ = 100.0;
+  bool reset_position_on_configure_ = true;
   int axis_count_ = 1;
   int status_publish_rate_ms_ = 50;
 

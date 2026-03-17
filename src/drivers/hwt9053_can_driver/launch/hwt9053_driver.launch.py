@@ -19,7 +19,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, GroupAction
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import Node, PushRosNamespace
+from launch_ros.actions import LifecycleNode, Node, PushRosNamespace
 from launch_ros.substitutions import FindPackageShare
 
 import os
@@ -68,10 +68,11 @@ def generate_launch_description():
     accel_covariance = LaunchConfiguration("accel_covariance")
     gyro_covariance = LaunchConfiguration("gyro_covariance")
 
-    # HWT9053 CAN 驱动节点
-    hwt9053_driver_node = Node(
+    # HWT9053 CAN 驱动节点（LifecycleNode）
+    hwt9053_driver_node = LifecycleNode(
         package="hwt9053_can_driver",
         executable="hwt9053_can_driver_node",
+        name="hwt9053_can_driver",
         output="screen",
         parameters=[
             {
@@ -86,6 +87,7 @@ def generate_launch_description():
                 "can_bus_topic": "from_can_bus",
             }
         ],
+        autostart=True,
     )
 
     # 在机器人命名空间内组织节点

@@ -86,9 +86,11 @@ class MotionController
 
   // 公共接口
   std::optional<std::string> initialize(const std::string &_controller_ip);
+  // 当 reset_position=true 时，configure_axis 会把 Dpos/Mpos 清零（回到 0）
   std::optional<std::string> configure_axis(int _axis, double _units,
                                             double _speed, double _accel,
-                                            double _decel);
+                                            double _decel,
+                                            bool _reset_position = true);
   std::optional<std::string> reset_axis_position(int _axis,
                                                  double _position = 0.0);
   std::optional<std::string> enable_axis(int _axis, bool _enable);
