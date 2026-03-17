@@ -58,6 +58,15 @@ class HWT9053Parser
   static constexpr uint32_t CAN_ID_ANGLE = 0x53;  // 角度数据
   static constexpr uint32_t CAN_ID_MAGN = 0x54;   // 磁场数据
 
+  // 解析权重常量 (物理量转换系数)
+  static constexpr float ACCEL_SCALE =
+      16.0f * 9.81f / 32768.0f;  // m/s^2 per LSB
+  static constexpr float GYRO_SCALE =
+      2000.0f * 3.14159265358979323846f / 180.0f / 32768.0f;  // rad/s per LSB
+  static constexpr float ANGLE_SCALE =
+      1.0f / 1000.0f * 3.14159265358979323846f / 180.0f;  // rad per LSB
+  static constexpr float MAG_SCALE = 0.013f;              // uT per LSB
+
   HWT9053Parser();
   ~HWT9053Parser();
 

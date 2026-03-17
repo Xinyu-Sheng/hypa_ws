@@ -1,5 +1,6 @@
 #include "hwt9053_can_driver/hwt9053_parser.hpp"
 
+#include <chrono>
 #include <cmath>
 
 namespace hwt9053_can_driver
@@ -16,6 +17,7 @@ class HWT9053Parser::Impl
   bool roll_ready{false};
   bool pitch_ready{false};
   bool yaw_ready{false};
+  std::chrono::steady_clock::time_point last_angle_time;  // 用于老化机制
 
   // 协方差值
   double accel_covariance{3.4e-5};  // (m/s^2)^2
@@ -24,15 +26,15 @@ class HWT9053Parser::Impl
   // 重置缓冲状态
   void ResetAngleBuffer()
   {
-    roll_ready = false;
-    pitch_ready = false;
-    yaw_ready = false;
+    this->roll_ready = false;
+    this->pitch_ready = false;
+    this->yaw_ready = false;
   }
 
   // 检查三个角度是否都已准备好
   bool IsAngleDataComplete() const
   {
-    return roll_ready && pitch_ready && yaw_ready;
+    return this->roll_ready && this->pitch_ready && this->yaw_ready;
   }
 
   // 获取数据（线程安全）
@@ -107,16 +109,18 @@ bool HWT9053Parser::ParseCANFrame(uint32_t _can_id,
     case HWT9053Parser::CAN_ID_ACCEL:
     {
       // 加速度数据格式: [AxL, AxH, AyL, AyH, AzL, AzH, ?, ?]
-      constexpr float ACCEL_SCALE = 16.0f * 9.81f / 32768.0f;  // m/s^2 per LSB
 
       // 低字节在 Data[0], 高字节在 Data[1]（按 CAN 协议）
       int16_t ax_raw = this->BytesToInt16(_data[1], _data[0]);
       int16_t ay_raw = this->BytesToInt16(_data[3], _data[2]);
       int16_t az_raw = this->BytesToInt16(_data[5], _data[4]);
 
-      this->pimpl_->data.accel_x = this->Int16ToFloat(ax_raw, ACCEL_SCALE);
-      this->pimpl_->data.accel_y = this->Int16ToFloat(ay_raw, ACCEL_SCALE);
-      this->pimpl_->data.accel_z = this->Int16ToFloat(az_raw, ACCEL_SCALE);
+      this->pimpl_->data.accel_x =
+          this->Int16ToFloat(ax_raw, HWT9053Parser::ACCEL_SCALE);
+      this->pimpl_->data.accel_y =
+          this->Int16ToFloat(ay_raw, HWT9053Parser::ACCEL_SCALE);
+      this->pimpl_->data.accel_z =
+          this->Int16ToFloat(az_raw, HWT9053Parser::ACCEL_SCALE);
       this->pimpl_->data.accel_valid = true;
       break;
     }
@@ -125,17 +129,18 @@ bool HWT9053Parser::ParseCANFrame(uint32_t _can_id,
     {
       // 角速度数据格式: [GxL, GxH, GyL, GyH, GzL, GzH, ?, ?]
       // 量程: ±2000°/s, 分辨率: 1/16.4 °/s = 0.061 °/s = 0.00106 rad/s
-      constexpr float GYRO_SCALE =
-          2000.0f * M_PI / 180.0f / 32768.0f;  // ~0.00106 rad/s
 
       // 低字节在 Data[0], 高字节在 Data[1]（按 CAN 协议）
       int16_t gx_raw = this->BytesToInt16(_data[1], _data[0]);
       int16_t gy_raw = this->BytesToInt16(_data[3], _data[2]);
       int16_t gz_raw = this->BytesToInt16(_data[5], _data[4]);
 
-      this->pimpl_->data.gyro_x = this->Int16ToFloat(gx_raw, GYRO_SCALE);
-      this->pimpl_->data.gyro_y = this->Int16ToFloat(gy_raw, GYRO_SCALE);
-      this->pimpl_->data.gyro_z = this->Int16ToFloat(gz_raw, GYRO_SCALE);
+      this->pimpl_->data.gyro_x =
+          this->Int16ToFloat(gx_raw, HWT9053Parser::GYRO_SCALE);
+      this->pimpl_->data.gyro_y =
+          this->Int16ToFloat(gy_raw, HWT9053Parser::GYRO_SCALE);
+      this->pimpl_->data.gyro_z =
+          this->Int16ToFloat(gz_raw, HWT9053Parser::GYRO_SCALE);
       this->pimpl_->data.gyro_valid = true;
       break;
     }
@@ -151,7 +156,15 @@ bool HWT9053Parser::ParseCANFrame(uint32_t _can_id,
       // 计算公式: 角度 = ((byte5<<24) | (byte4<<16) | (byte3<<8) | byte2) /
       // 1000.0 量程: ±180° (主要用于 9轴算法)
 
-      constexpr float ANGLE_SCALE = 1.0f / 1000.0f * M_PI / 180.0f;  // rad
+      // 老化机制：如果上一帧角度数据太旧（超过50ms），则重置缓冲区
+      auto now = std::chrono::steady_clock::now();
+      auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+          now - this->pimpl_->last_angle_time);
+      if (duration.count() > 50)
+      {
+        this->pimpl_->ResetAngleBuffer();
+      }
+      this->pimpl_->last_angle_time = now;
 
       uint8_t angle_type = _data[0];  // 获取数据指示符 (0x01/0x02/0x03)
 
@@ -162,19 +175,22 @@ bool HWT9053Parser::ParseCANFrame(uint32_t _can_id,
       if (angle_type == 0x01)
       {
         // Roll 数据
-        this->pimpl_->data.roll = static_cast<float>(angle_raw) * ANGLE_SCALE;
+        this->pimpl_->data.roll =
+            static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
         this->pimpl_->roll_ready = true;
       }
       else if (angle_type == 0x02)
       {
         // Pitch 数据
-        this->pimpl_->data.pitch = static_cast<float>(angle_raw) * ANGLE_SCALE;
+        this->pimpl_->data.pitch =
+            static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
         this->pimpl_->pitch_ready = true;
       }
       else if (angle_type == 0x03)
       {
         // Yaw 数据
-        this->pimpl_->data.yaw = static_cast<float>(angle_raw) * ANGLE_SCALE;
+        this->pimpl_->data.yaw =
+            static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
         this->pimpl_->yaw_ready = true;
       }
       else
@@ -198,16 +214,18 @@ bool HWT9053Parser::ParseCANFrame(uint32_t _can_id,
       // 量程: ±400uT, 分辨率: 13nT/LSB = 0.013 μT/LSB (按 HWT9053 产品规格)
       // 正确计算: (400uT * 2) / 32768 = 0.0244 μT (2半量程)
       // 但根据产业规格，分辨率应为 0.013 μT/LSB
-      constexpr float MAG_SCALE = 0.013f;  // uT/LSB
 
       // 低字节在 Data[0], 高字节在 Data[1]（按 CAN 协议）
       int16_t mx_raw = this->BytesToInt16(_data[1], _data[0]);
       int16_t my_raw = this->BytesToInt16(_data[3], _data[2]);
       int16_t mz_raw = this->BytesToInt16(_data[5], _data[4]);
 
-      this->pimpl_->data.mag_x = this->Int16ToFloat(mx_raw, MAG_SCALE);
-      this->pimpl_->data.mag_y = this->Int16ToFloat(my_raw, MAG_SCALE);
-      this->pimpl_->data.mag_z = this->Int16ToFloat(mz_raw, MAG_SCALE);
+      this->pimpl_->data.mag_x =
+          this->Int16ToFloat(mx_raw, HWT9053Parser::MAG_SCALE);
+      this->pimpl_->data.mag_y =
+          this->Int16ToFloat(my_raw, HWT9053Parser::MAG_SCALE);
+      this->pimpl_->data.mag_z =
+          this->Int16ToFloat(mz_raw, HWT9053Parser::MAG_SCALE);
       this->pimpl_->data.mag_valid = true;
       break;
     }
