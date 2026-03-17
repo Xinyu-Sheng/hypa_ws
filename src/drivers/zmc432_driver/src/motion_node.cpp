@@ -1,3 +1,5 @@
+#include <fstream>
+#include <map>
 #include <memory>
 #include <string>
 
@@ -32,6 +34,7 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
     this->declare_parameter<double>("default_accel", 100.0);
     this->declare_parameter<double>("default_decel", 100.0);
     this->declare_parameter<bool>("reset_position_on_configure", true);
+    this->declare_parameter<bool>("restore_position_from_memory", false);
     this->declare_parameter<int>("axis_count", 1);
     this->declare_parameter<int>("status_publish_rate_ms", 50);
 
@@ -62,6 +65,8 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
     default_decel_ = this->get_parameter("default_decel").as_double();
     reset_position_on_configure_ =
         this->get_parameter("reset_position_on_configure").as_bool();
+    restore_position_from_memory_ =
+        this->get_parameter("restore_position_from_memory").as_bool();
     axis_count_ = this->get_parameter("axis_count").as_int();
     status_publish_rate_ms_ =
         this->get_parameter("status_publish_rate_ms").as_int();
@@ -134,12 +139,23 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
     controller_ = std::make_shared<MotionController>();
 
     // 初始化控制器（连接 ZMC432）
-    auto init_result = controller_->initialize(controller_ip_);
-    if (init_result)
+    try
     {
-      RCLCPP_FATAL(this->get_logger(),
-                   "Failed to initialize motion controller: %s",
-                   init_result->c_str());
+      auto init_result = controller_->initialize(controller_ip_);
+      if (init_result)
+      {
+        RCLCPP_FATAL(this->get_logger(),
+                     "Failed to initialize motion controller: %s",
+                     init_result->c_str());
+        controller_.reset();  // 清理无效的控制实例
+        return CallbackReturn::FAILURE;
+      }
+    }
+    catch (const std::exception &e)
+    {
+      RCLCPP_FATAL(this->get_logger(), "Exception during initialize: %s",
+                   e.what());
+      controller_.reset();
       return CallbackReturn::FAILURE;
     }
 
@@ -153,13 +169,27 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
                                           "ecat");
       int slot = this->get_parameter("ecat_slot_id").as_int();
       int tout = this->get_parameter("ecat_timeout_ms").as_int();
-      auto err = controller_->initialize_bus(info, slot, tout);
-      if (err)
+
+      try
       {
-        RCLCPP_FATAL(this->get_logger(), "ECAT init failed: %s", err->c_str());
+        auto err = controller_->initialize_bus(info, slot, tout);
+        if (err)
+        {
+          RCLCPP_FATAL(this->get_logger(), "ECAT init failed: %s",
+                       err->c_str());
+          controller_->stop();  // 失败时确保内部线程/循环停止
+          controller_.reset();  // 释放并清理资源，防止内存泄漏或悬空挂起
+          return CallbackReturn::FAILURE;
+        }
+        RCLCPP_INFO(this->get_logger(), "EtherCAT bus initialised");
+      }
+      catch (const std::exception &e)
+      {
+        RCLCPP_FATAL(this->get_logger(), "ECAT init exception: %s", e.what());
+        controller_->stop();
+        controller_.reset();
         return CallbackReturn::FAILURE;
       }
-      RCLCPP_INFO(this->get_logger(), "EtherCAT bus initialised");
     }
 
     // 轴参数配置
@@ -201,6 +231,43 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
                     "Axis %d configured: units=%.3f, speed=%.3f, accel=%.3f, "
                     "decel=%.3f",
                     axis, units, speed, accel, decel);
+      }
+    }
+
+    // 从本地持久化文件载入位置记忆
+    if (restore_position_from_memory_)
+    {
+      std::ifstream ifs("/var/tmp/zmc432_last_positions.txt");
+      if (ifs.is_open())
+      {
+        int memory_axis;
+        double memory_pos;
+        while (ifs >> memory_axis >> memory_pos)
+        {
+          if (memory_axis >= 0 && memory_axis < axis_count_)
+          {
+            auto err =
+                controller_->reset_axis_position(memory_axis, memory_pos);
+            if (!err)
+            {
+              RCLCPP_INFO(this->get_logger(),
+                          "Restored axis %d position to %.3f from memory file",
+                          memory_axis, memory_pos);
+            }
+            else
+            {
+              RCLCPP_WARN(this->get_logger(),
+                          "Failed to restore axis %d position", memory_axis);
+            }
+          }
+        }
+        ifs.close();
+      }
+      else
+      {
+        RCLCPP_INFO(this->get_logger(),
+                    "No position memory file found at /var/tmp (will start "
+                    "from current default)");
       }
     }
 
@@ -282,15 +349,44 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
   rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
   on_shutdown(const rclcpp_lifecycle::State &) override
   {
-    if (topic_node_)
-    {
-      topic_node_->shutdown();
-    }
+    RCLCPP_INFO(this->get_logger(), "Motion hardware node shutting down");
+
     if (controller_)
     {
       controller_->stop();
+
+      // 将当前各个轴的位置保存到本地持久化文件
+      std::ofstream ofs("/var/tmp/zmc432_last_positions.txt");
+      if (ofs.is_open())
+      {
+        for (int axis = 0; axis < axis_count_; ++axis)
+        {
+          auto pos_opt = controller_->get_current_position(axis);
+          if (pos_opt)
+          {
+            ofs << axis << " " << pos_opt.value() << "\n";
+            RCLCPP_INFO(this->get_logger(),
+                        "Saved axis %d position (%.3f) to memory", axis,
+                        pos_opt.value());
+          }
+        }
+        ofs.close();
+      }
+      else
+      {
+        RCLCPP_WARN(this->get_logger(),
+                    "Failed to open position memory file for writing");
+      }
+
+      controller_.reset();
     }
-    RCLCPP_INFO(this->get_logger(), "Motion hardware node shutting down");
+
+    if (topic_node_)
+    {
+      topic_node_->shutdown();
+      topic_node_.reset();
+    }
+
     return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
         CallbackReturn::SUCCESS;
   }
@@ -304,6 +400,7 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
   double default_accel_ = 100.0;
   double default_decel_ = 100.0;
   bool reset_position_on_configure_ = true;
+  bool restore_position_from_memory_ = false;
   int axis_count_ = 1;
   int status_publish_rate_ms_ = 50;
 

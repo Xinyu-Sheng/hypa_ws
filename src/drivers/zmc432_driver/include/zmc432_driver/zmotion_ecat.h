@@ -40,6 +40,7 @@ extern "C"
     int SysClockMode;
     int DcOffsetFlag[128];
     float DcOffsetTime[128];
+    int WatchDogTime;
   };
 
   /*******************************************************************************************************************

@@ -132,6 +132,7 @@ struct EcatInitInfo
   int sys_clock_mode = 1;
   std::array<int, 128> dc_offset_flag{};
   std::array<float, 128> dc_offset_time{};
+  int watchdog_time = 1;
 
   EcatInitInfo()
   {
@@ -170,6 +171,7 @@ struct EcatInitInfo
       out.DcOffsetFlag[i] = dc_offset_flag[i];
       out.DcOffsetTime[i] = dc_offset_time[i];
     }
+    out.WatchDogTime = watchdog_time;
     return out;
   }
 

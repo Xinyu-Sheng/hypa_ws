@@ -212,6 +212,16 @@ std::optional<bool> ZMotionWrapper::get_axis_enable(int _axis) const
   return pimpl_->get_axis_enable(_axis);
 }
 
+std::optional<std::string> ZMotionWrapper::set_op(int _bit, bool _state)
+{
+  return pimpl_->set_op(_bit, _state);
+}
+
+std::optional<std::string> ZMotionWrapper::set_brake(int _axis, bool _release)
+{
+  return pimpl_->set_brake(_axis, _release);
+}
+
 std::optional<std::string> ZMotionWrapper::stop_all()
 {
   return pimpl_->stop_all();
@@ -1211,6 +1221,33 @@ std::optional<bool> ZMotionWrapper::ZMotionWrapperPrivate::get_axis_enable(
     return std::nullopt;
   }
   return enable_state != 0;
+}
+
+std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::set_op(
+    int _bit, bool _state)
+{
+  if (!handle)
+  {
+    last_error = "Controller not connected";
+    return last_error;
+  }
+  int32_t ret = ZAux_Direct_SetOp(handle, _bit, _state ? 1 : 0);
+  if (ret != ERR_OK)
+  {
+    last_error = "Set OP failed for bit " + std::to_string(_bit) +
+                 " (error: " + std::to_string(ret) + ")";
+    return last_error;
+  }
+  return std::nullopt;
+}
+
+std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::set_brake(
+    int _axis, bool _release)
+{
+  // 假设我们将 IO 映射规则为: 刹车 IO = 起始 IO位 + 轴号
+  // 后续如果参数化可以传入一个 map，这里给出基础的机械/电气抱闸控制逻辑
+  int brake_io = 0 + _axis;  // TEMP mapping
+  return set_op(brake_io, _release);
 }
 
 double ZMotionWrapper::ZMotionWrapperPrivate::CurrentUnits(int _axis) const

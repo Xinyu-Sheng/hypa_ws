@@ -97,6 +97,9 @@ class MotionController
   std::optional<std::string> enable_all_axes(bool _enable);
   std::optional<bool> get_axis_enable(int _axis) const;
 
+  // 获取当前轴反馈位置
+  std::optional<double> get_current_position(int _axis) const;
+
   // EtherCAT bus initialization
   std::optional<std::string> initialize_bus(const EcatInitInfo &info,
                                             int slot = 0,
@@ -119,7 +122,7 @@ class MotionController
   void update_status();
   double calculate_progress(const MotionCommand &_cmd) const;
   bool is_motion_complete(const MotionCommand &_cmd,
-                           bool use_idle_check = true) const;
+                          bool use_idle_check = true) const;
 };
 
 }  // namespace zmc432_driver

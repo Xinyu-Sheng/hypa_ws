@@ -48,6 +48,7 @@ class MotionController::MotionControllerPrivate
     bool configured = false;
   };
   std::map<int, AxisConfig> axis_configs;
+  std::mutex config_mutex;
 
   // 执行线程主循环
   void execution_loop(MotionController *_public_interface);
@@ -136,7 +137,10 @@ std::optional<std::string> MotionController::configure_axis(
   config.acceleration = _accel;
   config.deceleration = _decel;
   config.configured = true;
-  this->pimpl_->axis_configs[_axis] = config;
+  {
+    std::lock_guard<std::mutex> lock(this->pimpl_->config_mutex);
+    this->pimpl_->axis_configs[_axis] = config;
+  }
 
   // 同步底层 ZMotionWrapper 的轴配置标志，
   // 避免 ensure_axis_configured 用默认值覆盖已有配置
@@ -176,7 +180,24 @@ std::optional<std::string> MotionController::enable_axis(int _axis,
     return "Controller not connected";
   }
 
-  return this->pimpl_->zmotion->set_axis_enable(_axis, _enable);
+  if (_enable)
+  {
+    auto res = this->pimpl_->zmotion->set_axis_enable(_axis, true);
+    if (res)
+      return res;
+    // 延时等待伺服锁轴然后再释放抱闸
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    return this->pimpl_->zmotion->set_brake(_axis, true);  // Release brake
+  }
+  else
+  {
+    // 先抱闸，然后再下使能
+    auto res = this->pimpl_->zmotion->set_brake(_axis, false);  // Engage brake
+    if (res)
+      return res;
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    return this->pimpl_->zmotion->set_axis_enable(_axis, false);
+  }
 }
 
 std::optional<std::string> MotionController::enable_all_axes(bool _enable)
@@ -189,9 +210,29 @@ std::optional<std::string> MotionController::enable_all_axes(bool _enable)
   std::string error_msg;
   bool has_error = false;
 
-  for (const auto &[axis, config] : this->pimpl_->axis_configs)
+  std::vector<int> axes_to_enable;
   {
-    auto result = this->pimpl_->zmotion->set_axis_enable(axis, _enable);
+    std::lock_guard<std::mutex> lock(this->pimpl_->config_mutex);
+    for (const auto &[axis, config] : this->pimpl_->axis_configs)
+    {
+      axes_to_enable.push_back(axis);
+    }
+  }
+
+  for (int axis : axes_to_enable)
+  {
+    std::optional<std::string> result;
+    if (_enable)
+    {
+      result = this->pimpl_->zmotion->set_axis_enable(axis, true);
+      this->pimpl_->zmotion->set_brake(axis, true);
+    }
+    else
+    {
+      result = this->pimpl_->zmotion->set_brake(axis, false);
+      this->pimpl_->zmotion->set_axis_enable(axis, false);
+    }
+
     if (result)
     {
       has_error = true;
@@ -225,6 +266,15 @@ std::optional<bool> MotionController::get_axis_enable(int _axis) const
   }
 
   return this->pimpl_->zmotion->get_axis_enable(_axis);
+}
+
+std::optional<double> MotionController::get_current_position(int _axis) const
+{
+  if (!this->pimpl_->zmotion || !this->pimpl_->zmotion->is_connected())
+  {
+    return std::nullopt;
+  }
+  return this->pimpl_->zmotion->Feedback(_axis);
 }
 
 bool MotionController::start()
@@ -310,14 +360,17 @@ bool MotionController::queue_motion(const MotionCommand &_cmd)
   }
 
   // 检查所有轴是否已配置
-  for (int axis : _cmd.axes)
   {
-    if (this->pimpl_->axis_configs.find(axis) ==
-        this->pimpl_->axis_configs.end())
+    std::lock_guard<std::mutex> lock(this->pimpl_->config_mutex);
+    for (int axis : _cmd.axes)
     {
-      return false;
+      if (this->pimpl_->axis_configs.find(axis) ==
+          this->pimpl_->axis_configs.end())
+      {
+        return false;
+      }
+      // ✅ 已删除：轴使能检查 — 延迟到execution_loop()中执行
     }
-    // ✅ 已删除：轴使能检查 — 延迟到execution_loop()中执行
   }
 
   // 检查连续轨迹模式下的参数
@@ -349,8 +402,17 @@ MotionController::ControllerStatus MotionController::CurrentStatus() const
     status.executing_axes = this->pimpl_->active_axes;
   }
 
+  std::vector<int> axes_to_query;
+  {
+    std::lock_guard<std::mutex> lock(this->pimpl_->config_mutex);
+    for (const auto &[axis, config] : this->pimpl_->axis_configs)
+    {
+      axes_to_query.push_back(axis);
+    }
+  }
+
   // 读取所有已配置轴的状态
-  for (const auto &[axis, config] : this->pimpl_->axis_configs)
+  for (int axis : axes_to_query)
   {
     AxisStatus axis_status;
 

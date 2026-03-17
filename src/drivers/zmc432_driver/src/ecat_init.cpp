@@ -40,12 +40,12 @@ int ZAux_BusCmd_SlotScan(ZMC_HANDLE handle, int SlotId, int *pOutTime)
   int Iresult = 0;
   int ScanOkFlag = 0;
   // 停止总线
-  sprintf(cmdbuff, "SLOT_STOP(%d)", SlotId);
+  snprintf(cmdbuff, sizeof(cmdbuff), "SLOT_STOP(%d)", SlotId);
   ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
   // 等待200ms
   MyDelayMs(200, pOutTime);
   // 扫描总线
-  sprintf(cmdbuff, "SLOT_SCAN(%d) ?return", SlotId);
+  snprintf(cmdbuff, sizeof(cmdbuff), "SLOT_SCAN(%d) ?return", SlotId);
   Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
   if ((Iresult == 0) || (Iresult == 20003) || (Iresult == 3402))
   {
@@ -134,10 +134,13 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
         256;  // 总线驱动器IO映射到控制器上后当前驱动器IO的起始编号，IO起始地址需要是8的倍数，不能和其他IO地址冲突
     EcatInfo.DriveIoSpa =
         16;  // 一个驱动器映射多少个IO到控制器上，需要是8的倍数
-    memset(EcatInfo.DrivePdoMode, -1,
-           sizeof(EcatInfo.DrivePdoMode));  // 轴PDO模式 //TODO:
-                                            // 测试不同的效果，-1应当是通过查询/协商从站使用从站的默认PDO模式（意味着得提前确认驱动器设置正确的），其他模式是主站“强加”给从站（通过主站写入从站的
-                                            // PDO 映射）
+    memset(
+        EcatInfo.DrivePdoMode, -1,
+        sizeof(
+            EcatInfo
+                .DrivePdoMode));  // 轴PDO模式 //TODO:
+                                  // 测试不同的效果，-1应当是通过查询/协商从站使用从站的默认PDO模式（意味着得提前确认驱动器设置正确的），其他模式是主站“强加”给从站（通过主站写入从站的
+                                  // PDO 映射）
     EcatInfo.DriveEnable =
         1;  ////总线初始化后驱动器是否自动上使能，1自动上使能，0不上使能
 
@@ -173,6 +176,8 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
   // 【伺服驱动器厂商ID】
   int ElmoVender = 0x9a;     // Elmo驱动器的厂商Id
   int ElmoDevice = 0x30924;  // Elmo驱动器的设备Id
+  int AkdVender = 0x6A;      // Kollmorgen AKD
+  int Bd3eVender = 0x2E1;    // Servotronix BD3E (placeholder)
 
   // ═══════════════════════════════════════════════════════════════════
   // 【步骤 1】清除当前设置：标注在 ZAux_Direct_Rapidstop 和轴参数重置循环处
@@ -253,7 +258,7 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
   // 添加log：第一次SLOT_SCAN扫描结果
   if (ScanOkFlag == 1)
   {
-    sprintf(cmdbuff, "?NODE_COUNT(%d)", SlotId);
+    snprintf(cmdbuff, sizeof(cmdbuff), "?NODE_COUNT(%d)", SlotId);
     Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
     ScanNodeNum = std::atoi(ReceBuff);
     printf("[ECAT_INIT] 第一次SLOT_SCAN成功，发现节点数: %.0f\n", ScanNodeNum);
@@ -265,26 +270,30 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
   if (ScanOkFlag == 1)  // 如果有扫描到驱动器
   {
     // 【节点数目判断】
-    sprintf(cmdbuff, "?NODE_COUNT(%d)", SlotId);
+    snprintf(cmdbuff, sizeof(cmdbuff), "?NODE_COUNT(%d)", SlotId);
     Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
     ScanNodeNum = std::atoi(ReceBuff);
     for (int i = 0; i < ScanNodeNum; ++i)
     {
+      if (i >= 128)
+        break;  // 防止数组越界
       // 判断是否需要设置DC偏移时间
       if (EcatInfo.DcOffsetFlag[i] == 1)
       {
-        sprintf(cmdbuff, "?NODE_INFO(%d,%d, 0)", SlotId, i);  // 该节点的厂商ID
+        snprintf(cmdbuff, sizeof(cmdbuff), "?NODE_INFO(%d,%d, 0)", SlotId,
+                 i);  // 该节点的厂商ID
         Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
         Drive_Vender = std::atoi(ReceBuff);
 
-        sprintf(cmdbuff, "?NODE_INFO(%d,%d, 1)", SlotId,
-                i);  // 该节点的设备编号
+        snprintf(cmdbuff, sizeof(cmdbuff), "?NODE_INFO(%d,%d, 1)", SlotId,
+                 i);  // 该节点的设备编号
         Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
         Drive_Device = std::atoi(ReceBuff);
 
-        sprintf(cmdbuff, "ZML_INFO(19, %d, %d) = SERVO_PERIOD * %f * 1000",
-                Drive_Vender, Drive_Device,
-                EcatInfo.DcOffsetTime[i]);  // DC 偏移时间单位是ns
+        snprintf(cmdbuff, sizeof(cmdbuff),
+                 "ZML_INFO(19, %d, %d) = SERVO_PERIOD * %f * 1000",
+                 Drive_Vender, Drive_Device,
+                 EcatInfo.DcOffsetTime[i]);  // DC 偏移时间单位是ns
         Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
       }
     }
@@ -301,7 +310,7 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
   if (1 == ScanOkFlag)  // 如果有扫描到驱动器
   {
     // 【7、节点数目判断，看看是否少从站】
-    sprintf(cmdbuff, "?NODE_COUNT(%d)", SlotId);
+    snprintf(cmdbuff, sizeof(cmdbuff), "?NODE_COUNT(%d)", SlotId);
     Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
     ScanNodeNum = std::atoi(ReceBuff);
     if (EcatInfo.EcatNodeNum >= 0)
@@ -321,7 +330,8 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
     {
       for (int i = 0; i < ScanNodeNum; i++)
       {
-        sprintf(cmdbuff, "?NODE_AXIS_COUNT(%d,%d)", SlotId, i);
+        snprintf(cmdbuff, sizeof(cmdbuff), "?NODE_AXIS_COUNT(%d,%d)", SlotId,
+                 i);
         Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
         NodeAxisNum = std::atoi(ReceBuff);
         BusAxisNum = BusAxisNum + NodeAxisNum;
@@ -344,23 +354,25 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
     // 遍历节点
     for (int i = 0; i < ScanNodeNum; i++)
     {
-      sprintf(cmdbuff, "?NODE_AXIS_COUNT(%d,%d)", SlotId,
-              i);  // 各个节点的轴数
+      if (i >= 128)
+        break;  // 防止数组越界
+      snprintf(cmdbuff, sizeof(cmdbuff), "?NODE_AXIS_COUNT(%d,%d)", SlotId,
+               i);  // 各个节点的轴数
       Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
       NodeAxisNum = std::atoi(ReceBuff);
 
-      sprintf(cmdbuff, "?NODE_INFO(%d,%d, 0)", SlotId,
-              i);  // 该节点的厂商ID
+      snprintf(cmdbuff, sizeof(cmdbuff), "?NODE_INFO(%d,%d, 0)", SlotId,
+               i);  // 该节点的厂商ID
       Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
       Drive_Vender = std::atoi(ReceBuff);
 
-      sprintf(cmdbuff, "?NODE_INFO(%d,%d, 1)", SlotId,
-              i);  // 该节点的设备编号
+      snprintf(cmdbuff, sizeof(cmdbuff), "?NODE_INFO(%d,%d, 1)", SlotId,
+               i);  // 该节点的设备编号
       Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
       Drive_Device = std::atoi(ReceBuff);
 
-      sprintf(cmdbuff, "?NODE_INFO(%d,%d, 3)", SlotId,
-              i);  // 该节点的设备拨码ID
+      snprintf(cmdbuff, sizeof(cmdbuff), "?NODE_INFO(%d,%d, 3)", SlotId,
+               i);  // 该节点的设备拨码ID
       Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
       Drive_Alias = std::atoi(ReceBuff);
 
@@ -368,11 +380,12 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
       if (EcatInfo.DcOffsetFlag[i] == 1)
       {
         int ZmlInfo, NodeInfo;
-        sprintf(cmdbuff, "?ZML_INFO(19,%d,%d)", Drive_Vender, Drive_Device);
+        snprintf(cmdbuff, sizeof(cmdbuff), "?ZML_INFO(19,%d,%d)", Drive_Vender,
+                 Drive_Device);
         Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
         ZmlInfo = std::atoi(ReceBuff);
 
-        sprintf(cmdbuff, "?NODE_INFO(%d,%d,19)", SlotId, i);
+        snprintf(cmdbuff, sizeof(cmdbuff), "?NODE_INFO(%d,%d,19)", SlotId, i);
         Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
         NodeInfo = std::atoi(ReceBuff);
         // DC偏移设置失败
@@ -419,11 +432,12 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
           // ELMO的驱动器需要关闭总线时钟优化
           Iresult += ZAux_Execute(
               handle, "SYSTEM_ZSET = CLEAR_BIT(7, SYSTEM_ZSET)", ReceBuff, 256);
-          sprintf(cmdbuff, " DRIVE_PROFILE(%d + %d) = -1",
-                  EcatInfo.DriveAxisStart, BusAxisNum);
+          snprintf(cmdbuff, sizeof(cmdbuff), " DRIVE_PROFILE(%d + %d) = -1",
+                   EcatInfo.DriveAxisStart, BusAxisNum);
           Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
 
-          sprintf(cmdbuff, " NODE_PROFILE(%d,%d) = -1", SlotId, i);
+          snprintf(cmdbuff, sizeof(cmdbuff), " NODE_PROFILE(%d,%d) = -1",
+                   SlotId, i);
           Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
 
           // ELMO的驱动器需要自定义PDO
@@ -494,20 +508,42 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
           Iresult += ZAux_BusCmd_SDOWrite(handle, SlotId, i, 0x6040, 0, 6,
                                           15);  // 伺服fault reset
         }
+        else if (Drive_Vender == AkdVender)
+        {
+          // AKD 使用默认 PDO 映射（-1表示使用驱动器内部默认的字典分配）
+          snprintf(cmdbuff, sizeof(cmdbuff), " DRIVE_PROFILE(%d + %d) = -1",
+                   EcatInfo.DriveAxisStart, BusAxisNum);
+          Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
+
+          snprintf(cmdbuff, sizeof(cmdbuff), " NODE_PROFILE(%d,%d) = -1",
+                   SlotId, i);
+          Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
+        }
+        else if (Drive_Vender == Bd3eVender)
+        {
+          // BD3E 使用默认 PDO 映射（-1表示使用驱动器内部默认的字典分配）
+          snprintf(cmdbuff, sizeof(cmdbuff), " DRIVE_PROFILE(%d + %d) = -1",
+                   EcatInfo.DriveAxisStart, BusAxisNum);
+          Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
+
+          snprintf(cmdbuff, sizeof(cmdbuff), " NODE_PROFILE(%d,%d) = -1",
+                   SlotId, i);
+          Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
+        }
         else if ((Drive_Device == 0x1ab0) && (Drive_Vender == 0x41B))
         {
           // 如果正运动的脉冲扩展卡
-          sprintf(cmdbuff, " DRIVE_PROFILE(%d + %d) = 0",
-                  EcatInfo.DriveAxisStart, BusAxisNum);
+          snprintf(cmdbuff, sizeof(cmdbuff), " DRIVE_PROFILE(%d + %d) = 0",
+                   EcatInfo.DriveAxisStart, BusAxisNum);
           Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
         }
         else
         {
           // 驱动器PDO设置,驱动器默认设置-- -1 位置模式--0  速度模式--20+
           // 力矩模式--30+
-          sprintf(cmdbuff, " DRIVE_PROFILE(%d + %d) = %d",
-                  EcatInfo.DriveAxisStart, BusAxisNum,
-                  EcatInfo.DrivePdoMode[BusAxisNum]);
+          snprintf(cmdbuff, sizeof(cmdbuff), " DRIVE_PROFILE(%d + %d) = %d",
+                   EcatInfo.DriveAxisStart, BusAxisNum,
+                   EcatInfo.DrivePdoMode[BusAxisNum]);
           Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
 
           // ═══════════════════════════════════════════════════════════════════
@@ -522,8 +558,8 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
           {
             int StartIdTemp =
                 EcatInfo.DriveIoStara + EcatInfo.DriveIoSpa * (BusAxisNum);
-            sprintf(cmdbuff, " DRIVE_IO(%d + %d) = %d", EcatInfo.DriveAxisStart,
-                    BusAxisNum, StartIdTemp);
+            snprintf(cmdbuff, sizeof(cmdbuff), " DRIVE_IO(%d + %d) = %d",
+                     EcatInfo.DriveAxisStart, BusAxisNum, StartIdTemp);
             Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
             // 设置负限位
             Iresult += ZAux_Direct_SetRevIn(
@@ -572,8 +608,8 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
         }
 
         // 每轴单独分组,轴报警只停自己
-        sprintf(cmdbuff, " DISABLE_GROUP(%d)",
-                EcatInfo.DriveAxisStart + BusAxisNum);
+        snprintf(cmdbuff, sizeof(cmdbuff), " DISABLE_GROUP(%d)",
+                 EcatInfo.DriveAxisStart + BusAxisNum);
         Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
 
         BusAxisNum++;
@@ -585,15 +621,15 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
       // ECAT节点数字量IO起始地址的映射
       if (EcatInfo.NodeIoId[i] >= 32)
       {
-        sprintf(cmdbuff, "NODE_IO(%d, %d) = %d", SlotId, i,
-                EcatInfo.NodeIoId[i]);
+        snprintf(cmdbuff, sizeof(cmdbuff), "NODE_IO(%d, %d) = %d", SlotId, i,
+                 EcatInfo.NodeIoId[i]);
         Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
       }
       // ECAT节点模拟量IO起始地址的映射
       if (EcatInfo.NodeAIoId[i] > 0)
       {
-        sprintf(cmdbuff, "NODE_AIO(%d, %d) = %d", SlotId, i,
-                EcatInfo.NodeAIoId[i]);
+        snprintf(cmdbuff, sizeof(cmdbuff), "NODE_AIO(%d, %d) = %d", SlotId, i,
+                 EcatInfo.NodeAIoId[i]);
         Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
       }
       /***************************************************************************************
@@ -623,11 +659,11 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
     //      Mode=8: OP (正式运行，实时周期250us)
     // ═══════════════════════════════════════════════════════════════════
     MyDelayMs(100, &OutTime);
-    sprintf(cmdbuff, "SLOT_START(%d, 4)", SlotId);
+    snprintf(cmdbuff, sizeof(cmdbuff), "SLOT_START(%d, 4)", SlotId);
     Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
     MyDelayMs(1000, &OutTime);
     EcatScanOutTime = OutTime;
-    sprintf(cmdbuff, "SLOT_START(%d, 8)  ?return", SlotId);
+    snprintf(cmdbuff, sizeof(cmdbuff), "SLOT_START(%d, 8)  ?return", SlotId);
     Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
     ReceBuff[2] = 0;
     if (0 == strcmp("-1", ReceBuff))
@@ -673,23 +709,24 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
       for (int Drivei = EcatInfo.DriveAxisStart;
            Drivei < (EcatInfo.DriveAxisStart + BusAxisNum); ++Drivei)
       {
-        /*sprintf(cmdbuff, "DRIVE_CLEAR(0) AXIS(%d)", Drivei);
+        /*snprintf(cmdbuff, sizeof(cmdbuff), "DRIVE_CLEAR(0) AXIS(%d)", Drivei);
         Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);*/
 
         // 伺服错误清除
-        sprintf(cmdbuff, "DRIVE_CONTROLWORD(%d)=128 ", Drivei);
+        snprintf(cmdbuff, sizeof(cmdbuff), "DRIVE_CONTROLWORD(%d)=128 ",
+                 Drivei);
         Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
         MyDelayMs(10, &OutTime);
         // 伺服shutdown
-        sprintf(cmdbuff, "DRIVE_CONTROLWORD(%d)=6 ", Drivei);
+        snprintf(cmdbuff, sizeof(cmdbuff), "DRIVE_CONTROLWORD(%d)=6 ", Drivei);
         Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
         MyDelayMs(10, &OutTime);
         // 伺服disable voltage
-        /*sprintf(cmdbuff, "DRIVE_CONTROLWORD(%d)=7 ", Drivei);
-        Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
+        /*snprintf(cmdbuff, sizeof(cmdbuff), "DRIVE_CONTROLWORD(%d)=7 ",
+        Drivei); Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
         MyDelayMs(10, &OutTime);*/
         // 伺服fault reset
-        sprintf(cmdbuff, "DRIVE_CONTROLWORD(%d)=15 ", Drivei);
+        snprintf(cmdbuff, sizeof(cmdbuff), "DRIVE_CONTROLWORD(%d)=15 ", Drivei);
         Iresult += ZAux_Execute(handle, cmdbuff, ReceBuff, 256);
         MyDelayMs(10, &OutTime);
       }
@@ -697,8 +734,13 @@ int32 __stdcall ZAux_BusCmd_EcatInit(ZMC_HANDLE handle, int SlotId,
       // 清除控制器所有轴的错误状态
       ZAux_Direct_Single_Datum(handle, 0, 0);
       MyDelayMs(200, &OutTime);
-      // 打开总线轴使能总开关
-      Iresult += ZAux_Execute(handle, "WDOG=1", ReceBuff, 256);
+
+      // ✅ 修复：看门狗参数化
+      char wdog_cmd[32];
+      snprintf(wdog_cmd, sizeof(wdog_cmd), "WDOG=%d", EcatInfo.WatchDogTime);
+      // 打开总线轴使能总开关（发送看门狗配置）
+      Iresult += ZAux_Execute(handle, wdog_cmd, ReceBuff, 256);
+
       // ═══════════════════════════════════════════════════════════════════
       // 【步骤 11】轴使能 AXIS_ENABLE（第 411 行）
       // 操作目标：控制器虚拟轴
