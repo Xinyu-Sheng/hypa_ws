@@ -1,20 +1,73 @@
 #include "hwt9053_can_driver/hwt9053_can_driver_node.hpp"
 
+#include <array>
+#include <memory>
 #include <string>
+
+#include "can_msgs/msg/frame.hpp"
+#include "hwt9053_can_driver/hwt9053_parser.hpp"
+#include "rclcpp/rclcpp.hpp"
+#include "sensor_msgs/msg/imu.hpp"
+#include "sensor_msgs/msg/magnetic_field.hpp"
 
 namespace hwt9053_can_driver
 {
 
-// PIMPL 实现
+// PIMPL 实现类
 class HWT9053CANDriverNode::Impl
 {
   public:
+  explicit Impl();
+  ~Impl() = default;
+
+  // 生命周期方法实现
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  on_configure(HWT9053CANDriverNode *_node,
+               const rclcpp_lifecycle::State &_state);
+
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  on_activate(HWT9053CANDriverNode *_node,
+              const rclcpp_lifecycle::State &_state);
+
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  on_deactivate(HWT9053CANDriverNode *_node,
+                const rclcpp_lifecycle::State &_state);
+
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  on_cleanup(HWT9053CANDriverNode *_node,
+             const rclcpp_lifecycle::State &_state);
+
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+  on_shutdown(HWT9053CANDriverNode *_node,
+              const rclcpp_lifecycle::State &_state);
+
+  // CAN 帧回调处理
+  void CanFrameCallback(HWT9053CANDriverNode *_node,
+                        const can_msgs::msg::Frame::SharedPtr _msg);
+
+  private:
+  // 私有成员变量
+  std::unique_ptr<HWT9053Parser> parser_;
+  rclcpp::Subscription<can_msgs::msg::Frame>::SharedPtr can_sub_;
+  rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::Imu>::SharedPtr
+      imu_pub_;
+  rclcpp_lifecycle::LifecyclePublisher<
+      sensor_msgs::msg::MagneticField>::SharedPtr mag_pub_;
+
+  // 参数
+  std::string robot_name_;
+  std::string can_interface_;
+  std::string imu_frame_id_;
+  std::string imu_topic_name_;
+  std::string can_bus_topic_;
+  bool log_debug_;
+  double accel_covariance_;
+  double gyro_covariance_;
 };
 
-HWT9053CANDriverNode::HWT9053CANDriverNode(const rclcpp::NodeOptions &_options)
-    : rclcpp_lifecycle::LifecycleNode("hwt9053_can_driver", _options),
-      pimpl_(std::make_unique<Impl>()),
-      parser_(std::make_unique<HWT9053Parser>()),
+// Impl 构造函数实现
+HWT9053CANDriverNode::Impl::Impl()
+    : parser_(std::make_unique<HWT9053Parser>()),
       robot_name_("robot"),
       can_interface_("can0"),
       imu_frame_id_("imu_link"),
@@ -22,66 +75,57 @@ HWT9053CANDriverNode::HWT9053CANDriverNode(const rclcpp::NodeOptions &_options)
       accel_covariance_(3.4e-5),
       gyro_covariance_(5.8e-8)
 {
-  // 声明参数
-  this->declare_parameter("robot_name", rclcpp::ParameterValue("robot"));
-  this->declare_parameter("can_interface", rclcpp::ParameterValue("can0"));
-  this->declare_parameter("imu_frame_id", rclcpp::ParameterValue("imu_link"));
-  this->declare_parameter("imu_topic_name", rclcpp::ParameterValue("imu/data"));
-  this->declare_parameter("can_bus_topic",
-                          rclcpp::ParameterValue("from_can_bus"));
-  this->declare_parameter("log_debug", rclcpp::ParameterValue(false));
-  this->declare_parameter("accel_covariance", rclcpp::ParameterValue(3.4e-5));
-  this->declare_parameter("gyro_covariance", rclcpp::ParameterValue(5.8e-8));
 }
 
-HWT9053CANDriverNode::~HWT9053CANDriverNode() = default;
-
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-HWT9053CANDriverNode::on_configure(const rclcpp_lifecycle::State &)
+HWT9053CANDriverNode::Impl::on_configure(HWT9053CANDriverNode *_node,
+                                         const rclcpp_lifecycle::State &)
 {
-  RCLCPP_INFO(this->get_logger(), "正在配置 HWT9053 CAN 驱动节点");
+  RCLCPP_INFO(_node->get_logger(), "正在配置 HWT9053 CAN 驱动节点");
 
   // 获取参数
-  this->robot_name_ = this->get_parameter("robot_name").as_string();
-  this->can_interface_ = this->get_parameter("can_interface").as_string();
-  this->imu_frame_id_ = this->get_parameter("imu_frame_id").as_string();
-  this->log_debug_ = this->get_parameter("log_debug").as_bool();
-  this->accel_covariance_ = this->get_parameter("accel_covariance").as_double();
-  this->gyro_covariance_ = this->get_parameter("gyro_covariance").as_double();
+  this->robot_name_ = _node->get_parameter("robot_name").as_string();
+  this->can_interface_ = _node->get_parameter("can_interface").as_string();
+  this->imu_frame_id_ = _node->get_parameter("imu_frame_id").as_string();
+  this->log_debug_ = _node->get_parameter("log_debug").as_bool();
+  this->accel_covariance_ =
+      _node->get_parameter("accel_covariance").as_double();
+  this->gyro_covariance_ = _node->get_parameter("gyro_covariance").as_double();
 
   // 设置协方差到解析器
   this->parser_->SetAccelCovariance(this->accel_covariance_);
   this->parser_->SetGyroCovariance(this->gyro_covariance_);
 
-  this->imu_topic_name_ = this->get_parameter("imu_topic_name").as_string();
-  this->can_bus_topic_ = this->get_parameter("can_bus_topic").as_string();
+  this->imu_topic_name_ = _node->get_parameter("imu_topic_name").as_string();
+  this->can_bus_topic_ = _node->get_parameter("can_bus_topic").as_string();
 
-  RCLCPP_INFO(this->get_logger(), "参数设置:");
-  RCLCPP_INFO(this->get_logger(), "  robot_name: %s",
+  RCLCPP_INFO(_node->get_logger(), "参数设置:");
+  RCLCPP_INFO(_node->get_logger(), "  robot_name: %s",
               this->robot_name_.c_str());
-  RCLCPP_INFO(this->get_logger(), "  can_interface: %s",
+  RCLCPP_INFO(_node->get_logger(), "  can_interface: %s",
               this->can_interface_.c_str());
-  RCLCPP_INFO(this->get_logger(), "  imu_frame_id: %s",
+  RCLCPP_INFO(_node->get_logger(), "  imu_frame_id: %s",
               this->imu_frame_id_.c_str());
-  RCLCPP_INFO(this->get_logger(), "  imu_topic_name: %s",
+  RCLCPP_INFO(_node->get_logger(), "  imu_topic_name: %s",
               this->imu_topic_name_.c_str());
-  RCLCPP_INFO(this->get_logger(), "  can_bus_topic: %s",
+  RCLCPP_INFO(_node->get_logger(), "  can_bus_topic: %s",
               this->can_bus_topic_.c_str());
-  RCLCPP_INFO(this->get_logger(), "  accel_covariance: %.6e",
+  RCLCPP_INFO(_node->get_logger(), "  accel_covariance: %.6e",
               this->accel_covariance_);
-  RCLCPP_INFO(this->get_logger(), "  gyro_covariance: %.6e",
+  RCLCPP_INFO(_node->get_logger(), "  gyro_covariance: %.6e",
               this->gyro_covariance_);
 
-  RCLCPP_INFO(this->get_logger(), "HWT9053 CAN 驱动节点配置完成");
+  RCLCPP_INFO(_node->get_logger(), "HWT9053 CAN 驱动节点配置完成");
 
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
       CallbackReturn::SUCCESS;
 }
 
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-HWT9053CANDriverNode::on_activate(const rclcpp_lifecycle::State &)
+HWT9053CANDriverNode::Impl::on_activate(HWT9053CANDriverNode *_node,
+                                        const rclcpp_lifecycle::State &)
 {
-  RCLCPP_INFO(this->get_logger(), "正在激活 HWT9053 CAN 驱动节点");
+  RCLCPP_INFO(_node->get_logger(), "正在激活 HWT9053 CAN 驱动节点");
 
   // 订阅 CAN 帧（只在激活态接收数据）
   if (!this->can_sub_)
@@ -89,11 +133,10 @@ HWT9053CANDriverNode::on_activate(const rclcpp_lifecycle::State &)
     auto can_sub_options = rclcpp::SubscriptionOptions();
     can_sub_options.callback_group = nullptr;
 
-    this->can_sub_ = this->create_subscription<can_msgs::msg::Frame>(
+    this->can_sub_ = _node->create_subscription<can_msgs::msg::Frame>(
         this->can_bus_topic_, rclcpp::QoS(10),
-        std::bind(&HWT9053CANDriverNode::CanFrameCallback, this,
-                  std::placeholders::_1),
-        can_sub_options);
+        [this, _node](const can_msgs::msg::Frame::SharedPtr _msg)
+        { this->CanFrameCallback(_node, _msg); }, can_sub_options);
   }
 
   // 在激活阶段创建 Publisher（生命周期规范）
@@ -102,7 +145,7 @@ HWT9053CANDriverNode::on_activate(const rclcpp_lifecycle::State &)
     auto imu_pub_options = rclcpp::PublisherOptions();
     imu_pub_options.qos_overriding_options = rclcpp::QosOverridingOptions();
 
-    this->imu_pub_ = this->create_publisher<sensor_msgs::msg::Imu>(
+    this->imu_pub_ = _node->create_publisher<sensor_msgs::msg::Imu>(
         this->imu_topic_name_, rclcpp::QoS(10), imu_pub_options);
   }
 
@@ -111,7 +154,7 @@ HWT9053CANDriverNode::on_activate(const rclcpp_lifecycle::State &)
     auto mag_pub_options = rclcpp::PublisherOptions();
     mag_pub_options.qos_overriding_options = rclcpp::QosOverridingOptions();
 
-    this->mag_pub_ = this->create_publisher<sensor_msgs::msg::MagneticField>(
+    this->mag_pub_ = _node->create_publisher<sensor_msgs::msg::MagneticField>(
         this->imu_topic_name_ + "_mag", rclcpp::QoS(10), mag_pub_options);
   }
 
@@ -126,7 +169,7 @@ HWT9053CANDriverNode::on_activate(const rclcpp_lifecycle::State &)
     this->mag_pub_->on_activate();
   }
 
-  RCLCPP_INFO(this->get_logger(),
+  RCLCPP_INFO(_node->get_logger(),
               "HWT9053 CAN 驱动节点已激活，开始接收 CAN 数据");
 
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
@@ -134,9 +177,10 @@ HWT9053CANDriverNode::on_activate(const rclcpp_lifecycle::State &)
 }
 
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-HWT9053CANDriverNode::on_deactivate(const rclcpp_lifecycle::State &)
+HWT9053CANDriverNode::Impl::on_deactivate(HWT9053CANDriverNode *_node,
+                                          const rclcpp_lifecycle::State &)
 {
-  RCLCPP_INFO(this->get_logger(), "正在停用 HWT9053 CAN 驱动节点");
+  RCLCPP_INFO(_node->get_logger(), "正在停用 HWT9053 CAN 驱动节点");
 
   // 停用发布器
   if (this->imu_pub_)
@@ -157,9 +201,10 @@ HWT9053CANDriverNode::on_deactivate(const rclcpp_lifecycle::State &)
 }
 
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-HWT9053CANDriverNode::on_cleanup(const rclcpp_lifecycle::State &)
+HWT9053CANDriverNode::Impl::on_cleanup(HWT9053CANDriverNode *_node,
+                                       const rclcpp_lifecycle::State &)
 {
-  RCLCPP_INFO(this->get_logger(), "正在清理 HWT9053 CAN 驱动节点");
+  RCLCPP_INFO(_node->get_logger(), "正在清理 HWT9053 CAN 驱动节点");
 
   this->can_sub_.reset();
   this->imu_pub_.reset();
@@ -171,9 +216,10 @@ HWT9053CANDriverNode::on_cleanup(const rclcpp_lifecycle::State &)
 }
 
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
-HWT9053CANDriverNode::on_shutdown(const rclcpp_lifecycle::State &)
+HWT9053CANDriverNode::Impl::on_shutdown(HWT9053CANDriverNode *_node,
+                                        const rclcpp_lifecycle::State &)
 {
-  RCLCPP_INFO(this->get_logger(), "正在关闭 HWT9053 CAN 驱动节点");
+  RCLCPP_INFO(_node->get_logger(), "正在关闭 HWT9053 CAN 驱动节点");
 
   this->can_sub_.reset();
   this->imu_pub_.reset();
@@ -184,8 +230,8 @@ HWT9053CANDriverNode::on_shutdown(const rclcpp_lifecycle::State &)
       CallbackReturn::SUCCESS;
 }
 
-void HWT9053CANDriverNode::CanFrameCallback(
-    const can_msgs::msg::Frame::SharedPtr _msg)
+void HWT9053CANDriverNode::Impl::CanFrameCallback(
+    HWT9053CANDriverNode *_node, const can_msgs::msg::Frame::SharedPtr _msg)
 {
   if (!this->imu_pub_ || !this->imu_pub_->is_activated())
   {
@@ -197,7 +243,7 @@ void HWT9053CANDriverNode::CanFrameCallback(
   {
     if (this->log_debug_)
     {
-      RCLCPP_WARN(this->get_logger(),
+      RCLCPP_WARN(_node->get_logger(),
                   "收到非标准长度的 CAN 帧: DLC=%u, ID=0x%x", _msg->dlc,
                   _msg->id);
     }
@@ -214,14 +260,14 @@ void HWT9053CANDriverNode::CanFrameCallback(
   {
     if (this->log_debug_)
     {
-      RCLCPP_DEBUG(this->get_logger(), "忽略不支持的 CAN ID: 0x%x", can_id);
+      RCLCPP_DEBUG(_node->get_logger(), "忽略不支持的 CAN ID: 0x%x", can_id);
     }
     return;
   }
 
   if (this->log_debug_)
   {
-    RCLCPP_DEBUG(this->get_logger(), "接收 CAN 帧 ID=0x%x, DLC=%u", _msg->id,
+    RCLCPP_DEBUG(_node->get_logger(), "接收 CAN 帧 ID=0x%x, DLC=%u", _msg->id,
                  _msg->dlc);
   }
 
@@ -237,7 +283,7 @@ void HWT9053CANDriverNode::CanFrameCallback(
 
   if (!parse_success)
   {
-    RCLCPP_WARN(this->get_logger(),
+    RCLCPP_WARN(_node->get_logger(),
                 "CAN 帧解析失败: ID=0x%x, DLC=%u (期望 DLC=8)", can_id,
                 _msg->dlc);
     return;
@@ -282,13 +328,62 @@ void HWT9053CANDriverNode::CanFrameCallback(
 
   if (this->log_debug_)
   {
-    RCLCPP_DEBUG(this->get_logger(),
+    RCLCPP_DEBUG(_node->get_logger(),
                  "发布 IMU 消息: accel=[%.3f, %.3f, %.3f] m/s^2, gyro=[%.3f, "
                  "%.3f, %.3f] rad/s",
                  imu_msg.linear_acceleration.x, imu_msg.linear_acceleration.y,
                  imu_msg.linear_acceleration.z, imu_msg.angular_velocity.x,
                  imu_msg.angular_velocity.y, imu_msg.angular_velocity.z);
   }
+}
+
+// 公共接口实现
+HWT9053CANDriverNode::HWT9053CANDriverNode(const rclcpp::NodeOptions &_options)
+    : rclcpp_lifecycle::LifecycleNode("hwt9053_can_driver", _options),
+      pimpl_(std::make_unique<Impl>())
+{
+  // 声明参数
+  this->declare_parameter("robot_name", rclcpp::ParameterValue("robot"));
+  this->declare_parameter("can_interface", rclcpp::ParameterValue("can0"));
+  this->declare_parameter("imu_frame_id", rclcpp::ParameterValue("imu_link"));
+  this->declare_parameter("imu_topic_name", rclcpp::ParameterValue("imu/data"));
+  this->declare_parameter("can_bus_topic",
+                          rclcpp::ParameterValue("from_can_bus"));
+  this->declare_parameter("log_debug", rclcpp::ParameterValue(false));
+  this->declare_parameter("accel_covariance", rclcpp::ParameterValue(3.4e-5));
+  this->declare_parameter("gyro_covariance", rclcpp::ParameterValue(5.8e-8));
+}
+
+HWT9053CANDriverNode::~HWT9053CANDriverNode() = default;
+
+rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+HWT9053CANDriverNode::on_configure(const rclcpp_lifecycle::State &_state)
+{
+  return this->pimpl_->on_configure(this, _state);
+}
+
+rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+HWT9053CANDriverNode::on_activate(const rclcpp_lifecycle::State &_state)
+{
+  return this->pimpl_->on_activate(this, _state);
+}
+
+rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+HWT9053CANDriverNode::on_deactivate(const rclcpp_lifecycle::State &_state)
+{
+  return this->pimpl_->on_deactivate(this, _state);
+}
+
+rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+HWT9053CANDriverNode::on_cleanup(const rclcpp_lifecycle::State &_state)
+{
+  return this->pimpl_->on_cleanup(this, _state);
+}
+
+rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+HWT9053CANDriverNode::on_shutdown(const rclcpp_lifecycle::State &_state)
+{
+  return this->pimpl_->on_shutdown(this, _state);
 }
 
 }  // namespace hwt9053_can_driver
