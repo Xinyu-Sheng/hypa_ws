@@ -19,8 +19,8 @@
 HWT9053 IMU 驱动 Launch 文件
 
 支持两种运行模式：
-1. 真机模式 (use_sim=false): 从 CAN 总线获取 HWT9053 IMU 数据
-2. 仿真模式 (use_sim=true): 从 Gazebo 获取 IMU 数据（后续扩展）
+1. 真机模式 (use_sim_time=false): 从 CAN 总线获取 HWT9053 IMU 数据，使用系统时钟
+2. 仿真模式 (use_sim_time=true): 从 Gazebo 获取 IMU 数据，使用仿真时钟（后续扩展）
 
 参数从配置文件 hwt9053_params.yaml 读取，可在 launch 命令行覆盖。
 
@@ -35,7 +35,7 @@ HWT9053 IMU 驱动 Launch 文件
   ros2 launch hwt9053_can_driver imu_system.launch.py params_file:=/path/to/params.yaml
 
   # 仿真模式（预留）
-  ros2 launch hwt9053_can_driver imu_system.launch.py use_sim:=true robot_name:=robot
+  ros2 launch hwt9053_can_driver imu_system.launch.py use_sim_time:=true robot_name:=robot
 """
 
 import os
@@ -72,21 +72,14 @@ def generate_launch_description():
         "robot_name", default_value="robot", description="机器人名称，用于命名空间隔离"
     )
 
-    use_sim_arg = DeclareLaunchArgument(
-        "use_sim",
-        default_value="false",
-        description="使用仿真 IMU 数据源（true/false，仿真模式预留）",
-    )
-
     use_sim_time_arg = DeclareLaunchArgument(
         "use_sim_time",
         default_value="false",
-        description="使用仿真时钟（需要 Gazebo 启动）",
+        description="使用仿真时钟和数据源（true=仿真模式，false=真机模式）",
     )
 
     # 获取参数
     robot_name = LaunchConfiguration("robot_name")
-    use_sim = LaunchConfiguration("use_sim")
     use_sim_time = LaunchConfiguration("use_sim_time")
 
     # HWT9053 CAN 驱动节点（LifecycleNode）
@@ -96,14 +89,8 @@ def generate_launch_description():
         name="hwt9053_can_driver",
         namespace="",
         output="screen",
-        parameters=[
-            LaunchConfiguration("params_file"),
-            {
-                "robot_name": robot_name,
-                "use_sim_time": use_sim_time,
-            },
-        ],
-        condition=UnlessCondition(use_sim),
+        parameters=[LaunchConfiguration("params_file")],
+        condition=UnlessCondition(use_sim_time),
     )
 
     # 自动 configure -> activate（Humble 无 autostart）
@@ -119,7 +106,7 @@ def generate_launch_description():
             target_action=hwt9053_driver_node,
             on_start=[configure_event],
         ),
-        condition=UnlessCondition(use_sim),
+        condition=UnlessCondition(use_sim_time),
     )
 
     activate_event = EmitEvent(
@@ -135,7 +122,7 @@ def generate_launch_description():
             goal_state="inactive",
             entities=[activate_event],
         ),
-        condition=UnlessCondition(use_sim),
+        condition=UnlessCondition(use_sim_time),
     )
 
     # 在机器人命名空间内组织节点
@@ -144,14 +131,13 @@ def generate_launch_description():
             PushRosNamespace(robot_name),
             hwt9053_driver_node,
         ],
-        condition=UnlessCondition(use_sim),
+        condition=UnlessCondition(use_sim_time),
     )
 
     return LaunchDescription(
         [
             params_file_arg,
             robot_name_arg,
-            use_sim_arg,
             use_sim_time_arg,
             register_configure,
             register_activate,

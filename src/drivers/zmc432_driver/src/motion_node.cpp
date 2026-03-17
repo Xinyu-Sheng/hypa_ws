@@ -19,8 +19,7 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
   {
     // 声明必需参数（多机器人支持）
     // use_sim_time 由 LifecycleNode 自动声明，无需重复声明
-    this->declare_parameter<std::string>("namespace", "");
-    this->declare_parameter<std::string>("robot_name", "hypa");
+    // namespace 和 robot_name 由 launch 文件通过 PushRosNamespace 处理
 
     // 声明应用参数
     this->declare_parameter<std::string>("controller_ip", "192.168.0.11");
@@ -52,8 +51,8 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
         LifecycleNodeInterface::CallbackReturn;
 
     // 读取参数
-    namespace_ = this->get_parameter("namespace").as_string();
-    robot_name_ = this->get_parameter("robot_name").as_string();
+    // namespace 和 robot_name 由 launch 文件通过 PushRosNamespace
+    // 处理，无需在节点中读取
     controller_ip_ = this->get_parameter("controller_ip").as_string();
     command_topic_ = this->get_parameter("motion_command_topic").as_string();
     status_topic_ = this->get_parameter("motion_status_topic").as_string();
@@ -122,8 +121,6 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
     }
 
     RCLCPP_INFO(this->get_logger(), "Motion hardware node starting...");
-    RCLCPP_INFO(this->get_logger(), "Namespace: %s, Robot: %s",
-                namespace_.c_str(), robot_name_.c_str());
     RCLCPP_INFO(this->get_logger(), "Controller IP: %s",
                 controller_ip_.c_str());
     RCLCPP_INFO(this->get_logger(),
@@ -191,9 +188,8 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
       this->get_parameter(axis_param_prefix + "accel", accel);
       this->get_parameter(axis_param_prefix + "decel", decel);
 
-      auto config_result =
-          controller_->configure_axis(axis, units, speed, accel, decel,
-                                      reset_position_on_configure_);
+      auto config_result = controller_->configure_axis(
+          axis, units, speed, accel, decel, reset_position_on_configure_);
       if (config_result)
       {
         RCLCPP_WARN(this->get_logger(), "Failed to configure axis %d: %s", axis,
@@ -208,22 +204,8 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
       }
     }
 
-    // ✅ 修复#9：统一topic命名逻辑 — 总是添加robot_name前缀
-    std::string topic_prefix;
-
-    if (!namespace_.empty())
-    {
-      topic_prefix = "/" + namespace_ + "/" + robot_name_;
-    }
-    else
-    {
-      topic_prefix = "/" + robot_name_;  // 总是添加robot_name前缀
-    }
-
-    command_topic_ = topic_prefix + "/" + command_topic_;
-    status_topic_ = topic_prefix + "/" + status_topic_;
-
-    RCLCPP_INFO(this->get_logger(), "Topic prefix: %s", topic_prefix.c_str());
+    // ✅ topic 命名空间由 launch 层通过 PushRosNamespace
+    // 处理，无需在节点中手动添加前缀
 
     topic_node_ = std::make_unique<MotionTopicNode>(
         this->get_node_base_interface(), this->get_node_topics_interface(),
@@ -314,8 +296,6 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
   }
 
   private:
-  std::string namespace_;
-  std::string robot_name_;
   std::string controller_ip_;
   std::string command_topic_;
   std::string status_topic_;

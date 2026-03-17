@@ -21,5 +21,6 @@
     # 角速度协方差 (rad/s)^2
     gyro_covariance: 5.8e-8
 
-    # 机器人名称
-    robot_name: "robot"
+    # 机器人名称和是否使用仿真（需要上层launch文件或CLI指定）
+    # robot_name: "robot"
+    # use_sim_time: false
