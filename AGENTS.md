@@ -63,7 +63,7 @@ ros2 --version
 所有构建命令**必须**包含以下 CMake 参数以生成 `compile_commands.json`（Clangd 支持）：
 
 ```bash
-colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON --symlink-install
 ```
 
 ---

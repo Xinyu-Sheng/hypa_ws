@@ -39,10 +39,10 @@ def generate_launch_description():
                     [FindPackageShare("hypa_gazebo"), "worlds", "hypa.sdf"]
                 ),
                 # " -v 4 ",
-                " -r --gui-config ",
-                PathJoinSubstitution(
-                    [FindPackageShare("hypa_bringup"), "config", "hypa.config"]
-                ),
+                # " -r --gui-config ",
+                # PathJoinSubstitution(
+                #     [FindPackageShare("hypa_bringup"), "config", "hypa.config"]
+                # ),
             ]
             # gz_args传递给gz sim的参数，就等于gz sim xxxxxx
             # "on_exit_shutdown": "true",
@@ -75,7 +75,7 @@ def generate_launch_description():
                 ),
                 "qos_overrides./tf_static.publisher.durability": "transient_local",
                 "use_sim_time": True,
-                # "lazy": True 有用吗？
+                "lazy": True,  # 有用吗？
             },
         ],
         output="screen",

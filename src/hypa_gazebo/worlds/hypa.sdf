@@ -214,34 +214,6 @@
             <izz>0.001</izz>
           </inertia>
         </inertial>
-        <!-- <visual name="prismatic_marker">
-          <cast_shadows>false</cast_shadows>
-          <pose>0 0 0 -3.022164 0.289495 -2.363151</pose>
-          <geometry>
-            <cylinder>
-              <radius>0.1</radius>
-              <length>1.0</length>
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>1 0 0 1</ambient>
-            <diffuse>1 0 0 1</diffuse>
-            <specular>1 0 0 1</specular>
-          </material>
-        </visual>
-        <visual name="visual">
-          <pose>0 0 0 -3.022164 0.289495 -2.363151</pose>
-          <geometry>
-            <box>
-              <size>0.25 0.25 0.25</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>1 0 0 1</ambient>
-            <diffuse>1 0 0 1</diffuse>
-            <specular>1 0 0 1</specular>
-          </material>
-        </visual> -->
       </link>
       <link name="cable_hook_1_fr">
         <pose relative_to="base_link">0.1 -0.1 -0.3600 0 0 0</pose>
@@ -256,34 +228,6 @@
             <izz>0.001</izz>
           </inertia>
         </inertial>
-        <!-- <visual name="prismatic_marker">
-          <cast_shadows>false</cast_shadows>
-          <pose>0 0 0 3.022164 0.289495 2.363151</pose>
-          <geometry>
-            <cylinder>
-              <radius>0.1</radius>
-              <length>1.0</length>
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>1 0.5 0 1</ambient>
-            <diffuse>1 0.5 0 1</diffuse>
-            <specular>1 0.5 0 1</specular>
-          </material>
-        </visual>
-        <visual name="visual">
-          <pose>0 0 0 3.022164 0.289495 2.363151</pose>
-          <geometry>
-            <box>
-              <size>0.25 0.25 0.25</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>1 0.5 0 1</ambient>
-            <diffuse>1 0.5 0 1</diffuse>
-            <specular>1 0.5 0 1</specular>
-          </material>
-        </visual> -->
       </link>
       <link name="cable_hook_1_bl">
         <pose relative_to="base_link">-0.1 0.1 -0.3600 0 0 0</pose>
@@ -298,34 +242,6 @@
             <izz>0.001</izz>
           </inertia>
         </inertial>
-        <!-- <visual name="prismatic_marker">
-          <cast_shadows>false</cast_shadows>
-          <pose>0 0 0 -3.022164 -0.289495 2.363151</pose>
-          <geometry>
-            <cylinder>
-              <radius>0.1</radius>
-              <length>1.0</length>
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>1 0.5 0 1</ambient>
-            <diffuse>1 0.5 0 1</diffuse>
-            <specular>1 0.5 0 1</specular>
-          </material>
-        </visual>
-        <visual name="visual">
-          <pose>0 0 0 -3.022164 -0.289495 2.363151</pose>
-          <geometry>
-            <box>
-              <size>0.25 0.25 0.25</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>1 0.5 0 1</ambient>
-            <diffuse>1 0.5 0 1</diffuse>
-            <specular>1 0.5 0 1</specular>
-          </material>
-        </visual> -->
       </link>
       <link name="cable_hook_1_br">
         <pose relative_to="base_link">-0.1 -0.1 -0.3600 0 0 0</pose>
@@ -340,34 +256,6 @@
             <izz>0.001</izz>
           </inertia>
         </inertial>
-        <!-- <visual name="prismatic_marker">
-          <cast_shadows>false</cast_shadows>
-          <pose>0 0 0 3.022164 -0.289495 -2.363151</pose>
-          <geometry>
-            <cylinder>
-              <radius>0.1</radius>
-              <length>1.0</length>
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>1 0.5 0 1</ambient>
-            <diffuse>1 0.5 0 1</diffuse>
-            <specular>1 0.5 0 1</specular>
-          </material>
-        </visual>
-        <visual name="visual">
-          <pose>0 0 0 3.022164 -0.289495 -2.363151</pose>
-          <geometry>
-            <box>
-              <size>0.25 0.25 0.25</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>1 0.5 0 1</ambient>
-            <diffuse>1 0.5 0 1</diffuse>
-            <specular>1 0.5 0 1</specular>
-          </material>
-        </visual> -->
       </link>
       <joint name="ball_cable_hook_1_fl" type="ball">
         <pose relative_to="cable_hook_1_fl">0 0 0 0 0 0</pose>
@@ -404,33 +292,6 @@
             <izz>0.001</izz>
           </inertia>
         </inertial>
-        <!-- <visual name="prismatic_marker">
-          <pose>0 0 0 -3.022164 0.289495 -2.363151</pose>
-          <geometry>
-            <cylinder>
-              <radius>0.1</radius>
-              <length>1.0</length>
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>1 0 0 1</ambient>
-            <diffuse>1 0 0 1</diffuse>
-            <specular>1 0 0 1</specular>
-          </material>
-        </visual>
-        <visual name="visual">
-          <pose>0 0 0 -3.022164 0.289495 -2.363151</pose>
-          <geometry>
-            <box>
-              <size>0.25 0.25 0.25</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>1 0 0 1</ambient>
-            <diffuse>1 0 0 1</diffuse>
-            <specular>1 0 0 1</specular>
-          </material>
-        </visual> -->
       </link>
       <link name="cable_hook_2_fr">
         <pose>2.93256 -1.07359 -3.9 0 0 0</pose>
@@ -445,33 +306,6 @@
             <izz>0.001</izz>
           </inertia>
         </inertial>
-        <!-- <visual name="prismatic_marker">
-          <pose>0 0 0 3.022164 0.289495 2.363151</pose>
-          <geometry>
-            <cylinder>
-              <radius>0.1</radius>
-              <length>1.0</length>
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>1 1 0 1</ambient>
-            <diffuse>1 1 0 1</diffuse>
-            <specular>1 1 0 1</specular>
-          </material>
-        </visual>
-        <visual name="visual">
-          <pose>0 0 0 3.022164 0.289495 2.363151</pose>
-          <geometry>
-            <box>
-              <size>0.25 0.25 0.25</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>1 1 0 1</ambient>
-            <diffuse>1 1 0 1</diffuse>
-            <specular>1 1 0 1</specular>
-          </material>
-        </visual> -->
       </link>
       <link name="cable_hook_2_bl">
         <pose>-2.93256 1.07359 -3.9 0 0 0</pose>
@@ -486,33 +320,6 @@
             <izz>0.001</izz>
           </inertia>
         </inertial>
-        <!-- <visual name="prismatic_marker">
-          <pose>0 0 0 -3.022164 -0.289495 2.363151</pose>
-          <geometry>
-            <cylinder>
-              <radius>0.1</radius>
-              <length>1.0</length>
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>1 1 0 1</ambient>
-            <diffuse>1 1 0 1</diffuse>
-            <specular>1 1 0 1</specular>
-          </material>
-        </visual>
-        <visual name="visual">
-          <pose>0 0 0 -3.022164 -0.289495 2.363151</pose>
-          <geometry>
-            <box>
-              <size>0.25 0.25 0.25</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>1 1 0 1</ambient>
-            <diffuse>1 1 0 1</diffuse>
-            <specular>1 1 0 1</specular>
-          </material>
-        </visual> -->
       </link>
       <link name="cable_hook_2_br">
         <pose>-2.93256 -1.07359 -3.9 0 0 0</pose>
@@ -527,33 +334,6 @@
             <izz>0.001</izz>
           </inertia>
         </inertial>
-        <!-- <visual name="prismatic_marker">
-          <pose>0 0 0 3.022164 -0.289495 -2.363151</pose>
-          <geometry>
-            <cylinder>
-              <radius>0.1</radius>
-              <length>1.0</length>
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>1 1 0 1</ambient>
-            <diffuse>1 1 0 1</diffuse>
-            <specular>1 1 0 1</specular>
-          </material>
-        </visual>
-        <visual name="visual">
-          <pose>0 0 0 3.022164 -0.289495 -2.363151</pose>
-          <geometry>
-            <box>
-              <size>0.25 0.25 0.25</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>1 1 0 1</ambient>
-            <diffuse>1 1 0 1</diffuse>
-            <specular>1 1 0 1</specular>
-          </material>
-        </visual> -->
       </link>
       <link name="cable_ring_2_fl">
         <pose relative_to="cable_hook_2_fl">0 0 0 0 0 0</pose>
@@ -743,9 +523,6 @@
         <parent_link>cable_ring_2_fl</parent_link>
         <child_model>slide_main_link</child_model>
         <child_link>main_link_hook_fl</child_link>
-        <detach_topic>/hypa/fl/detach</detach_topic>
-        <attach_topic>/hypa/fl/attach</attach_topic>
-        <output_topic>/hypa/fl/state</output_topic>
       </plugin>
       <plugin
         filename="gz-sim-detachable-joint-system"
@@ -753,9 +530,6 @@
         <parent_link>cable_ring_2_fr</parent_link>
         <child_model>slide_main_link</child_model>
         <child_link>main_link_hook_fr</child_link>
-        <detach_topic>/hypa/fr/detach</detach_topic>
-        <attach_topic>/hypa/fr/attach</attach_topic>
-        <output_topic>/hypa/fr/state</output_topic>
       </plugin>
       <plugin
         filename="gz-sim-detachable-joint-system"
@@ -763,9 +537,6 @@
         <parent_link>cable_ring_2_bl</parent_link>
         <child_model>slide_main_link</child_model>
         <child_link>main_link_hook_bl</child_link>
-        <detach_topic>/hypa/bl/detach</detach_topic>
-        <attach_topic>/hypa/bl/attach</attach_topic>
-        <output_topic>/hypa/bl/state</output_topic>
       </plugin>
       <plugin
         filename="gz-sim-detachable-joint-system"
@@ -773,9 +544,6 @@
         <parent_link>cable_ring_2_br</parent_link>
         <child_model>slide_main_link</child_model>
         <child_link>main_link_hook_br</child_link>
-        <detach_topic>/hypa/br/detach</detach_topic>
-        <attach_topic>/hypa/br/attach</attach_topic>
-        <output_topic>/hypa/br/state</output_topic>
       </plugin>
 
       <!-- 关节状态与控制插件 -->
@@ -786,6 +554,7 @@
         <joint_name>prismatic_cable_hook_fr</joint_name>
         <joint_name>prismatic_cable_hook_bl</joint_name>
         <joint_name>prismatic_cable_hook_br</joint_name>
+        <topic>/hypa/upper/joint_state</topic>
       </plugin>
       <plugin
         filename="gz-sim-joint-position-controller-system"
@@ -798,6 +567,7 @@
         <cmd_max>1000000</cmd_max>
         <initial_position>0</initial_position>
         <use_velocity_commands>false</use_velocity_commands>
+        <topic>/hypa/joint/prismatic_cable_hook_fl/cmd</topic>
       </plugin>
       <plugin
         filename="gz-sim-joint-position-controller-system"
@@ -810,6 +580,7 @@
         <cmd_max>1000000</cmd_max>
         <initial_position>0</initial_position>
         <use_velocity_commands>false</use_velocity_commands>
+        <topic>/hypa/joint/prismatic_cable_hook_fr/cmd</topic>
       </plugin>
       <plugin
         filename="gz-sim-joint-position-controller-system"
@@ -822,6 +593,7 @@
         <cmd_max>1000000</cmd_max>
         <initial_position>0</initial_position>
         <use_velocity_commands>false</use_velocity_commands>
+        <topic>/hypa/joint/prismatic_cable_hook_bl/cmd</topic>
       </plugin>
       <plugin
         filename="gz-sim-joint-position-controller-system"
@@ -834,6 +606,7 @@
         <cmd_max>1000000</cmd_max>
         <initial_position>0</initial_position>
         <use_velocity_commands>false</use_velocity_commands>
+        <topic>/hypa/joint/prismatic_cable_hook_br/cmd</topic>
       </plugin>
 
       <!-- gui与仿真可视化插件 -->
@@ -1199,6 +972,7 @@
         name="gz::sim::systems::JointStatePublisher">
         <joint_name>secondary_link_joint</joint_name>
         <joint_name>slide_link_joint</joint_name>
+        <topic>/hypa/lower/joint_state</topic>
       </plugin>
       <plugin
         filename="gz-sim-joint-position-controller-system"
@@ -1211,6 +985,7 @@
         <cmd_max>1000000</cmd_max>
         <initial_position>0</initial_position>
         <use_velocity_commands>false</use_velocity_commands>
+        <topic>/hypa/joint/secondary_link_joint/cmd</topic>
       </plugin>
       <plugin
         filename="gz-sim-joint-position-controller-system"
@@ -1223,6 +998,7 @@
         <cmd_max>1000000</cmd_max>
         <initial_position>0</initial_position>
         <use_velocity_commands>false</use_velocity_commands>
+        <topic>/hypa/joint/slide_link_joint/cmd</topic>
       </plugin>
 
     </model>
