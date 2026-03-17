@@ -5,7 +5,7 @@
   <version>2.0.0</version>
   <description>hypa应用层</description>
   <maintainer email="sheng.xin.yu@faxmail.com">Xinyu Sheng</maintainer>
-  <license>Apache-2.0</license>
+  <license>Proprietary</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

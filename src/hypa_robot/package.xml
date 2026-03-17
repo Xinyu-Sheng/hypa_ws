@@ -5,7 +5,7 @@
   <version>2.0.0</version>
   <description>HYPA机器人元包</description>
   <maintainer email="sheng.xin.yu@faxmail.com">Xinyu Sheng</maintainer>
-  <license>Apache-2.0</license>
+  <license>Proprietary</license>
 
   <!-- 元包只需要ament_cmake作为构建工具 -->
   <buildtool_depend>ament_cmake</buildtool_depend>

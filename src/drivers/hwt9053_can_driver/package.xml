@@ -5,7 +5,7 @@
     <version>0.0.1</version>
     <description>HWT9053 CAN IMU 传感器驱动，通过 ROS2 SocketCAN 接口读取 IMU 数据</description>
     <maintainer email="sheng.xin.yu@faxmail.com">Xinyu Sheng</maintainer>
-    <license>Apache-2.0</license>
+    <license>Proprietary</license>
 
     <buildtool_depend>ament_cmake</buildtool_depend>
 

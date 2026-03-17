@@ -5,9 +5,7 @@
   <version>0.0.0</version>
   <description>Gazebo-specific implementations for the hypa project</description>
   <maintainer email="sheng.xin.yu@faxmail.com">Xinyu Sheng</maintainer>
-  <license>Apache 2.0</license>
-  <author>Michael Carroll</author>
-  <author>Dharini Dutia</author>
+  <license>Proprietary</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
