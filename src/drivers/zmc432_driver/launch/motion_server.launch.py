@@ -1,14 +1,77 @@
 import os
+
+import lifecycle_msgs.msg
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, EmitEvent, RegisterEventHandler
+from launch.event_handlers import OnProcessStart
+from launch.events import matches_action
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import LifecycleNode
+from launch_ros.event_handlers import OnStateTransition
+from launch_ros.events.lifecycle import ChangeState
 
 
 def generate_launch_description():
     pkg_dir = get_package_share_directory("zmc432_driver")
     default_params_file = os.path.join(pkg_dir, "config", "zmc432_params.yaml")
+
+    motion_node = LifecycleNode(
+        package="zmc432_driver",
+        executable="motion_node",
+        name="motion_hardware_node",
+        namespace=LaunchConfiguration("namespace"),
+        output="screen",
+        parameters=[
+            LaunchConfiguration("params_file"),
+            {
+                "namespace": LaunchConfiguration("namespace"),
+                "use_sim_time": LaunchConfiguration("use_sim_time"),
+                "robot_name": LaunchConfiguration("robot_name"),
+                "controller_ip": LaunchConfiguration("controller_ip"),
+                "default_units": LaunchConfiguration("default_units"),
+                "default_speed": LaunchConfiguration("default_speed"),
+                "default_accel": LaunchConfiguration("default_accel"),
+                "default_decel": LaunchConfiguration("default_decel"),
+                "motion_command_topic": LaunchConfiguration("motion_command_topic"),
+                "motion_status_topic": LaunchConfiguration("motion_status_topic"),
+                "axis_count": LaunchConfiguration("axis_count"),
+                "perform_ecat_init": LaunchConfiguration("perform_ecat_init"),
+                "ecat_slot_id": LaunchConfiguration("ecat_slot_id"),
+                "ecat_timeout_ms": LaunchConfiguration("ecat_timeout_ms"),
+            },
+        ],
+    )
+
+    # Humble does not support LifecycleNode autostart; simulate it via events.
+    configure_event = EmitEvent(
+        event=ChangeState(
+            lifecycle_node_matcher=matches_action(motion_node),
+            transition_id=lifecycle_msgs.msg.Transition.TRANSITION_CONFIGURE,
+        )
+    )
+
+    register_configure = RegisterEventHandler(
+        OnProcessStart(
+            target_action=motion_node,
+            on_start=[configure_event],
+        )
+    )
+
+    activate_event = EmitEvent(
+        event=ChangeState(
+            lifecycle_node_matcher=matches_action(motion_node),
+            transition_id=lifecycle_msgs.msg.Transition.TRANSITION_ACTIVATE,
+        )
+    )
+
+    register_activate = RegisterEventHandler(
+        OnStateTransition(
+            target_lifecycle_node=motion_node,
+            goal_state="inactive",
+            entities=[activate_event],
+        )
+    )
 
     return LaunchDescription(
         [
@@ -87,35 +150,8 @@ def generate_launch_description():
                 default_value="5000",
                 description="Timeout (ms) for EtherCAT init operations",
             ),
-            LifecycleNode(
-                package="zmc432_driver",
-                executable="motion_node",
-                name="motion_hardware_node",
-                namespace=LaunchConfiguration("namespace"),
-                output="screen",
-                parameters=[
-                    LaunchConfiguration("params_file"),
-                    {
-                        "namespace": LaunchConfiguration("namespace"),
-                        "use_sim_time": LaunchConfiguration("use_sim_time"),
-                        "robot_name": LaunchConfiguration("robot_name"),
-                        "controller_ip": LaunchConfiguration("controller_ip"),
-                        "default_units": LaunchConfiguration("default_units"),
-                        "default_speed": LaunchConfiguration("default_speed"),
-                        "default_accel": LaunchConfiguration("default_accel"),
-                        "default_decel": LaunchConfiguration("default_decel"),
-                        "motion_command_topic": LaunchConfiguration(
-                            "motion_command_topic"
-                        ),
-                        "motion_status_topic": LaunchConfiguration(
-                            "motion_status_topic"
-                        ),
-                        "axis_count": LaunchConfiguration("axis_count"),
-                        "perform_ecat_init": LaunchConfiguration("perform_ecat_init"),
-                        "ecat_slot_id": LaunchConfiguration("ecat_slot_id"),
-                        "ecat_timeout_ms": LaunchConfiguration("ecat_timeout_ms"),
-                    },
-                ],
-            ),
+            register_configure,
+            register_activate,
+            motion_node,
         ]
     )

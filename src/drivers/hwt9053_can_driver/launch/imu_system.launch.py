@@ -39,12 +39,22 @@ HWT9053 IMU 驱动 Launch 文件
 """
 
 import os
+import lifecycle_msgs.msg
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, GroupAction
+from launch.actions import (
+    DeclareLaunchArgument,
+    EmitEvent,
+    GroupAction,
+    RegisterEventHandler,
+)
 from launch.conditions import UnlessCondition
+from launch.event_handlers import OnProcessStart
+from launch.events import matches_action
 from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import Node, PushRosNamespace
+from launch_ros.actions import LifecycleNode, PushRosNamespace
+from launch_ros.event_handlers import OnStateTransition
+from launch_ros.events.lifecycle import ChangeState
 
 
 def generate_launch_description():
@@ -79,10 +89,12 @@ def generate_launch_description():
     use_sim = LaunchConfiguration("use_sim")
     use_sim_time = LaunchConfiguration("use_sim_time")
 
-    # HWT9053 CAN 驱动节点
-    hwt9053_driver_node = Node(
+    # HWT9053 CAN 驱动节点（LifecycleNode）
+    hwt9053_driver_node = LifecycleNode(
         package="hwt9053_can_driver",
         executable="hwt9053_can_driver_node",
+        name="hwt9053_can_driver",
+        namespace="",
         output="screen",
         parameters=[
             LaunchConfiguration("params_file"),
@@ -91,6 +103,38 @@ def generate_launch_description():
                 "use_sim_time": use_sim_time,
             },
         ],
+        condition=UnlessCondition(use_sim),
+    )
+
+    # 自动 configure -> activate（Humble 无 autostart）
+    configure_event = EmitEvent(
+        event=ChangeState(
+            lifecycle_node_matcher=matches_action(hwt9053_driver_node),
+            transition_id=lifecycle_msgs.msg.Transition.TRANSITION_CONFIGURE,
+        )
+    )
+
+    register_configure = RegisterEventHandler(
+        OnProcessStart(
+            target_action=hwt9053_driver_node,
+            on_start=[configure_event],
+        ),
+        condition=UnlessCondition(use_sim),
+    )
+
+    activate_event = EmitEvent(
+        event=ChangeState(
+            lifecycle_node_matcher=matches_action(hwt9053_driver_node),
+            transition_id=lifecycle_msgs.msg.Transition.TRANSITION_ACTIVATE,
+        )
+    )
+
+    register_activate = RegisterEventHandler(
+        OnStateTransition(
+            target_lifecycle_node=hwt9053_driver_node,
+            goal_state="inactive",
+            entities=[activate_event],
+        ),
         condition=UnlessCondition(use_sim),
     )
 
@@ -109,6 +153,8 @@ def generate_launch_description():
             robot_name_arg,
             use_sim_arg,
             use_sim_time_arg,
+            register_configure,
+            register_activate,
             hwt9053_driver_group,
         ]
     )
