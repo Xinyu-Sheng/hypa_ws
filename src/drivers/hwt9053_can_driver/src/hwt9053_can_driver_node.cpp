@@ -37,7 +37,7 @@ HWT9053CANDriverNode::HWT9053CANDriverNode(const rclcpp::NodeOptions &_options)
       gyro_covariance_(5.8e-8)
 {
   // 声明参数
-  this->declare_parameter("use_sim_time", rclcpp::ParameterValue(false));
+  // this->declare_parameter("use_sim_time", rclcpp::ParameterValue(false));
   this->declare_parameter("robot_name", rclcpp::ParameterValue("robot"));
   this->declare_parameter("can_interface", rclcpp::ParameterValue("can0"));
   this->declare_parameter("imu_frame_id", rclcpp::ParameterValue("imu_link"));

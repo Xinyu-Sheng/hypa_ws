@@ -91,6 +91,7 @@ def generate_launch_description():
                 package="zmc432_driver",
                 executable="motion_node",
                 name="motion_hardware_node",
+                namespace=LaunchConfiguration("namespace"),
                 output="screen",
                 parameters=[
                     LaunchConfiguration("params_file"),
@@ -115,7 +116,6 @@ def generate_launch_description():
                         "ecat_timeout_ms": LaunchConfiguration("ecat_timeout_ms"),
                     },
                 ],
-                autostart=True,
             ),
         ]
     )
