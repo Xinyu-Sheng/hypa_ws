@@ -99,10 +99,17 @@ bool HWT9053Parser::ParseCANFrame(uint32_t _can_id,
   {
     case HWT9053Parser::CAN_ID_TIME:
     {
-      // 时间数据：提取硬件时间戳（32位，ms单位）
-      uint32_t timestamp =
-          this->BytesToInt32(_data[0], _data[1], _data[2], _data[3]);
-      this->pimpl_->data.hw_timestamp = timestamp;
+      // 时间输出格式 (按 High_Precision_Sensor_CAN_Protocol.txt):
+      // _data = [YY, MM, DD, HH, MN, SS, msl, msh]
+      this->pimpl_->data.year = _data[0];
+      this->pimpl_->data.month = _data[1];
+      this->pimpl_->data.day = _data[2];
+      this->pimpl_->data.hour = _data[3];
+      this->pimpl_->data.minute = _data[4];
+      this->pimpl_->data.second = _data[5];
+
+      // 提取毫秒 (ms)
+      this->pimpl_->data.millisecond = this->BytesToUInt16(_data[7], _data[6]);
       break;
     }
 

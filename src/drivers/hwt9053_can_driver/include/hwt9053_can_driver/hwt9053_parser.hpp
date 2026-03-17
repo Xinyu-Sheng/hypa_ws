@@ -37,8 +37,14 @@ struct HWT9053Data
   // 温度 (°C)
   float temperature = 0.0f;
 
-  // 硬件时间戳 (ms)
-  uint32_t hw_timestamp = 0;
+  // 硬件时间 (年月日时分秒)
+  uint8_t year = 0;
+  uint8_t month = 0;
+  uint8_t day = 0;
+  uint8_t hour = 0;
+  uint8_t minute = 0;
+  uint8_t second = 0;
+  uint16_t millisecond = 0;
 
   // 数据有效标志
   bool accel_valid{false};
