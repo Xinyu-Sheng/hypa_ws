@@ -57,6 +57,7 @@ find_package(Qt5
 
 # Add plugin subdirectories
 add_subdirectory(plugins/rope_visualizer)
+add_subdirectory(plugins/gui/hypa_state_display)
 
 # 注释掉不存在的库目标的安装
 # install(

@@ -1,4 +1,5 @@
 import os
+import sys
 
 from launch import LaunchDescription
 from launch.actions import (
@@ -17,6 +18,8 @@ from launch_ros.actions import Node
 
 from launch.substitutions import TextSubstitution
 
+from launch.actions import ExecuteProcess
+
 
 def generate_launch_description():
     # Configure ROS nodes for launch
@@ -28,6 +31,10 @@ def generate_launch_description():
     )
     pkg_ros_gz_sim = FindPackageShare("ros_gz_sim").find("ros_gz_sim")
 
+    # 不需要设置环境变量了，因为已经在hook脚本里设置了
+    # # 获取安装目录中的插件库路径
+    # plugin_lib_path = os.path.join(pkg_project_gazebo, "..", "..", "lib", "hypa_gazebo")
+
     # Setup to launch the simulator and Gazebo world
     gz_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -38,11 +45,11 @@ def generate_launch_description():
                 PathJoinSubstitution(
                     [FindPackageShare("hypa_gazebo"), "worlds", "hypa.sdf"]
                 ),
-                # " -v 4 ",
-                # " -r --gui-config ",
-                # PathJoinSubstitution(
-                #     [FindPackageShare("hypa_bringup"), "config", "hypa.config"]
-                # ),
+                " -v 2 ",
+                " -r --gui-config ",
+                PathJoinSubstitution(
+                    [FindPackageShare("hypa_bringup"), "config", "hypa.config"]
+                ),
             ]
             # gz_args传递给gz sim的参数，就等于gz sim xxxxxx
             # "on_exit_shutdown": "true",
@@ -83,6 +90,14 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            # 不需要设置环境变量了，因为已经在hook脚本里设置了
+            # # 设置环境变量，使 Gazebo 能找到 GUI 插件
+            # SetEnvironmentVariable("GZ_GUI_PLUGIN_PATH", plugin_lib_path),
+            # # 调试：打印环境变量验证生效
+            # ExecuteProcess(
+            #     cmd=["bash", "-c", f"echo GZ_GUI_PLUGIN_PATH=$GZ_GUI_PLUGIN_PATH"],
+            #     output="screen",
+            # ),
             LogInfo(
                 msg=[
                     FindPackageShare("hypa_description"),
@@ -93,6 +108,20 @@ def generate_launch_description():
             gz_sim,
             DeclareLaunchArgument(
                 "rviz", default_value="true", description="Open RViz."
+            ),
+            # rosout_bridge 节点 - 实时将日志写入文件
+            Node(
+                package="hypa_bringup",
+                executable="rosout_bridge_node",
+                name="rosout_bridge",
+                output="screen",
+                parameters=[
+                    {
+                        "log_file_path": os.path.expanduser("~/.ros/hypa_logs"),
+                        "log_publish_frequency": 100,
+                        "min_log_level": 0,  # DEBUG
+                    }
+                ],
             ),
             bridge,
             rviz,

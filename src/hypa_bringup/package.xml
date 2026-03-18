@@ -11,6 +11,11 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
+  <!-- rosout_bridge 节点依赖 -->
+  <depend>rclcpp</depend>
+  <depend>rclcpp_lifecycle</depend>
+  <depend>rcl_interfaces</depend>
+
   <test_depend>ament_lint_auto</test_depend>
 
   <export>
