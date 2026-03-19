@@ -91,7 +91,8 @@ endif()
 # When using this template for your project, change the filenames of the
 # files in the 'hooks' folder, to correspond to your project name.
 ament_environment_hooks("${CMAKE_CURRENT_SOURCE_DIR}/hooks/${PROJECT_NAME}.dsv.in")
-ament_environment_hooks("${CMAKE_CURRENT_SOURCE_DIR}/hooks/${PROJECT_NAME}.sh.in")
+
+# ament_environment_hooks("${CMAKE_CURRENT_SOURCE_DIR}/hooks/${PROJECT_NAME}.sh.in") # 这一项是向下兼容的，保留了sh脚本的安装，虽然现在主要使用dsv脚本
 
 # Following directive configures ament based on the previous directives, and should
 # typically be the last directive in the CMakeLists.txt file.

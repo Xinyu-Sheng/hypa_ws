@@ -5,12 +5,14 @@ from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
     IncludeLaunchDescription,
+    RegisterEventHandler,
     SetEnvironmentVariable,
     LogInfo,
     Shutdown,
 )
 
 from launch.conditions import IfCondition
+from launch.event_handlers import OnProcessStart
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
@@ -56,6 +58,30 @@ def generate_launch_description():
         }.items(),
     )
 
+    # When gz-sim process starts, wait until the Gazebo GUI window exists
+    # and then set it to fullscreen using wmctrl (X11 only).
+    wmctrl_fullscreen = RegisterEventHandler(
+        OnProcessStart(
+            target_action=lambda action: (
+                isinstance(action, ExecuteProcess)
+                and any(x in " ".join(action.cmd) for x in ["gz sim", "gz-sim"])
+            ),
+            on_start=[
+                ExecuteProcess(
+                    cmd=[
+                        "bash",
+                        "-c",
+                        "for i in {1..50}; do "
+                        'id=$(wmctrl -l | grep -m1 "Gazebo" | cut -d " " -f1); '
+                        '[ -n "$id" ] && wmctrl -ir "$id" -b add,fullscreen && exit 0; '
+                        "sleep 0.1; done",
+                    ],
+                    output="screen",
+                ),
+            ],
+        )
+    )
+
     # Visualize in RViz
     rviz = Node(
         package="rviz2",
@@ -90,22 +116,19 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-            # 不需要设置环境变量了，因为已经在hook脚本里设置了
             # # 设置环境变量，使 Gazebo 能找到 GUI 插件
-            # SetEnvironmentVariable("GZ_GUI_PLUGIN_PATH", plugin_lib_path),
+            # SetEnvironmentVariable("GZ_GUI_PLUGIN_PATH", plugin_lib_path), # 不需要设置环境变量了，因为已经在hook脚本里设置了
             # # 调试：打印环境变量验证生效
-            # ExecuteProcess(
-            #     cmd=["bash", "-c", f"echo GZ_GUI_PLUGIN_PATH=$GZ_GUI_PLUGIN_PATH"],
-            #     output="screen",
-            # ),
-            LogInfo(
-                msg=[
-                    FindPackageShare("hypa_description"),
-                    "GZ_SIM_RESOURCE_PATH",
-                    os.path.join(pkg_project_description, "models"),
-                ]
+            ExecuteProcess(
+                cmd=["bash", "-c", f"echo GZ_GUI_PLUGIN_PATH=$GZ_GUI_PLUGIN_PATH"],
+                output="screen",
+            ),
+            ExecuteProcess(
+                cmd=["bash", "-c", f"echo GZ_SIM_RESOURCE_PATH=$GZ_SIM_RESOURCE_PATH"],
+                output="screen",
             ),
             gz_sim,
+            # wmctrl_fullscreen,
             DeclareLaunchArgument(
                 "rviz", default_value="true", description="Open RViz."
             ),
