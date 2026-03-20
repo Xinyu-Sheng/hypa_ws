@@ -110,6 +110,11 @@ void MotionTopicNode::shutdown()
 // MotionTopicNodePrivate method implementations
 bool MotionTopicNode::MotionTopicNodePrivate::initialize()
 {
+  if (this->running)
+  {
+    return true;
+  }
+
   // 创建命令订阅器
   auto command_callback =
       [this](const hypa_msgs::msg::MotionCommand::ConstSharedPtr _msg)
@@ -170,6 +175,7 @@ void MotionTopicNode::MotionTopicNodePrivate::shutdown()
     {
       this->status_timer->cancel();
     }
+    this->status_timer.reset();
     this->command_subscription.reset();
     this->status_publisher.reset();
     RCLCPP_INFO(this->node_logging->get_logger(), "Motion topic node shutdown");

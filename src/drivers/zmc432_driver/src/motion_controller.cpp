@@ -299,19 +299,22 @@ bool MotionController::start()
   }
 
   // 启动执行线程
-  this->pimpl_->execution_thread =
-      std::thread(&MotionControllerPrivate::execution_loop, pimpl_.get(), this);
+  try
+  {
+    this->pimpl_->execution_thread = std::thread(
+        &MotionControllerPrivate::execution_loop, pimpl_.get(), this);
+  }
+  catch (const std::exception &)
+  {
+    this->pimpl_->running = false;
+    return false;
+  }
 
   return true;
 }
 
 void MotionController::stop()
 {
-  if (!this->pimpl_->running)
-  {
-    return;
-  }
-
   this->pimpl_->running = false;
   this->pimpl_->cancel_requested = true;
 
@@ -324,10 +327,10 @@ void MotionController::stop()
     this->pimpl_->execution_thread.join();
   }
 
-  // 断开连接
-  if (this->pimpl_->zmotion)
   {
-    this->pimpl_->zmotion->disconnect();
+    std::lock_guard<std::mutex> lock(this->pimpl_->buffer_mutex);
+    this->pimpl_->executing = false;
+    this->pimpl_->active_axes.clear();
   }
 }
 

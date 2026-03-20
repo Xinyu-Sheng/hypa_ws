@@ -471,20 +471,17 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_line_absolute(
     }
   }
 
-  std::stringstream cmd;
-  cmd << "MOVEABS(";
+  std::vector<float> distance_list;
+  distance_list.reserve(_axes.size());
   for (size_t i = 0; i < _axes.size(); ++i)
   {
-    if (i > 0)
-      cmd << ",";
     int64_t pulses = physical_to_pulses(_axes[i], _positions[i]);
-    cmd << _axes[i] << "," << pulses;
+    distance_list.push_back(static_cast<float>(pulses));
   }
-  cmd << ")";
 
-  char ack[2048] = {0};
-  int32_t ret = ZAux_DirectCommand(
-      handle, const_cast<char *>(cmd.str().c_str()), ack, sizeof(ack));
+  int32_t ret = ZAux_Direct_MoveAbs(handle, static_cast<int>(_axes.size()),
+                                    const_cast<int *>(_axes.data()),
+                                    distance_list.data());
   if (ret != ERR_OK)
   {
     last_error =
@@ -513,20 +510,17 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_line_relative(
     }
   }
 
-  std::stringstream cmd;
-  cmd << "MOVEREL(";
+  std::vector<float> distance_list;
+  distance_list.reserve(_axes.size());
   for (size_t i = 0; i < _axes.size(); ++i)
   {
-    if (i > 0)
-      cmd << ",";
     int64_t pulses = physical_to_pulses(_axes[i], _distances[i]);
-    cmd << _axes[i] << "," << pulses;
+    distance_list.push_back(static_cast<float>(pulses));
   }
-  cmd << ")";
 
-  char ack[2048] = {0};
-  int32_t ret = ZAux_DirectCommand(
-      handle, const_cast<char *>(cmd.str().c_str()), ack, sizeof(ack));
+  int32_t ret =
+      ZAux_Direct_Move(handle, static_cast<int>(_axes.size()),
+                       const_cast<int *>(_axes.data()), distance_list.data());
   if (ret != ERR_OK)
   {
     last_error =
@@ -542,13 +536,17 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_circular_absolute(
     const std::vector<int> &_axes, const std::vector<double> &_positions,
     const std::vector<double> &_circular_params)
 {
-  if (_axes.size() < 2 || _axes.size() > 3)
+  if (_axes.size() != 2)
   {
-    return "Circular interpolation requires 2 or 3 axes";
+    return "Circular interpolation currently requires exactly 2 axes";
   }
   if (_positions.size() != _axes.size())
   {
     return "Positions size mismatch with axes";
+  }
+  if (_circular_params.size() < 3)
+  {
+    return "Circular requires parameters: [center1, center2, direction]";
   }
 
   for (int axis : _axes)
@@ -560,34 +558,19 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_circular_absolute(
     }
   }
 
-  std::stringstream cmd;
-  cmd << "MOVECIRCABS(";
-  for (size_t i = 0; i < _axes.size(); ++i)
-  {
-    if (i > 0)
-      cmd << ",";
-    int64_t pulses = physical_to_pulses(_axes[i], _positions[i]);
-    cmd << _axes[i] << "," << pulses;
-  }
-  for (size_t i = 0; i < _circular_params.size(); ++i)
-  {
-    if (i < _axes.size())
-      cmd << ",";
-    else
-      cmd << ",";
-    if (i < _circular_params.size())
-    {
-      int axis_idx = i % _axes.size();
-      double param_val = _circular_params[i];
-      int64_t pulses = physical_to_pulses(_axes[axis_idx], param_val);
-      cmd << pulses;
-    }
-  }
-  cmd << ")";
+  const float end1 =
+      static_cast<float>(physical_to_pulses(_axes[0], _positions[0]));
+  const float end2 =
+      static_cast<float>(physical_to_pulses(_axes[1], _positions[1]));
+  const float center1 =
+      static_cast<float>(physical_to_pulses(_axes[0], _circular_params[0]));
+  const float center2 =
+      static_cast<float>(physical_to_pulses(_axes[1], _circular_params[1]));
+  const int direction = (_circular_params[2] >= 0.5) ? 1 : 0;
 
-  char ack[2048] = {0};
-  int32_t ret = ZAux_DirectCommand(
-      handle, const_cast<char *>(cmd.str().c_str()), ack, sizeof(ack));
+  int32_t ret = ZAux_Direct_MoveCircAbs(handle, static_cast<int>(_axes.size()),
+                                        const_cast<int *>(_axes.data()), end1,
+                                        end2, center1, center2, direction);
   if (ret != ERR_OK)
   {
     last_error =
@@ -603,18 +586,18 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_spiral_absolute(
     const std::vector<int> &_axes, const std::vector<double> &_positions,
     const std::vector<double> &_spiral_params)
 {
-  if (_axes.size() != 3)
+  if (_axes.size() < 2 || _axes.size() > 4)
   {
-    return "Spiral interpolation requires exactly 3 axes";
+    return "Spiral interpolation requires 2 to 4 axes";
   }
-  if (_positions.size() != 3)
+  if (_positions.size() != _axes.size())
   {
-    return "Spiral positions must have 3 values";
+    return "Spiral positions size mismatch with axes";
   }
   if (_spiral_params.size() < 4)
   {
-    return "Spiral requires at least 4 parameters: [radius, pitch, turns, "
-           "end_angle]";
+    return "Spiral requires at least 4 parameters: [center1, center2, circles, "
+           "pitch]";
   }
 
   for (int axis : _axes)
@@ -626,38 +609,37 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_spiral_absolute(
     }
   }
 
-  std::stringstream cmd;
-  cmd << "MOVESPIRALABS(";
-  for (size_t i = 0; i < _axes.size(); ++i)
-  {
-    if (i > 0)
-      cmd << ",";
-    cmd << _axes[i];
-  }
-  for (size_t i = 0; i < _positions.size(); ++i)
-  {
-    cmd << ",";
-    int64_t pulses = physical_to_pulses(_axes[i], _positions[i]);
-    cmd << pulses;
-  }
-  for (size_t i = 0; i < _spiral_params.size(); ++i)
-  {
-    cmd << ",";
-    if (i < 2)
-    {
-      int64_t pulses = physical_to_pulses(_axes[0], _spiral_params[i]);
-      cmd << pulses;
-    }
-    else
-    {
-      cmd << _spiral_params[i];
-    }
-  }
-  cmd << ")";
+  const float center1 =
+      static_cast<float>(physical_to_pulses(_axes[0], _spiral_params[0]));
+  const float center2 =
+      static_cast<float>(physical_to_pulses(_axes[1], _spiral_params[1]));
+  const float circles = static_cast<float>(_spiral_params[2]);
+  const float pitch =
+      static_cast<float>(physical_to_pulses(_axes[0], _spiral_params[3]));
 
-  char ack[2048] = {0};
-  int32_t ret = ZAux_DirectCommand(
-      handle, const_cast<char *>(cmd.str().c_str()), ack, sizeof(ack));
+  float distance3 = 0.0F;
+  float distance4 = 0.0F;
+  if (_axes.size() >= 3)
+  {
+    distance3 = static_cast<float>(physical_to_pulses(_axes[2], _positions[2]));
+  }
+  else if (_spiral_params.size() > 4)
+  {
+    distance3 = static_cast<float>(_spiral_params[4]);
+  }
+
+  if (_axes.size() >= 4)
+  {
+    distance4 = static_cast<float>(physical_to_pulses(_axes[3], _positions[3]));
+  }
+  else if (_spiral_params.size() > 5)
+  {
+    distance4 = static_cast<float>(_spiral_params[5]);
+  }
+
+  int32_t ret = ZAux_Direct_MoveSpiral(
+      handle, static_cast<int>(_axes.size()), const_cast<int *>(_axes.data()),
+      center1, center2, circles, pitch, distance3, distance4);
   if (ret != ERR_OK)
   {
     last_error =
@@ -681,10 +663,10 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_eclipse_absolute(
   {
     return "Eclipse positions must have 2 values";
   }
-  if (_eclipse_params.size() < 6)
+  if (_eclipse_params.size() < 5)
   {
-    return "Eclipse requires 6 parameters: [center_x, center_y, major_axis, "
-           "minor_axis, start_angle, end_angle]";
+    return "Eclipse requires 5 parameters: [center1, center2, direction, adis, "
+           "bdis]";
   }
 
   for (int axis : _axes)
@@ -696,33 +678,23 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_eclipse_absolute(
     }
   }
 
-  std::stringstream cmd;
-  cmd << "MOVECLIPSEABS(";
-  cmd << _axes[0] << "," << _axes[1] << ",";
-  int64_t pulses_x = physical_to_pulses(_axes[0], _positions[0]);
-  int64_t pulses_y = physical_to_pulses(_axes[1], _positions[1]);
-  cmd << pulses_x << "," << pulses_y << ",";
+  const float end1 =
+      static_cast<float>(physical_to_pulses(_axes[0], _positions[0]));
+  const float end2 =
+      static_cast<float>(physical_to_pulses(_axes[1], _positions[1]));
+  const float center1 =
+      static_cast<float>(physical_to_pulses(_axes[0], _eclipse_params[0]));
+  const float center2 =
+      static_cast<float>(physical_to_pulses(_axes[1], _eclipse_params[1]));
+  const int direction = (_eclipse_params[2] >= 0.5) ? 1 : 0;
+  const float adis =
+      static_cast<float>(physical_to_pulses(_axes[0], _eclipse_params[3]));
+  const float bdis =
+      static_cast<float>(physical_to_pulses(_axes[1], _eclipse_params[4]));
 
-  for (size_t i = 0; i < _eclipse_params.size(); ++i)
-  {
-    if (i > 0)
-      cmd << ",";
-    if (i < 4)
-    {
-      int axis_idx = (i < 2) ? i : 0;
-      int64_t pulses = physical_to_pulses(_axes[axis_idx], _eclipse_params[i]);
-      cmd << pulses;
-    }
-    else
-    {
-      cmd << _eclipse_params[i];
-    }
-  }
-  cmd << ")";
-
-  char ack[2048] = {0};
-  int32_t ret = ZAux_DirectCommand(
-      handle, const_cast<char *>(cmd.str().c_str()), ack, sizeof(ack));
+  int32_t ret = ZAux_Direct_MEclipseAbs(
+      handle, static_cast<int>(_axes.size()), const_cast<int *>(_axes.data()),
+      end1, end2, center1, center2, direction, adis, bdis);
   if (ret != ERR_OK)
   {
     last_error =
@@ -746,10 +718,10 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_spherical_absolute(
   {
     return "Spherical positions must have 3 values";
   }
-  if (_spherical_params.size() < 8)
+  if (_spherical_params.size() < 4)
   {
-    return "Spherical requires 8 parameters: [center_x, center_y, center_z, "
-           "radius, start_theta, end_theta, start_phi, end_phi]";
+    return "Spherical requires at least 4 parameters: [center1, center2, "
+           "center3, mode, ...]";
   }
 
   for (int axis : _axes)
@@ -761,40 +733,29 @@ ZMotionWrapper::ZMotionWrapperPrivate::move_spherical_absolute(
     }
   }
 
-  std::stringstream cmd;
-  cmd << "MOVESPHERICALABS(";
-  for (size_t i = 0; i < _axes.size(); ++i)
-  {
-    if (i > 0)
-      cmd << ",";
-    cmd << _axes[i];
-  }
-  for (size_t i = 0; i < _positions.size(); ++i)
-  {
-    cmd << ",";
-    int64_t pulses = physical_to_pulses(_axes[i], _positions[i]);
-    cmd << pulses;
-  }
-  for (size_t i = 0; i < _spherical_params.size(); ++i)
-  {
-    cmd << ",";
-    if (i < 4)
-    {
-      int axis_idx = (i < 3) ? i : 0;
-      int64_t pulses =
-          physical_to_pulses(_axes[axis_idx], _spherical_params[i]);
-      cmd << pulses;
-    }
-    else
-    {
-      cmd << _spherical_params[i];
-    }
-  }
-  cmd << ")";
+  const float end1 =
+      static_cast<float>(physical_to_pulses(_axes[0], _positions[0]));
+  const float end2 =
+      static_cast<float>(physical_to_pulses(_axes[1], _positions[1]));
+  const float end3 =
+      static_cast<float>(physical_to_pulses(_axes[2], _positions[2]));
+  const float center1 =
+      static_cast<float>(physical_to_pulses(_axes[0], _spherical_params[0]));
+  const float center2 =
+      static_cast<float>(physical_to_pulses(_axes[1], _spherical_params[1]));
+  const float center3 =
+      static_cast<float>(physical_to_pulses(_axes[2], _spherical_params[2]));
+  const int mode = static_cast<int>(_spherical_params[3]);
+  const float center4 = (_spherical_params.size() > 4)
+                            ? static_cast<float>(_spherical_params[4])
+                            : 0.0F;
+  const float center5 = (_spherical_params.size() > 5)
+                            ? static_cast<float>(_spherical_params[5])
+                            : 0.0F;
 
-  char ack[2048] = {0};
-  int32_t ret = ZAux_DirectCommand(
-      handle, const_cast<char *>(cmd.str().c_str()), ack, sizeof(ack));
+  int32_t ret = ZAux_Direct_MSpherical(
+      handle, static_cast<int>(_axes.size()), const_cast<int *>(_axes.data()),
+      end1, end2, end3, center1, center2, center3, mode, center4, center5);
   if (ret != ERR_OK)
   {
     last_error =

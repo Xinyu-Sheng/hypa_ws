@@ -1,5 +1,4 @@
 #include <fstream>
-#include <map>
 #include <memory>
 #include <string>
 
@@ -284,6 +283,9 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
     {
       RCLCPP_FATAL(this->get_logger(),
                    "Failed to initialize motion topic node");
+      controller_->stop();
+      controller_.reset();
+      topic_node_.reset();
       return CallbackReturn::FAILURE;
     }
 
@@ -303,6 +305,14 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
     {
       RCLCPP_ERROR(this->get_logger(),
                    "Cannot activate: controller not initialized");
+      return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
+          CallbackReturn::FAILURE;
+    }
+
+    if (topic_node_ && !topic_node_->initialize())
+    {
+      RCLCPP_ERROR(this->get_logger(),
+                   "Cannot activate: failed to reinitialize topic node");
       return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
           CallbackReturn::FAILURE;
     }
@@ -351,10 +361,14 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
   {
     RCLCPP_INFO(this->get_logger(), "Motion hardware node shutting down");
 
+    if (topic_node_)
+    {
+      topic_node_->shutdown();
+      topic_node_.reset();
+    }
+
     if (controller_)
     {
-      controller_->stop();
-
       // 将当前各个轴的位置保存到本地持久化文件
       std::ofstream ofs("/var/tmp/zmc432_last_positions.txt");
       if (ofs.is_open())
@@ -378,13 +392,8 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
                     "Failed to open position memory file for writing");
       }
 
+      controller_->stop();
       controller_.reset();
-    }
-
-    if (topic_node_)
-    {
-      topic_node_->shutdown();
-      topic_node_.reset();
     }
 
     return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
