@@ -29,7 +29,7 @@ struct HWT9053Data
   float pitch = 0.0f;
   float yaw = 0.0f;
 
-  // 磁场 (uT)
+  // 磁场 (T)
   float mag_x = 0.0f;
   float mag_y = 0.0f;
   float mag_z = 0.0f;
@@ -71,7 +71,7 @@ class HWT9053Parser
       2000.0f * 3.14159265358979323846f / 180.0f / 32768.0f;  // rad/s per LSB
   static constexpr float ANGLE_SCALE =
       1.0f / 1000.0f * 3.14159265358979323846f / 180.0f;  // rad per LSB
-  static constexpr float MAG_SCALE = 0.013f;              // uT per LSB
+  static constexpr float MAG_SCALE = 13.0e-9f;            // T per LSB
 
   HWT9053Parser();
   ~HWT9053Parser();
@@ -96,7 +96,7 @@ class HWT9053Parser
    * @brief 获取传感器原始数据
    * @return HWT9053Data 结构体
    */
-  const HWT9053Data &GetData() const;
+  HWT9053Data GetData() const;
 
   /**
    * @brief 获取磁场数据快照（线程安全）

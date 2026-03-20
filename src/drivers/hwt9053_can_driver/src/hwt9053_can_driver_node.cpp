@@ -83,6 +83,15 @@ HWT9053CANDriverNode::Impl::on_configure(HWT9053CANDriverNode *_node,
 {
   RCLCPP_INFO(_node->get_logger(), "正在配置 HWT9053 CAN 驱动节点");
 
+  if (!this->parser_)
+  {
+    this->parser_ = std::make_unique<HWT9053Parser>();
+  }
+  else
+  {
+    this->parser_->Reset();
+  }
+
   // 获取参数
   this->robot_name_ = _node->get_parameter("robot_name").as_string();
   this->can_interface_ = _node->get_parameter("can_interface").as_string();
@@ -209,7 +218,10 @@ HWT9053CANDriverNode::Impl::on_cleanup(HWT9053CANDriverNode *_node,
   this->can_sub_.reset();
   this->imu_pub_.reset();
   this->mag_pub_.reset();
-  this->parser_.reset();
+  if (this->parser_)
+  {
+    this->parser_->Reset();
+  }
 
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
       CallbackReturn::SUCCESS;
@@ -224,7 +236,10 @@ HWT9053CANDriverNode::Impl::on_shutdown(HWT9053CANDriverNode *_node,
   this->can_sub_.reset();
   this->imu_pub_.reset();
   this->mag_pub_.reset();
-  this->parser_.reset();
+  if (this->parser_)
+  {
+    this->parser_->Reset();
+  }
 
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
       CallbackReturn::SUCCESS;
@@ -233,7 +248,7 @@ HWT9053CANDriverNode::Impl::on_shutdown(HWT9053CANDriverNode *_node,
 void HWT9053CANDriverNode::Impl::CanFrameCallback(
     HWT9053CANDriverNode *_node, const can_msgs::msg::Frame::SharedPtr _msg)
 {
-  if (!this->imu_pub_ || !this->imu_pub_->is_activated())
+  if (!this->parser_ || !this->imu_pub_ || !this->imu_pub_->is_activated())
   {
     return;
   }
@@ -272,20 +287,27 @@ void HWT9053CANDriverNode::Impl::CanFrameCallback(
   }
 
   // 转换 CAN 数据为数组
-  std::array<uint8_t, 8> data;
+  std::array<uint8_t, 8> can_data;
   for (size_t i = 0; i < 8 && i < _msg->data.size(); ++i)
   {
-    data[i] = _msg->data[i];
+    can_data[i] = _msg->data[i];
   }
 
   // 解析 CAN 帧
-  bool parse_success = this->parser_->ParseCANFrame(can_id, data, _msg->dlc);
+  bool parse_success =
+      this->parser_->ParseCANFrame(can_id, can_data, _msg->dlc);
 
   if (!parse_success)
   {
     RCLCPP_WARN(_node->get_logger(),
                 "CAN 帧解析失败: ID=0x%x, DLC=%u (期望 DLC=8)", can_id,
                 _msg->dlc);
+    return;
+  }
+
+  auto parsed_data = this->parser_->GetData();
+  if (!parsed_data.accel_valid || !parsed_data.gyro_valid)
+  {
     return;
   }
 
@@ -309,8 +331,9 @@ void HWT9053CANDriverNode::Impl::CanFrameCallback(
     mag_msg.magnetic_field.y = mag_data.mag_y;
     mag_msg.magnetic_field.z = mag_data.mag_z;
 
-    // 磁场协方差矩阵 (μT^2)
-    constexpr double MAG_COVARIANCE = 0.0001;  // 单位: (μT)^2
+    // 磁场协方差矩阵 (T^2)
+    constexpr double MAG_STDDEV_T = 13.0e-9;
+    constexpr double MAG_COVARIANCE = MAG_STDDEV_T * MAG_STDDEV_T;
     for (int i = 0; i < 9; ++i)
     {
       if (i % 4 == 0)

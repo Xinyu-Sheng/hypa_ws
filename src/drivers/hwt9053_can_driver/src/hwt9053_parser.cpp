@@ -95,6 +95,8 @@ bool HWT9053Parser::ParseCANFrame(uint32_t _can_id,
     return false;  // DLC 无效，解析失败
   }
 
+  std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);
+
   switch (_can_id)
   {
     case HWT9053Parser::CAN_ID_TIME:
@@ -218,9 +220,7 @@ bool HWT9053Parser::ParseCANFrame(uint32_t _can_id,
     case HWT9053Parser::CAN_ID_MAGN:
     {
       // 磁场数据格式: [MxL, MxH, MyL, MyH, MzL, MzH, ?, ?]
-      // 量程: ±400uT, 分辨率: 13nT/LSB = 0.013 μT/LSB (按 HWT9053 产品规格)
-      // 正确计算: (400uT * 2) / 32768 = 0.0244 μT (2半量程)
-      // 但根据产业规格，分辨率应为 0.013 μT/LSB
+      // 按产品规格分辨率 13nT/LSB 解析，内部统一使用 SI 单位 Tesla。
 
       // 低字节在 Data[0], 高字节在 Data[1]（按 CAN 协议）
       int16_t mx_raw = this->BytesToInt16(_data[1], _data[0]);
@@ -237,11 +237,9 @@ bool HWT9053Parser::ParseCANFrame(uint32_t _can_id,
       break;
     }
 
-      // CAN ID 0x54 按协议应为磁场数据，温度数据更新不常（暂不处理）
-
     default:
       // 忽略不支持的 CAN ID
-      break;
+      return false;
   }
 
   return true;  // 解析成功
@@ -295,27 +293,32 @@ sensor_msgs::msg::Imu HWT9053Parser::ToIMUMessage() const
     }
   }
 
-  // 方向四元数（从欧拉角转换）
-  // 简化计算：使用Yaw作为主要方向
-  float cy = std::cos(data_snapshot.yaw * 0.5f);
-  float sy = std::sin(data_snapshot.yaw * 0.5f);
-  float cp = std::cos(data_snapshot.pitch * 0.5f);
-  float sp = std::sin(data_snapshot.pitch * 0.5f);
-  float cr = std::cos(data_snapshot.roll * 0.5f);
-  float sr = std::sin(data_snapshot.roll * 0.5f);
+  if (data_snapshot.angle_valid)
+  {
+    float cy = std::cos(data_snapshot.yaw * 0.5f);
+    float sy = std::sin(data_snapshot.yaw * 0.5f);
+    float cp = std::cos(data_snapshot.pitch * 0.5f);
+    float sp = std::sin(data_snapshot.pitch * 0.5f);
+    float cr = std::cos(data_snapshot.roll * 0.5f);
+    float sr = std::sin(data_snapshot.roll * 0.5f);
 
-  msg.orientation.w = cr * cp * cy + sr * sp * sy;
-  msg.orientation.x = sr * cp * cy - cr * sp * sy;
-  msg.orientation.y = cr * sp * cy + sr * cp * sy;
-  msg.orientation.z = cr * cp * sy - sr * sp * cy;
+    msg.orientation.w = cr * cp * cy + sr * sp * sy;
+    msg.orientation.x = sr * cp * cy - cr * sp * sy;
+    msg.orientation.y = cr * sp * cy + sr * cp * sy;
+    msg.orientation.z = cr * cp * sy - sr * sp * cy;
+  }
+  else
+  {
+    // 未获取到完整角度数据时显式声明 orientation 不可用。
+    msg.orientation_covariance[0] = -1.0;
+  }
 
   return msg;
 }
 
-const HWT9053Data &HWT9053Parser::GetData() const
+HWT9053Data HWT9053Parser::GetData() const
 {
-  // 注意：GetData返回引用，不能再持有锁
-  // 调用者需要正确处理多线程访问
+  std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);
   return this->pimpl_->data;
 }
 
@@ -329,16 +332,20 @@ HWT9053Parser::MagneticFieldData HWT9053Parser::GetMagneticFieldData() const
 
 void HWT9053Parser::Reset()
 {
+  std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);
   this->pimpl_->data = HWT9053Data();
+  this->pimpl_->ResetAngleBuffer();
 }
 
 void HWT9053Parser::SetAccelCovariance(double _covariance)
 {
+  std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);
   this->pimpl_->accel_covariance = _covariance;
 }
 
 void HWT9053Parser::SetGyroCovariance(double _covariance)
 {
+  std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);
   this->pimpl_->gyro_covariance = _covariance;
 }
 
