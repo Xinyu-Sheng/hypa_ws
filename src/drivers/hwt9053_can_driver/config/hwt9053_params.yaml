@@ -1,7 +1,7 @@
 # HWT9053 CAN 驱动配置文件
 /**:
   ros__parameters:
-    # CAN 接口配置
+    # CAN 接口配置，仅记录/日志所选 CAN 接口名；本节点不负责打开该接口，或执行逻辑
     can_interface: "can0"
 
     # IMU 话题配置
@@ -16,10 +16,16 @@
 
     # 传感器协方差（可根据实际标定调整）
     # 线性加速度协方差 (m/s^2)^2
-    accel_covariance: 3.4e-5
+    # 说明：采用 3.5 μg (XY) 作为加速度标准差，
+    # 3.5 μg = 3.5e-6 * 9.80665 m/s^2 ≈ 3.4323e-5 m/s^2
+    # 方差 = (3.4323e-5)^2 ≈ 1.18e-9
+    accel_covariance: 1.18e-9
 
     # 角速度协方差 (rad/s)^2
-    gyro_covariance: 5.8e-8
+    # 说明：采用 0.028°/s RMS 噪声作为陀螺标准差，
+    # 0.028°/s = 0.028 * π/180 ≈ 4.8869e-4 rad/s
+    # 方差 = (4.8869e-4)^2 ≈ 2.39e-7
+    gyro_covariance: 2.39e-7
 
     # 机器人名称和是否使用仿真（需要上层launch文件或CLI指定）
     # robot_name: "robot"

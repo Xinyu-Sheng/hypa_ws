@@ -56,6 +56,11 @@ class HWT9053CANDriverNode::Impl
 
   // 参数
   std::string robot_name_;
+  // CAN 设备接口名（例如 "can0"）。
+  // 注意：本节点仅将该参数作为配置/文档提示保存并打印，
+  // 本节点本身不会打开或管理 socketCAN。底层 CAN 接口
+  // 的实际打开/转发应由外部节点（例如 `ros2_socketcan`）或系统
+  // 配置负责，数据通过 `can_bus_topic` 订阅接收。
   std::string can_interface_;
   std::string imu_frame_id_;
   std::string imu_topic_name_;
@@ -111,7 +116,9 @@ HWT9053CANDriverNode::Impl::on_configure(HWT9053CANDriverNode *_node,
   RCLCPP_INFO(_node->get_logger(), "参数设置:");
   RCLCPP_INFO(_node->get_logger(), "  robot_name: %s",
               this->robot_name_.c_str());
-  RCLCPP_INFO(_node->get_logger(), "  can_interface: %s",
+  // 仅记录所选 CAN 接口名；本节点不负责打开该接口
+  RCLCPP_INFO(_node->get_logger(),
+              "  can_interface: %s (仅记录，不用于打开设备)",
               this->can_interface_.c_str());
   RCLCPP_INFO(_node->get_logger(), "  imu_frame_id: %s",
               this->imu_frame_id_.c_str());

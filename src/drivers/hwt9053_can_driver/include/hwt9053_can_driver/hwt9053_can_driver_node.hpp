@@ -37,7 +37,7 @@ class HWT9053CANDriverNode : public rclcpp_lifecycle::LifecycleNode
   std::unique_ptr<Impl> pimpl_;
 
   // 回调函数（由实现类调用）
-  friend class Impl;
+  // friend class Impl;
 };
 
 }  // namespace hwt9053_can_driver
