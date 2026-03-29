@@ -1,0 +1,3015 @@
+WITMOTION SDK
+WIT STANDARD CAN PROTOCOL
+
+CAN Protocol
+
+Copy
+
+CAN Protocol Instructions for use：
+The serial port sending command must be completed within 10S, otherwise it
+will be
+automatically locked. In order to avoid automatic locking, the following steps
+can be performed first.
+1. Enter the unlock command
+2. Enter the command that needs to modify or read the data
+3. Save the command
+Register table
+
+1
+
+AD DR
+
+AD DR
+
+(He
+
+(De
+
+x)
+
+c)
+
+SER IAL
+
+REGISTE R
+NAME
+
+FUNCTION
+
+R/W
+
+I/F
+
+00
+
+00
+
+SAVE
+
+save/reboo
+t/ factory
+reset
+
+01
+
+01
+
+CALSW
+
+Calibration
+mode
+
+R/W
+
+02
+
+02
+
+RSW
+
+output
+content
+
+R/W
+
+03
+
+03
+
+RRATE
+
+output rate
+
+R/W
+
+04
+
+04
+
+BAUD
+
+Serial port
+baud rate
+
+R/W
+
+05
+
+AXOFFSE
+T
+
+Acceleratio
+n X Zero
+Bias
+
+R/W
+
+05
+
+Bit 15
+
+SAVE[15:0]
+
+AXOFFSET
+[15:0]
+
+2
+
+06
+
+AYOFFSE
+T
+
+Acceleratio
+n Y Zero
+Bias
+
+R/W
+
+AYOFFSET
+[15:0]
+
+07
+
+AZOFFSE
+T
+
+Acceleratio
+n Z Zero
+Bias
+
+R/W
+
+AZOFFSET
+[15:0]
+
+08
+
+GXOFFS
+ET
+
+Angular
+velocity X
+zero bias
+
+R/W
+
+GXOFFSET
+[15:0]
+
+09
+
+GYOFFS
+ET
+
+Angular
+velocity Y
+zero bias
+
+R/W
+
+GYOFFSET
+[15:0]
+
+10
+
+GZOFFSE
+T
+
+Angular
+velocity Z
+zero bias
+
+R/W
+
+GZOFFSET
+[15:0]
+
+11
+
+HXOFFSE
+T
+
+Magnetic
+Field X
+Zero Bias
+
+R/W
+
+HXOFFSET
+[15:0]
+
+12
+
+HYOFFSE
+T
+
+Magnetic
+Field Y
+Zero Bias
+
+R/W
+
+HYOFFSET
+[15:0]
+
+0D
+
+13
+
+HZOFFSE
+T
+
+Magnetic
+Field Z
+Zero Bias
+
+R/W
+
+HZOFFSET
+[15:0]
+
+1A
+
+26
+
+IICADDR
+
+Device
+address
+
+R/W
+
+1B
+
+27
+
+LEDOFF
+
+Turn off
+LED light
+
+R/W
+
+R/W
+
+MAGRANG
+X[15:0]
+
+R/W
+
+MAGRANG
+Y[15:0]
+
+06
+
+07
+
+08
+
+09
+
+0A
+
+0B
+
+0C
+
+1C
+
+28
+
+MAGRAN
+GX
+
+Magnetic
+Field X
+Calibration
+Range
+
+1D
+
+29
+
+MAGRAN
+
+Magnetic
+
+3
+
+GY
+
+Field Y
+Calibration
+Range
+
+R/W
+
+1E
+
+30
+
+MAGRAN
+GZ
+
+Magnetic
+Field Z
+Calibration
+Range
+
+1F
+
+31
+
+BANDWID
+TH
+
+bandwidth
+
+R/W
+
+20
+
+32
+
+GYRORA
+NGE
+
+Gyroscope
+range
+
+R/W
+
+21
+
+33
+
+ACCRAN
+GE
+
+Acceleratio
+n range
+
+R/W
+
+22
+
+34
+
+SLEEP
+
+sleep
+
+R/W
+
+23
+
+35
+
+ORIENT
+
+Installation
+direction
+
+R/W
+
+24
+
+36
+
+AXIS6
+
+Algorithms
+
+R/W
+
+25
+
+37
+
+FILTK
+
+Dynamic
+filtering
+
+R/W
+
+27
+
+39
+
+READAD
+DR
+
+Read
+registers
+
+R/W
+
+2A
+
+42
+
+ACCFILT
+
+Acceleratio
+n filtering
+
+R/W
+
+2D
+
+45
+
+POWONS
+END
+
+command
+start
+
+R/W
+
+2E
+
+46
+
+VERSION
+
+version
+number
+
+R
+
+VERSION[1
+5:0]
+
+30
+
+48
+
+YYMM
+
+year/mout
+h
+
+R/W
+
+MOUTH[15
+:8]
+
+MAGRANG
+Z[15:0]
+
+FILTK[15:0]
+
+ACCFILT[1
+5:0]
+
+4
+
+31
+
+49
+
+DDHH
+
+day/hour
+
+R/W
+
+HOUR[15:8
+]
+
+32
+
+50
+
+MMSS
+
+minute/sec
+o nds
+
+R/W
+
+SECONDS[
+15:8]
+
+33
+
+51
+
+MS
+
+millisecond
+
+R/W
+
+MS[15:0]
+
+34
+
+52
+
+AX
+
+Acceleratio
+nX
+
+R
+
+AX[15:0]
+
+35
+
+53
+
+AY
+
+Acceleratio
+nY
+
+R
+
+AY[15:0]
+
+36
+
+54
+
+AZ
+
+Acceleratio
+nZ
+
+R
+
+AZ[15:0]
+
+37
+
+55
+
+GX
+
+Angular
+velocity X
+
+R
+
+GX[15:0]
+
+38
+
+56
+
+GY
+
+Angular
+velocity Y
+
+R
+
+GY[15:0]
+
+39
+
+57
+
+GZ
+
+Angular
+velocity Z
+
+R
+
+GZ[15:0]
+
+3A
+
+58
+
+HX
+
+Magnetic
+Field X
+
+R
+
+HX[15:0]
+
+3B
+
+59
+
+HY
+
+Magnetic
+field Y
+
+R
+
+HY[15:0]
+
+3C
+
+60
+
+HZ
+
+Magnetic
+field Z
+
+R
+
+HZ[15:0]
+
+3D
+
+61
+
+Roll
+
+Roll angle
+
+R
+
+Roll[15:0]
+
+3E
+
+62
+
+Pitch
+
+Pitch angle
+
+R
+
+Pitch[15:0]
+
+3F
+
+63
+
+Yaw
+
+Heading
+
+R
+
+Yaw[15:0]
+
+40
+
+64
+
+TEMP
+
+temperatur
+e
+
+R
+
+TEMP[15:0
+]
+
+5
+
+45
+
+46
+
+69
+
+70
+
+PressureL
+
+Air
+pressure
+low 16 bits
+
+R
+
+PressureL[
+15:0]
+
+PressureH
+
+Air
+pressure
+high 16 bits
+
+R
+
+PressureH[
+15:0]
+
+R
+
+HeightL[15:
+0]
+
+47
+
+71
+
+HeightL
+
+Height
+lower 16
+bits
+
+48
+
+72
+
+HeightH
+
+High low
+high 16 bits
+
+R
+
+HeightH[15
+:0]
+
+51
+
+81
+
+q0
+
+Quaternion
+0
+
+R
+
+q0[15:0]
+
+52
+
+82
+
+q1
+
+Quaternion
+1
+
+R
+
+q1[15:0]
+
+53
+
+83
+
+q2
+
+Quaternion
+2
+
+R
+
+q2[15:0]
+
+54
+
+84
+
+q3
+
+Quaternion
+3
+
+R
+
+q3[15:0]
+
+61
+
+97
+
+GYROCA
+LITHR
+
+Gyro Still
+Threshold
+
+R/W
+
+GYROCALI
+THR[15:0]
+
+62
+
+98
+
+ALARMLE
+VEL
+
+Angle
+alarm level
+
+R/W
+
+99
+
+GYROCA
+LTIME
+
+Gyro auto
+calibration
+time
+
+R/W
+
+GYROCALT
+IME[15:0]
+
+R/W
+
+TRIGTIME[
+15:0]
+
+63
+
+68
+
+104
+
+TRIGTIM E
+
+Alarm
+continuous
+trigger
+time
+
+69
+
+105
+
+KEY
+
+Unlock
+
+R/W
+
+KEY[15:0]
+
+6A
+
+106
+
+WERROR
+
+Gyroscope
+
+R
+
+WERROR[1
+5:0]
+
+6
+
+change
+value
+
+6E
+
+6F
+
+79
+
+110
+
+111
+
+121
+
+WZTIME
+
+Angular
+velocity
+continuous
+rest time
+
+R/W
+
+WZTIME[1
+5:0]
+
+WZSTATI C
+
+Angular
+velocity
+integral
+threshold
+
+R/W
+
+WZSTATIC
+[15:0]
+
+XREFROL L
+
+Roll angle
+zero
+reference
+value
+
+R
+
+XREFROLL
+[15:0]
+
+R
+
+YREFPITC
+H[15:0]
+
+7A
+
+122
+
+YREFPIT
+CH
+
+Pitch angle
+zero
+reference
+value
+
+7F
+
+127
+
+NUMBERI
+D1
+
+Device
+No.1-2
+
+R
+
+ID2[15:8]
+
+80
+
+128
+
+NUMBERI
+D2
+
+Device No.
+3-4
+
+R
+
+ID4[15:8]
+
+81
+
+129
+
+NUMBERI
+D3
+
+Device No.
+5-6
+
+R
+
+ID6[15:8]
+
+82
+
+130
+
+NUMBERI
+D4
+
+Device No.
+7-8
+
+R
+
+ID8[15:8]
+
+83
+
+131
+
+NUMBERI
+D5
+
+Device No.
+9-10
+
+R
+
+ID10[15:8]
+
+84
+
+132
+
+NUMBERI
+D6
+
+Device No.
+11-12
+
+R
+
+ID12[15:8]
+
+7
+
+Protol format
+Active Output Format
+
+• The data is sent in hexadecimal not ASCII。
+• Each data is transmitted in sequence by low byte and high byte, and the
+
+two are combined into a signed short type of data. For example, for data
+DATA1, DATA1L is the low byte and DATA1H is the high byte. The
+conversion method is as follows: Suppose DATA1 is the actual data,
+DATA1H is its high-byte part, DATA1L is its low-byte part,
+
+Then: DATA1=(short)((short)DATA1H<<8|DATA1L). It must be noted here that
+DATA1H needs to be coerced into a signed short type of data before shifting,
+and the data type of DATA1 is also a signed short type, so that negative
+numbers can be represented.
+Protocol
+headers
+0x55
+
+Data
+Content
+
+Data lower
+8 bits
+
+Data high
+8 bits
+
+Data lower
+8 bits
+
+Data high
+8 bits
+
+TYPE
+
+DATA1L[7:0
+]
+
+DATA1H[15:
+8]
+
+DATA2L[7:
+0]
+
+DATA2H[15
+:8]
+
+【1】
+
+【1】TYPE(Data content):
+TYPE
+
+Remark
+
+0x50
+
+Time
+
+0x51
+
+Acceleration
+
+0x52
+
+Angular velocity
+
+0x53
+
+Angle
+
+0x54
+
+Magnetic field
+
+0x5F
+
+Read
+
+8
+
+0x55
+
+0x50
+
+YY
+
+Name
+
+Descriptio
+n
+
+Remark
+
+YY
+
+Year
+
+MM
+
+Mouth
+
+DD
+
+Day
+
+HH
+
+Hour
+
+MN
+
+Munite
+
+SS
+
+Seconds
+
+MM
+
+DD
+
+HH
+
+9
+
+0x55
+
+0x51
+
+AxL
+
+Name
+
+Descrption
+
+Remark
+
+AxL
+
+Acceleratio
+n X low 8
+bits
+
+AxH
+
+Acceleratio
+n X high 8
+bits
+
+AyL
+
+Acceleratio
+n Y low 8
+bits
+
+AyH
+
+Acceleratio
+n Y high 8
+bits
+
+AzL
+
+Acceleratio
+n Z low 8
+bits
+
+AxH
+
+AyL
+
+AyH
+
+Acceleratio
+n X=
+((AxH<<8)|
+AxL)/3276
+8*16g
+(g is the
+acceleratio
+n of
+gravity,
+preferably
+9.8m/s2)
+
+Acceleratio
+n Y=
+((AyH<<8)|
+AyL)/3276
+8*16g
+(g is the
+acceleratio
+n of
+gravity,
+preferably
+9.8m/s2)
+
+Acceleratio
+n Z=
+((AzH<<8)|
+AzL)/3276
+8*16g
+
+10
+
+(g is the
+acceleratio
+n of
+gravity,
+preferably
+9.8m/s2)
+AzH
+
+Acceleratio
+n Z high 8
+bits
+
+11
+
+0x55
+
+0x52
+
+WxL
+
+Name
+
+Descriptio
+n
+
+Remark
+
+WxL
+
+Angular
+velocity X
+low 8 bits
+
+Angular
+velocity X=
+((WxH<<8)
+|WxL)/327
+68*2000°/
+s
+
+WxH
+
+Angular
+velocity X
+high 8 bits
+
+WyL
+
+Angular
+velocity Y
+low 8 bits
+
+WyH
+
+Angular
+velocity Y
+high 8 bits
+
+WzL
+
+Angular
+velocity Z
+low 8 bits
+
+WzH
+
+Angular
+velocity Z
+high 8 bits
+
+WxH
+
+WyL
+
+WyH
+
+Angular
+velocity Y=
+((WyH<<8)
+|WyL)/327
+68*2000°/
+s
+
+Angular
+velocity Z=
+((WzH<<8)
+|WzL)/327
+68*2000°/
+s
+
+12
+
+0x55
+
+0x53
+
+RollL
+
+Name
+
+Descriptio
+n
+
+Remark
+
+RollL
+
+Roll angle
+X lower 8
+bits
+
+Roll angle
+X=
+((RollH<<8
+)|RollL)/32
+768*180(°)
+
+RollH
+
+Roll angle
+X high 8
+bits
+
+PitchL
+
+Pitch angle
+Y low 8
+bits
+
+PitchH
+
+Pitch angle
+Y high 8
+bits
+
+YawL
+
+Yaw angle
+Z low 8
+bits
+
+YawH
+
+Yaw angle
+Z high 8
+bits
+
+RollH
+
+PitchL
+
+PitchH
+
+Pitch angle
+Y=
+((PitchH<<
+8)|PitchL)/
+32768*180
+(°)
+
+Heading
+angle Z=
+((YawH<<
+8)|YawL)/3
+2768*180(
+°)
+
+13
+
+0x55
+
+0x54
+
+HxL
+
+Name
+
+Descriptio
+n
+
+Remark
+
+HxL
+
+Magnetic
+field X
+lower 8
+bits
+
+Magnetic
+field X=
+((HxH<<8)
+|HxL)
+
+HxH
+
+Magnetic
+field X high
+8 bits
+
+HyL
+
+Magnetic
+field Y
+lower 8
+bits
+
+HyH
+
+Magnetic
+field Y high
+8 bits
+
+HzL
+
+Magnetic
+field Z
+lower 8
+bits
+
+HzH
+
+Magnetic
+field Z high
+8 bits
+
+HxH
+
+HyL
+
+HyH
+
+Magnetic
+field Y=
+((HyH
+<<8)|HyL)
+
+Magnetic
+field Z=
+((HzH<<8)
+|HzL)
+
+• Data is sent in hexadecimal, not ASCII.
+• Each register address, the number of read registers, and the read data
+
+are represented by two bytes. The high and low bits of the register
+address are represented by ADDRH and ADDRL, the high and low bits of
+the number of registers to be read are represented by LENH and LENL,
+and the high and low bits of the read data are represented by DATA1H and
+DATA1L.
+
+command send
+
+14
+
+protocol
+header
+
+protocol
+header
+
+register
+
+Data lower 8
+bits
+
+Data high 8
+bits
+
+0xFF
+
+0xAA
+
+ADDR
+
+DATAL[7:0]
+
+DATAH[15:8]
+
+data return
+0x55
+
+0x5F
+
+REG1L
+
+Name
+
+Descriptio
+n
+
+Remark
+
+REG1L
+
+Register 1
+lower 8
+bits
+
+REG1[15:0]
+=
+((REG1H<<
+8)|REG1L)
+
+REG1H
+
+Register 1
+upper 8
+bits
+
+REG2L
+
+Register 2
+lower 8
+bits
+
+REG2H
+
+Register 2
+upper 8
+bits
+
+REG3L
+
+Register 3
+lower 8
+
+REG1H
+
+REG2L
+
+REG2H
+
+REG2[15:0]
+=
+((REG2H<
+<8)|REG2L
+)
+
+REG3[15:0]
+=
+((REG3H<
+<8)|REG3L
+)
+bits
+
+REG3H
+
+Register 3 upper 8 bits
+
+• Data is sent in hexadecimal, not ASCII.
+• All settings need to operate the unlock register (KEY) first.
+15
+
+• For each register address, the write data is represented by two bytes.
+
+The high and low bits of the register address are represented by ADDRH
+and ADDRL, and the high and low bits of the written data are represented
+by DATAH and DATAL.
+
+protocol
+header
+
+protocol
+header
+
+register
+
+Data lower 8
+bits
+
+Data high 8
+bits
+
+0xFF
+
+0xAA
+
+ADDR
+
+DATAL[7:0]
+
+DATAH[15:8]
+
+SAVE
+Register Name: SAVE
+Register Address: 0
+(0x00) Read and write
+direction: R/W
+Default: 0x0000
+Bit
+
+NAME
+
+FUNCTION
+Save: 0x0000
+
+15:0
+
+SAVE[15:0]
+
+Reboot: 0x00FF Factory
+reset: 0x0001
+
+Example: FF AA 00 FF 00
+(reboot)
+
+16
+
+CALSW
+Register Name: CALSW
+Register Address: 1
+(0x01) Read and write
+direction: R/W
+Default: 0x0000
+Bit
+
+NAME
+
+FUNCTION
+
+15:4
+Set calibration mode:
+0000(0x00): normal
+working mode
+0001(0x01): Auto adder
+calibration 0011(0x03):
+height reset
+3:0
+
+CAL[3:0]
+
+0100(0x04): Set the
+heading angle to zero
+0111(0x07): Magnetic
+Field Calibration
+(Spherical Fitting)
+1000(0x08): set angle
+reference
+1001(0x09): Magnetic
+Field Calibration (Dual
+Plane Mode)
+
+Example: FF AA 01 04 00
+(course angle set to zero)
+
+17
+
+Register Name: RSW
+Register Address: 2
+(0x02) Read and write
+direction: R/W
+Default: 0x001E
+Bit
+
+NAME
+
+FUNCTION
+
+10
+
+GSA (0x5A)
+
+0: off 1: on
+
+9
+
+QUATER (0x59)
+
+0: off 1: on
+
+8
+
+VELOCITY (0x58)
+
+0: off 1: on
+
+7
+
+GPS (0x57)
+
+0: off 1: on
+
+6
+
+PRESS (0x56)
+
+0: off 1: on
+
+5
+
+PORT (0x55)
+
+0: off 1: on
+
+4
+
+MAG (0x54)
+
+0: off 1: on
+
+3
+
+ANGLE (0x53)
+
+0: off 1: on
+
+2
+
+GYRO (0x52)
+
+0: off 1: on
+
+1
+
+ACC (0x51)
+
+0: off 1: on
+
+0
+
+TIME (0x50)
+
+0: off 1: on
+
+15:11
+
+Example: FF AA 02 3E 00
+(set to output only
+acceleration, angular
+velocity, angle, magnetic
+field, port status)
+
+18
+
+Register Name: RRATE
+Register Address: 3
+(0x03) Read and write
+direction: R/W
+Default: 0x0006
+Bit
+
+NAME
+
+FUNCTION
+
+15:4
+Set output rate
+0001(0x01): 0.2Hz
+0010(0x02): 0.5Hz
+0011(0x03): 1Hz
+0100(0x04): 2Hz
+0101(0x05): 5Hz
+3:0
+
+RRATE[3:0]
+
+0110(0x06): 10Hz
+0111(0x07): 20Hz
+1000(0x08): 50Hz
+1001(0x09): 100Hz
+1011(0x0B): 200Hz
+1011(0x0C): single return
+1100(0x0D): No return
+
+Example：FF AA 03 03
+00（set 1Hz output）
+
+BAUD
+
+19
+
+Register Name: BAUD
+Register Address: 4
+(0x04) Read and write
+direction: R/W
+Default: 0x0002
+Bit
+
+NAME
+
+FUNCTION
+
+15:4
+Set the serial port baud
+rate: 0000(0x00):
+1000000bps
+0001(0x01): 800000bps
+0010(0x02): 500000bps
+0011(0x03): 400000bps
+3:0
+
+BAUD[3:0]
+
+0100(0x04): 250000bps
+0101(0x05): 200000bps
+0110(0x06): 125000bps
+0111(0x07): 100000bps
+1000(0x08): 80000bps
+1001(0x09): 50000bps
+1010(0x0A): 40000bps
+1011(0x0B): 20000bps
+1100(0x0C): 10000bps
+1101(0x0D): 5000bps
+1110(0x0E): 3000bps
+
+Example: FF AA 04 02 00
+(set serial port baud rate
+500000)
+
+AXOFFSET~HZOFFSET
+
+20
+
+Register Name:
+AXOFFSET~HZOFFSET
+Register Address: 5~13
+(0x05~0x0D) Read and
+write direction: R/W
+Default: 0x0000
+Bit
+
+NAME
+
+FUNCTION
+
+AXOFFSET[15:0]
+
+Acceleration X-axis bias,
+actual acceleration
+offset=AXOFFSET[15:0]/1
+0000(g)
+
+AYOFFSET[15:0]
+
+Acceleration Y-axis bias,
+actual acceleration
+offset=AYOFFSET[15:0]/1
+0000(g)
+
+AZOFFSET[15:0]
+
+Acceleration Z-axis bias,
+actual acceleration
+offset=AZOFFSET[15:0]/1
+0000(g)
+
+GXOFFSET[15:0]
+
+Angular velocity X-axis
+bias, actual angular
+velocity
+offset=GXOFFSET[15:0]/1
+0000(°/s)
+
+GYOFFSET[15:0]
+
+Angular velocity Y-axis
+bias, actual angular
+velocity
+offset=GYOFFSET[15:0]/1
+0000(°/s)
+
+15:0
+
+GZOFFSET[15:0]
+
+Angular velocity Z-axis
+bias, actual angular
+velocity
+offset=GZOFFSET[15:0]/1
+0000(°/s)
+
+15:0
+
+HXOFFSET[15:0]
+
+Magnetic field X-axis
+zero bias
+
+15:0
+
+15:0
+
+15:0
+
+15:0
+
+15:0
+
+21
+
+15:0
+
+HYOFFSET[15:0]
+
+Magnetic field Y axis zero
+bias
+
+15:0
+
+HZOFFSET[15:0]
+
+Magnetic field Z axis zero
+bias
+
+NAME
+
+FUNCTION
+
+IICADDR[7:0]
+
+Set the device address
+for I2C and Modbus
+communication
+
+Example: FF AA 05 E8 03
+(set acceleration X-axis
+zero offset 0.1g),
+0x03E8=1000,
+1000/10000=0.1(g)
+
+IICADDR
+Register Name: IICADDR
+Register Address: 26
+(0x1A) Read and write
+direction: R/W
+Default: 0x0050
+Bit
+15:8
+
+7:0
+
+0x01~0x7F
+Example: FF AA 1A 02 00
+(set the device address
+to 0x02)
+
+22
+
+Register Name: LEDOFF
+Register Address: 27
+(0x1B) Read and write
+direction: R/W
+Default: 0x0000
+Bit
+
+NAME
+
+FUNCTION
+
+15:1
+0
+
+LEDOFF
+
+1: Turn off the LED light
+0: Turn on the LED light
+
+Example: FF AA 1B 01 00
+(turn off the LED light)
+Register Name:
+MAGRANGX~MAGRANG
+Z Register Address:
+28~30 (0x1C~0x1E) Read
+and write direction: R/W
+Default: 0x01F4
+Bit
+
+NAME
+
+FUNCTION
+
+15:0
+
+MAGRANGX[15:0]
+
+Magnetic field calibration
+X-axis range
+
+15:0
+
+MAGRANGY[15:0]
+
+Magnetic Field
+Calibration Y-axis Range
+
+15:0
+
+MAGRANGZ[15:0]
+
+Magnetic field calibration
+Z-axis range
+
+Example: FF AA 1C F4 01
+(set the magnetic field
+calibration X-axis range
+to 500)
+
+23
+
+Register Name:
+BANDWIDTH Register
+Address: 31 (0x1F) Read
+and write direction: R/W
+Default: 0x0004
+Bit
+
+NAME
+
+FUNCTION
+
+15:4
+Set bandwidth
+0000(0x00): 256Hz
+0001(0x01): 188Hz
+3:0
+
+BANDWIDTH[3:0]
+
+0010(0x02): 98Hz
+0011(0x03): 42Hz
+0100(0x04): 20Hz
+0101(0x05): 10Hz
+0110(0x06): 5Hz
+
+Example：FF AA 1F 01 00
+（set bandwidth
+is188Hz）
+Register Name:
+GYRORANGE Register
+Address: 32 (0x20) Read
+and write direction: R/W
+Default: 0x0003
+Bit
+
+NAME
+
+FUNCTION
+
+15:4
+
+3:0
+
+GYRORANGE[3:0]
+
+Set the gyro range
+0011(0x03): 2000°/s
+The default is 2000°/s,
+fixed and cannot be set
+
+Example: FF AA 20 03 00
+(set the gyro range to
+2000°/s)
+
+24
+
+Register Name:
+ACCRANGE Register
+Address: 33 (0x21) Read
+and write direction: R/W
+Default: 0x0000
+Bit
+
+NAME
+
+FUNCTION
+
+15:4
+Set the accelerometer
+range 0000(0x00): ±2g
+0011(0x03): ±16g
+3:0
+
+ACCRANGE[3:0]
+
+This parameter cannot be
+set. The internal adaptive
+acceleration range of the
+product will automatically
+switch to 16g when the
+acceleration exceeds 2g.
+
+Example: FF AA 21 00 00
+(set the accelerometer
+range to 16g)
+Register Name: SLEEP
+Register Address: 34
+(0x22) Read and write
+direction: R/W
+Default: 0x0000
+Bit
+
+NAME
+
+FUNCTION
+
+15:1
+
+0
+
+SLEEP
+
+set hibernate 1(0x01):
+sleep
+Any serial port data, can
+wake up
+
+Example: FF AA 22 01 00
+(go to sleep)
+
+25
+
+Register Name: ORIENT
+Register Address: 35
+(0x23) Read and write
+direction: R/W
+Default: 0x0000
+Bit
+
+NAME
+
+FUNCTION
+
+15:1
+Set the installation
+direction
+0
+
+ORIENT
+
+0 (0x00): horizontal
+installation
+1(0x01): vertical
+installation (the Y-axis
+arrow of the coordinate
+axis must be upward)
+
+Example: FF AA 23 01 00
+(set vertical installation)
+
+26
+
+Register Name: AXIS6
+Register Address: 36
+(0x24) Read and write
+direction: R/W
+Default: 0x0000
+Bit
+
+NAME
+
+FUNCTION
+
+15:1
+set algorithm
+
+0
+
+AXIS6
+
+0(0x00): 9-axis algorithm
+(magnetic field solution
+navigation angle,
+absolute heading angle)
+1(0x01): 6-axis algorithm
+(integral solution
+navigation angle, relative
+heading angle)
+
+Example: FF AA 24 01 00
+(set 6-axis algorithm
+mode)
+
+27
+
+Register Name: FILTK
+Register Address: 37
+(0x25) Read and write
+direction: R/W
+Default: 0x001E
+Bit
+
+NAME
+
+FUNCTION
+Range: 1~10000, the
+default is 30 (it is not
+recommended to modify,
+once modified, if the
+angle does not meet the
+requirements for use,
+please modify it to 30)
+
+15:0
+
+FILTK[15:0]
+
+The smaller the
+FILTK[15:0], the stronger
+the seismic performance
+and the weaker the realtime performance.
+The larger the
+FILTK[15:0], the weaker
+the seismic performance
+and the stronger the realtime performance.
+
+Example: FF AA 25 1E 00
+(set K value filter to 30)
+
+28
+
+Register Name:
+READADDR Register
+Address: 39 (0x27) Read
+and write direction: R/W
+Default: 0x00FF
+Bit
+
+NAME
+
+FUNCTION
+
+READADDR[7:0]
+
+Read register range:
+Please refer to "Register
+Table"
+
+15:8
+7:0
+Example:
+Send: FF AA 27 34 00
+(read acceleration X axis
+0x34) Return: 55 5F AXL
+AXH AYL AYH AZL AZH
+GXL GXH SUM
+For details, please refer
+to "Read Register Return
+Value" in the "Read
+Format" chapter
+
+29
+
+Register Name: ACCFILT
+Register Address: 42
+(0x2A) Read and write
+direction: R/W
+Default: 0x01F4
+Bit
+
+NAME
+
+FUNCTION
+Range: 1~10000, the
+default is 500 (it is not
+recommended to modify,
+once modified, if the
+angle does not meet the
+requirements for use,
+please modify it to 500)
+The smaller the
+ACCFILT[15:0], the
+stronger the seismic
+performance and the
+weaker the real-time
+performance.
+
+15:0
+
+ACCFILT[15:0]
+
+The larger the
+ACCFILT[15:0], the
+weaker the seismic
+performance and the
+stronger the real-time
+performance.
+This parameter is an
+empirical value, which
+needs to be debugged
+according to different
+environments. In the
+tractor environment,
+ACCFILT[15:0] can be
+adjusted to 100, because
+the vibration of the
+tractor is serious and the
+anti-vibration
+performance needs to be
+improved
+
+30
+
+Example: FF AA 2A F4 01
+(set acceleration filter
+500)
+Register Name:
+POWONSEND Register
+Address: 45 (0x2D) Read
+and write direction: R/W
+Default: 0x0001
+Bit
+
+NAME
+
+FUNCTION
+
+15:4
+Set the command to start:
+3:0
+
+POWONSEND[3:0]
+
+0000(0x00): Turn off
+power-on data output
+0001(0x01): Turn on
+power-on data output
+
+Example: FF AA 2D 00 00
+(turn on power-on data
+output)
+
+31
+
+Register Name: VERSION
+Register Address: 46
+(0x2E) Read and write
+direction: R
+Default: none
+Bit
+
+NAME
+
+FUNCTION
+
+15:0
+
+VERSION[15:0]
+
+Different products,
+different version numbers
+
+Example:
+Send: FF AA 27 2E 00
+(read version number,
+0x27 means read, 0x2E
+is version number
+register)
+Return: 55 5F VL VH XX
+XX XX XX XX XX SUM
+VERSION[15:0]=(short)
+(((short)VH<<8)|VL)
+
+32
+
+Register Name:
+YYMM~MS
+Register address: 48~51
+(0x30~0x33) Read and
+write direction: R/W
+Default: 0x0000
+Bit
+
+NAME
+
+FUNCTION
+
+15:8
+
+YYMM[15:8]
+
+mouth
+
+7:0
+
+YYMM[7:0]
+
+year
+
+15:8
+
+DDHH[15:8]
+
+hour
+
+7:0
+
+DDHH[7:0]
+
+day
+
+15:8
+
+MMSS[15:8]
+
+seconds
+
+7:0
+
+MMSS[7:0]
+
+minute
+
+15:0
+
+MS[15:0]
+
+millisecond
+
+Example:
+FF AA 30 16 03 (set year
+22-03)
+FF AA 31 0C 09 (set date
+12-09)
+FF AA 32 1E 3A (set
+minute seconds 30:58)
+FF AA 33 F4 01 (set ms
+500)
+Example:
+Send: FF AA 27 30 00
+(read version number,
+0x27 means read, 0x30
+is year month
+
+register)
+Returns: 55 5F YYMM[7:0] YYMM[15:8] DDHH[7:0] DDHH[15:8] MMSS[7:0]
+MMSS[15:8] MS[7:0] MS[15: 8] SUM
+
+33
+
+Register Name: AX~AZ
+Register address: 52~54
+(0x34~0x36) Read and
+write direction: R
+Default: 0x0000
+Bit
+
+15:0
+
+15:0
+
+15:0
+
+NAME
+
+FUNCTION
+
+AX[15:0]
+
+Acceleration
+X=AX[15:0]/32768*16g (g
+is the acceleration of
+gravity, preferably
+9.8m/s2)
+
+AY[15:0]
+
+Acceleration
+Y=AY[15:0]/32768*16g (g
+is the acceleration of
+gravity, preferably
+9.8m/s2)
+
+AZ[15:0]
+
+Acceleration
+Z=AZ[15:0]/32768*16g (g
+is the acceleration of
+gravity, preferably
+9.8m/s2)
+
+34
+
+Register Name: GX~GZ
+Register address: 55~57
+(0x37~0x39) Read and
+write direction: R
+Default: 0x0000
+Bit
+
+NAME
+
+FUNCTION
+
+GX[15:0]
+
+Angular velocity
+X=GX[15:0]/32768*2000
+°/s
+
+GY[15:0]
+
+Angular velocity
+Y=GY[15:0]/32768*2000
+°/s
+
+GZ[15:0]
+
+Angular velocity
+Z=GZ[15:0]/32768*2000
+°/s
+
+Bit
+
+NAME
+
+FUNCTION
+
+15:0
+
+HX[15:0]
+
+Magnetic field
+X=HX[15:0] (unit：LSB)
+
+15:0
+
+HY[15:0]
+
+Magnetic field
+Y=HY[15:0] (unit：LSB)
+
+15:0
+
+HZ[15:0]
+
+Magnetic fieldZ=HZ[15:0]
+(unit：LSB)
+
+15:0
+
+15:0
+
+15:0
+
+Register name: HX~HZ
+Register Address: 58~60
+(0x3A~0x3C) Read and
+write direction: R
+Default: 0x0000
+
+35
+
+Register Name: Roll~Yaw
+Register address: 61~63
+(0x3D~0x3F) Read and
+write direction: R
+Default: 0x0000
+Bit
+
+NAME
+
+FUNCTION
+
+Roll[15:0]
+
+roll
+angleX=Roll[15:0]/32768*
+180°
+
+Pitch[15:0]
+
+picth
+angleY=Pitch[15:0]/32768
+*180°
+
+Yaw[15:0]
+
+heading
+angleZ=Yaw[15:0]/32768
+*180°
+
+Bit
+
+NAME
+
+FUNCTION
+
+15:0
+
+TEMP[15:0]
+
+temperature=TEMP[15:0]/
+100℃
+
+15:0
+
+15:0
+
+15:0
+
+Register Name: TEMP
+Register Address: 64
+(0x40) Read and write
+direction: R
+Default: 0x0000
+
+36
+
+Register Name:
+PressureL~HeightH
+Register address: 69~72
+(0x45~0x48) Read and
+write direction: R
+Default: 0x0000
+Bit
+
+NAME
+
+FUNCTION
+
+15:0
+
+PressureL[15:0]
+
+air pressure=
+((int)PressureH[15:0]
+<<16)|PressureL[15:0]
+(Pa)
+
+15:0
+
+PressureH[15:0]
+
+15:0
+
+HeightL[15:0]
+
+15:0
+
+HeightH[15:0]
+
+altitute=
+((int)HeightH[15:0]
+<<16)|HeightL[15:0](cm)
+
+Register name: q0~q3
+Register address: 81~84
+(0x51~0x54) Read and
+write direction: R
+Default: 0x0000
+Bit
+
+NAME
+
+FUNCTION
+
+15:0
+
+q0[15:0]
+
+Quaternion0=q0[15:0]/32
+768
+
+15:0
+
+q1[15:0]
+
+Quaternion1=q1[15:0]/327
+68
+
+15:0
+
+q2[15:0]
+
+Quaternion=q2[15:0]/327
+68
+
+15:0
+
+q3[15:0]
+
+Quaternion3=q3[15:0]/32
+768
+
+37
+
+Register Name:
+GYROCALITHR Register
+Address: 97 (0x61) Read
+and write direction: R/W
+Default: 0x0000
+Bit
+
+NAME
+
+FUNCTION
+Set the gyroscope
+inactivity threshold:
+
+15:0
+
+GYROCALITHR[15:0]
+
+Gyro static
+threshold=GYROCALITHR
+[15:0]/1000(°/s)
+
+Example: Setting the
+Gyro Rest Threshold to
+0.05°/s FFAA 61 32 00
+When the angular
+velocity change is less
+than 0.05°/s and lasts for
+the time of
+"GYROCALTIME", the
+sensor recognizes it as
+stationary and
+automatically resets the
+angular velocity less than
+0.05°/s to zero
+The setting rule of the
+static threshold of the
+gyroscope can be
+determined by reading
+the value of the
+"WERROR" register. The
+general setting rule is:
+GYROCALITHR=WERROR
+*1.2, unit: °/s
+This register needs to be
+used in conjunction with
+the GYROCALTIME
+register
+
+38
+
+Register Name:
+GYROCALTIME Register
+Address: 99 (0x63) Read
+and write direction: R/W
+Default: 0x03E8
+Bit
+
+NAME
+
+FUNCTION
+
+15:0
+
+GYROCALTIME[15:0]
+
+Set gyroscope autocalibration time
+
+Example: Set gyroscope
+auto-calibration time to
+500ms FF AA 63 F4 01
+When the angular
+velocity change is less
+than "GYROCALITHR"
+and lasts for 500ms, the
+sensor recognizes that it
+is stationary and
+automatically resets the
+angular velocity less than
+0.05°/s to zero
+This register needs to be
+used in conjunction with
+the GYROCALITHR
+register
+
+39
+
+Register Name: KEY
+Register Address: 105
+(0x69)
+Read and write direction:
+R/W
+Default: 0x0000
+Bit
+
+15:0
+
+NAME
+
+FUNCTION
+
+KEY[15:0]
+
+Unlock register: When
+performing a write
+operation, you need to
+set this register first
+
+NAME
+
+FUNCTION
+
+Example: Unlock, write
+0xB588 to this register
+(other values are invalid)
+FFAA 69 88 B5
+Register Name: WERROR
+Register Address: 106
+(0x6A) Read and write
+direction: R
+Default: 0x0000
+Bit
+
+Gyroscope change
+value=WERROR[15:0]/100
+0*180/3.1415926(°/s)
+15:0
+
+WERROR[15:0]
+
+When the sensor is
+stationary, the
+"GYROCALITHR" register
+can be set by changing
+this register
+
+40
+
+Register Name: WZTIME
+Register Address: 110
+(0x6E) Read and write
+direction: R/W
+Default: 0x01F4
+Bit
+
+NAME
+
+FUNCTION
+
+15:0
+
+WZTIME[15:0]
+
+Angular velocity
+continuous rest time
+
+Example: Set the angular
+velocity continuous static
+time to 500ms FFAA 6E
+F4 01
+When the angular
+velocity is less than
+"WZSTATIC" for 500ms,
+the angular velocity
+output is 0, and the Zaxis heading angle is not
+integrated
+This register needs to be
+used in conjunction with
+the "WZSTATIC" register
+
+41
+
+Register Name:
+WZSTATIC Register
+Address: 111 (0x6F) Read
+and write direction: R/W
+Default: 0x012C
+Bit
+
+15:0
+
+NAME
+
+FUNCTION
+
+WZSTATIC[15:0]
+
+Angular velocity
+integration
+threshold=WZSTATIC[15:
+0]/1000(°/s)
+
+Example: Set the angular
+velocity integration
+threshold to 0.5°/s FF AA
+6F F4 01
+When the angular
+velocity is greater than
+0.5°/s, the Z-axis
+heading angle starts to
+integrate the acceleration
+When the angular
+velocity is less than
+0.5°/s, and the duration
+set by the register
+"WZTIME", the angular
+velocity output is 0, and
+the Z-axis heading angle
+is not integrated
+This register needs to be
+used in conjunction with
+the "WZTIME" register
+
+42
+
+Register Name:
+XREFROLL~YREFPITCH
+Register address:
+121~122 (0x79~0x7A)
+Read and write direction:
+R/W
+Default: 0x00000
+Bit
+15:0
+
+15:0
+
+NAME
+
+FUNCTION
+
+XREFROLL[15:0]
+
+Roll angle zero reference
+value=XREFROLL[15:0]/3
+2768*180(°)
+
+YREFPITCH[15:0]
+
+Pitch angle zero
+reference
+value=YREFPITCH[15:0]/3
+2768*180(°)
+
+Example: The current roll
+angle is 2°, set the roll
+angle zero, subtract 2°,
+then
+XREFROLL[15:0]=2*3276
+8/180=364=0x016C
+FFAA 79 6C 01
+
+43
+
+Register Name:
+NUMBERID1~NUMBERID
+6 Register address:
+127~132 (0x7F~0x84)
+Read and write direction:
+R
+Default: none
+Bit
+
+NAME
+
+15:0
+
+NUMBERID1[15:0]
+
+15:0
+
+NUMBERID2[15:0]
+
+15:0
+
+NUMBERID3[15:0]
+
+15:0
+
+NUMBERID4[15:0]
+
+15:0
+
+NUMBERID5[15:0]
+
+15:0
+
+NUMBERID6[15:0]
+
+FUNCTION
+
+Device label：
+WT4200000001
+Previous
+
+STM32_SDK Quick Start
+Next
+
+High precision Modbus Protocol
+Last updated 3 years ago
+
+44
+
+
