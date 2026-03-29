@@ -120,10 +120,10 @@ class HWT9053Parser
   void Reset();
 
   /**
-   * @brief 设置线性加速度协方差
-   * @param _covariance 协方差值 (m/s^2)^2
+   * @brief 设置线性加速度方差（variance）
+   * @param _variance 方差值 (m/s^2)^2
    */
-  void SetAccelCovariance(double _covariance);
+  void SetAccelVariance(double _variance);
 
   /**
    * @brief 设置数据过期超时（毫秒）。当某类数据超过此阈值未更新时，相关 *_valid
@@ -133,10 +133,10 @@ class HWT9053Parser
   void SetDataTimeoutMs(uint32_t _ms);
 
   /**
-   * @brief 设置角速度协方差
-   * @param _covariance 协方差值 (rad/s)^2
+   * @brief 设置角速度方差（variance）
+   * @param _variance 方差值 (rad/s)^2
    */
-  void SetGyroCovariance(double _covariance);
+  void SetGyroVariance(double _variance);
 
   private:
   // PIMPL：私有数据实现

@@ -27,9 +27,9 @@ class HWT9053Parser::Impl
   // 数据过期阈值（毫秒）
   uint32_t data_timeout_ms{500};
 
-  // 协方差值（语义：方差）
-  double accel_covariance{1.18e-9};  // (m/s^2)^2
-  double gyro_covariance{2.39e-7};   // (rad/s)^2
+  // 方差值（variance）
+  double accel_variance{1.18e-9};  // (m/s^2)^2
+  double gyro_variance{2.39e-7};   // (rad/s)^2
 
   // 重置缓冲状态并清除 angle_valid
   void ResetAngleBuffer()
@@ -106,7 +106,7 @@ bool HWT9053Parser::ParseCANFrame(const std::array<uint8_t, 8> &_data,
   {
     return false;  // DLC 无效，解析失败
   }
-  std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);
+  std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);  // 防御性设计
 
   const auto now = std::chrono::steady_clock::now();
 
@@ -246,13 +246,13 @@ sensor_msgs::msg::Imu HWT9053Parser::ToIMUMessage() const
 {
   // 仅在临界区内复制需要的数据，缩小锁范围
   HWT9053Data data_snapshot;
-  double accel_covariance = 0.0;
-  double gyro_covariance = 0.0;
+  double accel_variance = 0.0;
+  double gyro_variance = 0.0;
   {
-    std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);
+    std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);  // 防御性设计
     data_snapshot = this->pimpl_->data;
-    accel_covariance = this->pimpl_->accel_covariance;
-    gyro_covariance = this->pimpl_->gyro_covariance;
+    accel_variance = this->pimpl_->accel_variance;
+    gyro_variance = this->pimpl_->gyro_variance;
   }
 
   sensor_msgs::msg::Imu msg;
@@ -270,9 +270,8 @@ sensor_msgs::msg::Imu HWT9053Parser::ToIMUMessage() const
   // 协方差矩阵：注意这里语义为方差 (已经由节点/配置统一为方差)
   for (int i = 0; i < 9; ++i)
   {
-    msg.linear_acceleration_covariance[i] =
-        (i % 4 == 0) ? accel_covariance : 0.0;
-    msg.angular_velocity_covariance[i] = (i % 4 == 0) ? gyro_covariance : 0.0;
+    msg.linear_acceleration_covariance[i] = (i % 4 == 0) ? accel_variance : 0.0;
+    msg.angular_velocity_covariance[i] = (i % 4 == 0) ? gyro_variance : 0.0;
   }
 
   if (data_snapshot.angle_valid)
@@ -322,7 +321,7 @@ sensor_msgs::msg::Imu HWT9053Parser::ToIMUMessage() const
 
 HWT9053Data HWT9053Parser::GetData() const
 {
-  std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);
+  std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);  // 防御性设计
   HWT9053Data snapshot = this->pimpl_->data;
   const auto now = std::chrono::steady_clock::now();
   const auto timeout = std::chrono::milliseconds(this->pimpl_->data_timeout_ms);
@@ -373,7 +372,7 @@ HWT9053Data HWT9053Parser::GetData() const
 HWT9053Parser::MagneticFieldData HWT9053Parser::GetMagneticFieldData() const
 {
   // 获取磁场数据快照（线程安全）
-  std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);
+  std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);  // 防御性设计
   MagneticFieldData snapshot = {
       this->pimpl_->data.mag_x, this->pimpl_->data.mag_y,
       this->pimpl_->data.mag_z, this->pimpl_->data.mag_valid};
@@ -392,26 +391,26 @@ HWT9053Parser::MagneticFieldData HWT9053Parser::GetMagneticFieldData() const
 
 void HWT9053Parser::Reset()
 {
-  std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);
+  std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);  // 防御性设计
   this->pimpl_->data = HWT9053Data();
   this->pimpl_->ResetAngleBuffer();
 }
 
-void HWT9053Parser::SetAccelCovariance(double _covariance)
+void HWT9053Parser::SetAccelVariance(double _variance)
 {
-  std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);
-  this->pimpl_->accel_covariance = _covariance;
+  std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);  // 防御性设计
+  this->pimpl_->accel_variance = _variance;
 }
 
-void HWT9053Parser::SetGyroCovariance(double _covariance)
+void HWT9053Parser::SetGyroVariance(double _variance)
 {
-  std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);
-  this->pimpl_->gyro_covariance = _covariance;
+  std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);  // 防御性设计
+  this->pimpl_->gyro_variance = _variance;
 }
 
 void HWT9053Parser::SetDataTimeoutMs(uint32_t _ms)
 {
-  std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);
+  std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);  // 防御性设计
   this->pimpl_->data_timeout_ms = _ms;
 }
 
