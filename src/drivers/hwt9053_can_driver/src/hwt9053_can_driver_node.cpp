@@ -271,58 +271,52 @@ void HWT9053CANDriverNode::Impl::CanFrameCallback(
     }
     return;
   }
-  // 先把 CAN 数据拷贝到固定数组（后面用于判断是否为 WIT payload）
+  // 先把 CAN 数据拷贝到固定数组
   std::array<uint8_t, 8> can_data;
   for (size_t i = 0; i < 8 && i < _msg->data.size(); ++i)
   {
     can_data[i] = _msg->data[i];
   }
 
-  // 支持两种来源：CAN ID 表示类型，或 payload[0]==0x55 且 payload[1] 为 WIT type
-  uint32_t can_id = _msg->id;
-  bool has_wit_header = (can_data[0] == 0x55);
-  bool supported_by_payload = false;
-  if (has_wit_header)
-  {
-    uint8_t payload_type = can_data[1];
-    supported_by_payload = (payload_type == HWT9053Parser::CAN_ID_TIME ||
-                            payload_type == HWT9053Parser::CAN_ID_ACCEL ||
-                            payload_type == HWT9053Parser::CAN_ID_GYRO ||
-                            payload_type == HWT9053Parser::CAN_ID_ANGLE ||
-                            payload_type == HWT9053Parser::CAN_ID_MAGN);
-  }
-
-  bool supported_by_id = (can_id == HWT9053Parser::CAN_ID_TIME ||
-                          can_id == HWT9053Parser::CAN_ID_ACCEL ||
-                          can_id == HWT9053Parser::CAN_ID_GYRO ||
-                          can_id == HWT9053Parser::CAN_ID_ANGLE ||
-                          can_id == HWT9053Parser::CAN_ID_MAGN);
-
-  if (!supported_by_id && !supported_by_payload)
+  // 强制采用 WIT 封装：payload[0] 必须为 0x55，payload[1] 为 TYPE
+  if (can_data[0] != 0x55)
   {
     if (this->log_debug_)
     {
-      RCLCPP_DEBUG(_node->get_logger(),
-                   "忽略不支持的 CAN 帧: CAN ID=0x%x, payload_type=0x%x",
-                   can_id, static_cast<int>(can_data[1]));
+      RCLCPP_DEBUG(_node->get_logger(), "忽略非 WIT 封装的 CAN 帧: CAN ID=0x%x",
+                   _msg->id);
+    }
+    return;
+  }
+
+  uint8_t payload_type = can_data[1];
+  if (payload_type != HWT9053Parser::WIT_TYPE_TIME &&
+      payload_type != HWT9053Parser::WIT_TYPE_ACCEL &&
+      payload_type != HWT9053Parser::WIT_TYPE_GYRO &&
+      payload_type != HWT9053Parser::WIT_TYPE_ANGLE &&
+      payload_type != HWT9053Parser::WIT_TYPE_MAGN)
+  {
+    if (this->log_debug_)
+    {
+      RCLCPP_DEBUG(_node->get_logger(), "忽略不支持的 WIT TYPE: 0x%x",
+                   payload_type);
     }
     return;
   }
 
   if (this->log_debug_)
   {
-    RCLCPP_DEBUG(_node->get_logger(), "接收 CAN 帧 ID=0x%x, DLC=%u", _msg->id,
-                 _msg->dlc);
+    RCLCPP_DEBUG(_node->get_logger(), "接收 WIT CAN 帧 TYPE=0x%x, ID=0x%x",
+                 payload_type, _msg->id);
   }
 
   // 解析 CAN 帧
-  bool parse_success =
-      this->parser_->ParseCANFrame(can_id, can_data, _msg->dlc);
+  bool parse_success = this->parser_->ParseCANFrame(can_data, _msg->dlc);
 
   if (!parse_success)
   {
     RCLCPP_WARN(_node->get_logger(),
-                "CAN 帧解析失败: ID=0x%x, DLC=%u (期望 DLC=8)", can_id,
+                "CAN 帧解析失败: ID=0x%x, DLC=%u (期望 DLC=8)", _msg->id,
                 _msg->dlc);
     return;
   }

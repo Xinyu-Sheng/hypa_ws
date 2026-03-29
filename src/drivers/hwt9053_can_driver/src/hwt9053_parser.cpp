@@ -86,8 +86,7 @@ float HWT9053Parser::Int16ToFloat(int16_t _value, float _scale) const
   return _value * _scale;
 }
 
-bool HWT9053Parser::ParseCANFrame(uint32_t _can_id,
-                                  const std::array<uint8_t, 8> &_data,
+bool HWT9053Parser::ParseCANFrame(const std::array<uint8_t, 8> &_data,
                                   uint8_t _dlc)
 {
   if (_dlc != 8)
@@ -96,199 +95,129 @@ bool HWT9053Parser::ParseCANFrame(uint32_t _can_id,
   }
   std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);
 
-  // 支持两种封装：
-  // 1) 传统 HWT9053 CAN（CAN ID 表示类型，数据直接在 payload[0..7]）
-  // 2) WIT SDK 风格：payload[0] == 0x55，payload[1] 为类型（WIT_*），有效数据位于 payload[2..7]
-  bool is_wit_payload = (_data[0] == 0x55);
-  uint32_t msg_type = _can_id;
-
-  if (is_wit_payload)
+  // 严格按照 WIT 封装解析：payload[0] == 0x55, payload[1] == TYPE
+  if (_data[0] != 0x55)
   {
-    msg_type = static_cast<uint32_t>(_data[1]);
+    return false;  // 非 WIT 封装，拒绝解析
   }
 
-  switch (msg_type)
+  uint8_t type = _data[1];
+
+  switch (type)
   {
-    case HWT9053Parser::CAN_ID_TIME:
+    case HWT9053Parser::WIT_TYPE_TIME:
     {
-      if (is_wit_payload)
-      {
-        // WIT 常见封装：payload[2..7] 存放时间或寄存器压缩值
-        this->pimpl_->data.year = _data[2];
-        this->pimpl_->data.month = _data[3];
-        this->pimpl_->data.day = _data[4];
-        this->pimpl_->data.hour = _data[5];
-        this->pimpl_->data.minute = _data[6];
-        this->pimpl_->data.second = _data[7];
-        this->pimpl_->data.millisecond = 0;
-      }
-      else
-      {
-        // 原始 HWT9053 时间格式: [YY, MM, DD, HH, MN, SS, msl, msh]
-        this->pimpl_->data.year = _data[0];
-        this->pimpl_->data.month = _data[1];
-        this->pimpl_->data.day = _data[2];
-        this->pimpl_->data.hour = _data[3];
-        this->pimpl_->data.minute = _data[4];
-        this->pimpl_->data.second = _data[5];
-        this->pimpl_->data.millisecond = this->BytesToUInt16(_data[7], _data[6]);
-      }
+      // WIT 时间输出：payload[2..7] = [YY, MM, DD, HH, MN, SS]
+      this->pimpl_->data.year = _data[2];
+      this->pimpl_->data.month = _data[3];
+      this->pimpl_->data.day = _data[4];
+      this->pimpl_->data.hour = _data[5];
+      this->pimpl_->data.minute = _data[6];
+      this->pimpl_->data.second = _data[7];
+      this->pimpl_->data.millisecond = 0;
       break;
     }
 
-    case HWT9053Parser::CAN_ID_ACCEL:
+    case HWT9053Parser::WIT_TYPE_ACCEL:
     {
-      int16_t ax_raw, ay_raw, az_raw;
-      if (is_wit_payload)
-      {
-        // WIT CAN: data in payload[2..7] as three 16-bit values (low,high order)
-        ax_raw = this->BytesToInt16(_data[3], _data[2]);
-        ay_raw = this->BytesToInt16(_data[5], _data[4]);
-        az_raw = this->BytesToInt16(_data[7], _data[6]);
-      }
-      else
-      {
-        // 原始 HWT9053: [AxL, AxH, AyL, AyH, AzL, AzH, ?, ?]
-        ax_raw = this->BytesToInt16(_data[1], _data[0]);
-        ay_raw = this->BytesToInt16(_data[3], _data[2]);
-        az_raw = this->BytesToInt16(_data[5], _data[4]);
-      }
+      // WIT 加速度：payload[2..7] = AxL,AxH,AyL,AyH,AzL,AzH
+      int16_t ax_raw = this->BytesToInt16(_data[3], _data[2]);
+      int16_t ay_raw = this->BytesToInt16(_data[5], _data[4]);
+      int16_t az_raw = this->BytesToInt16(_data[7], _data[6]);
 
-      this->pimpl_->data.accel_x = this->Int16ToFloat(ax_raw, HWT9053Parser::ACCEL_SCALE);
-      this->pimpl_->data.accel_y = this->Int16ToFloat(ay_raw, HWT9053Parser::ACCEL_SCALE);
-      this->pimpl_->data.accel_z = this->Int16ToFloat(az_raw, HWT9053Parser::ACCEL_SCALE);
+      this->pimpl_->data.accel_x =
+          this->Int16ToFloat(ax_raw, HWT9053Parser::ACCEL_SCALE);
+      this->pimpl_->data.accel_y =
+          this->Int16ToFloat(ay_raw, HWT9053Parser::ACCEL_SCALE);
+      this->pimpl_->data.accel_z =
+          this->Int16ToFloat(az_raw, HWT9053Parser::ACCEL_SCALE);
       this->pimpl_->data.accel_valid = true;
       break;
     }
 
-    case HWT9053Parser::CAN_ID_GYRO:
+    case HWT9053Parser::WIT_TYPE_GYRO:
     {
-      int16_t gx_raw, gy_raw, gz_raw;
-      if (is_wit_payload)
-      {
-        gx_raw = this->BytesToInt16(_data[3], _data[2]);
-        gy_raw = this->BytesToInt16(_data[5], _data[4]);
-        gz_raw = this->BytesToInt16(_data[7], _data[6]);
-      }
-      else
-      {
-        gx_raw = this->BytesToInt16(_data[1], _data[0]);
-        gy_raw = this->BytesToInt16(_data[3], _data[2]);
-        gz_raw = this->BytesToInt16(_data[5], _data[4]);
-      }
+      // WIT 角速度：payload[2..7] = GxL,GxH,GyL,GyH,GzL,GzH
+      int16_t gx_raw = this->BytesToInt16(_data[3], _data[2]);
+      int16_t gy_raw = this->BytesToInt16(_data[5], _data[4]);
+      int16_t gz_raw = this->BytesToInt16(_data[7], _data[6]);
 
-      this->pimpl_->data.gyro_x = this->Int16ToFloat(gx_raw, HWT9053Parser::GYRO_SCALE);
-      this->pimpl_->data.gyro_y = this->Int16ToFloat(gy_raw, HWT9053Parser::GYRO_SCALE);
-      this->pimpl_->data.gyro_z = this->Int16ToFloat(gz_raw, HWT9053Parser::GYRO_SCALE);
+      this->pimpl_->data.gyro_x =
+          this->Int16ToFloat(gx_raw, HWT9053Parser::GYRO_SCALE);
+      this->pimpl_->data.gyro_y =
+          this->Int16ToFloat(gy_raw, HWT9053Parser::GYRO_SCALE);
+      this->pimpl_->data.gyro_z =
+          this->Int16ToFloat(gz_raw, HWT9053Parser::GYRO_SCALE);
       this->pimpl_->data.gyro_valid = true;
       break;
     }
 
-    case HWT9053Parser::CAN_ID_ANGLE:
+    case HWT9053Parser::WIT_TYPE_ANGLE:
     {
-      // 支持两种常见角度封装：
-      // - 原始 HWT9053: data[0]=angle_type, data[2..5] 为 32-bit 角度 (低字节优先)
-      // - WIT 905x_CAN: payload[0]=0x55, payload[1]=0x53, payload[2]=angle_type, payload[4..7] 为 32-bit 角度
-      // 老化机制
+      // WIT 角度：payload[2] = angle_type(0x01/0x02/0x03), payload[4..7] 为
+      // 32-bit angle
       auto now = std::chrono::steady_clock::now();
-      auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - this->pimpl_->last_angle_time);
+      auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+          now - this->pimpl_->last_angle_time);
       if (duration.count() > 50)
       {
         this->pimpl_->ResetAngleBuffer();
       }
       this->pimpl_->last_angle_time = now;
 
-      if (is_wit_payload)
+      uint8_t angle_type = _data[2];
+      if (angle_type != 0x01 && angle_type != 0x02 && angle_type != 0x03)
       {
-        uint8_t angle_type = _data[2];
-        if (angle_type == 0x01 || angle_type == 0x02 || angle_type == 0x03)
-        {
-          int32_t angle_raw = this->BytesToInt32(_data[4], _data[5], _data[6], _data[7]);
-          if (angle_type == 0x01)
-          {
-            this->pimpl_->data.roll = static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
-            this->pimpl_->roll_ready = true;
-          }
-          else if (angle_type == 0x02)
-          {
-            this->pimpl_->data.pitch = static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
-            this->pimpl_->pitch_ready = true;
-          }
-          else if (angle_type == 0x03)
-          {
-            this->pimpl_->data.yaw = static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
-            this->pimpl_->yaw_ready = true;
-          }
-
-          if (this->pimpl_->IsAngleDataComplete())
-          {
-            this->pimpl_->data.angle_valid = true;
-            this->pimpl_->ResetAngleBuffer();
-          }
-        }
-        else
-        {
-          return false;
-        }
+        return false;
       }
-      else
-      {
-        uint8_t angle_type = _data[0];
-        int32_t angle_raw = this->BytesToInt32(_data[2], _data[3], _data[4], _data[5]);
-        if (angle_type == 0x01)
-        {
-          this->pimpl_->data.roll = static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
-          this->pimpl_->roll_ready = true;
-        }
-        else if (angle_type == 0x02)
-        {
-          this->pimpl_->data.pitch = static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
-          this->pimpl_->pitch_ready = true;
-        }
-        else if (angle_type == 0x03)
-        {
-          this->pimpl_->data.yaw = static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
-          this->pimpl_->yaw_ready = true;
-        }
-        else
-        {
-          return false;
-        }
 
-        if (this->pimpl_->IsAngleDataComplete())
-        {
-          this->pimpl_->data.angle_valid = true;
-          this->pimpl_->ResetAngleBuffer();
-        }
+      int32_t angle_raw =
+          this->BytesToInt32(_data[4], _data[5], _data[6], _data[7]);
+      if (angle_type == 0x01)
+      {
+        this->pimpl_->data.roll =
+            static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
+        this->pimpl_->roll_ready = true;
+      }
+      else if (angle_type == 0x02)
+      {
+        this->pimpl_->data.pitch =
+            static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
+        this->pimpl_->pitch_ready = true;
+      }
+      else if (angle_type == 0x03)
+      {
+        this->pimpl_->data.yaw =
+            static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
+        this->pimpl_->yaw_ready = true;
+      }
+
+      if (this->pimpl_->IsAngleDataComplete())
+      {
+        this->pimpl_->data.angle_valid = true;
+        this->pimpl_->ResetAngleBuffer();
       }
       break;
     }
 
-    case HWT9053Parser::CAN_ID_MAGN:
+    case HWT9053Parser::WIT_TYPE_MAGN:
     {
-      int16_t mx_raw, my_raw, mz_raw;
-      if (is_wit_payload)
-      {
-        mx_raw = this->BytesToInt16(_data[3], _data[2]);
-        my_raw = this->BytesToInt16(_data[5], _data[4]);
-        mz_raw = this->BytesToInt16(_data[7], _data[6]);
-      }
-      else
-      {
-        mx_raw = this->BytesToInt16(_data[1], _data[0]);
-        my_raw = this->BytesToInt16(_data[3], _data[2]);
-        mz_raw = this->BytesToInt16(_data[5], _data[4]);
-      }
+      // WIT 磁场：payload[2..7] = HxL,HxH,HyL,HyH,HzL,HzH
+      int16_t mx_raw = this->BytesToInt16(_data[3], _data[2]);
+      int16_t my_raw = this->BytesToInt16(_data[5], _data[4]);
+      int16_t mz_raw = this->BytesToInt16(_data[7], _data[6]);
 
-      this->pimpl_->data.mag_x = this->Int16ToFloat(mx_raw, HWT9053Parser::MAG_SCALE);
-      this->pimpl_->data.mag_y = this->Int16ToFloat(my_raw, HWT9053Parser::MAG_SCALE);
-      this->pimpl_->data.mag_z = this->Int16ToFloat(mz_raw, HWT9053Parser::MAG_SCALE);
+      this->pimpl_->data.mag_x =
+          this->Int16ToFloat(mx_raw, HWT9053Parser::MAG_SCALE);
+      this->pimpl_->data.mag_y =
+          this->Int16ToFloat(my_raw, HWT9053Parser::MAG_SCALE);
+      this->pimpl_->data.mag_z =
+          this->Int16ToFloat(mz_raw, HWT9053Parser::MAG_SCALE);
       this->pimpl_->data.mag_valid = true;
       break;
     }
 
     default:
-      // 不支持的消息类型（既不是 HWT9053 的 CAN ID，也不是 Wit payload 的 type）
       return false;
   }
 

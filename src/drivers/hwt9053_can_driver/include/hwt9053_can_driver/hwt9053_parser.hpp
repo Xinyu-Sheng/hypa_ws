@@ -57,12 +57,15 @@ struct HWT9053Data
 class HWT9053Parser
 {
   public:
-  // HWT9053 CAN ID 定义（按 High_Precision_Sensor_CAN_Protocol.txt）
-  static constexpr uint32_t CAN_ID_TIME = 0x50;   // 时间数据
-  static constexpr uint32_t CAN_ID_ACCEL = 0x51;  // 加速度数据
-  static constexpr uint32_t CAN_ID_GYRO = 0x52;   // 角速度数据
-  static constexpr uint32_t CAN_ID_ANGLE = 0x53;  // 角度数据
-  static constexpr uint32_t CAN_ID_MAGN = 0x54;   // 磁场数据
+  // WIT/TYPE 定义（按 High_Precision_Sensor_CAN_Protocol.txt）
+  // 注意：驱动已修正为严格解析 WIT 封装（payload[0] == 0x55，payload[1] 为
+  // TYPE）。常量名使用 `WIT_TYPE_*` 更能反映它们表示的是 WIT 帧中的 TYPE 字段，
+  // 而不是 CAN ID。
+  static constexpr uint8_t WIT_TYPE_TIME = 0x50;   // 时间数据 (TYPE)
+  static constexpr uint8_t WIT_TYPE_ACCEL = 0x51;  // 加速度数据 (TYPE)
+  static constexpr uint8_t WIT_TYPE_GYRO = 0x52;   // 角速度数据 (TYPE)
+  static constexpr uint8_t WIT_TYPE_ANGLE = 0x53;  // 角度数据 (TYPE)
+  static constexpr uint8_t WIT_TYPE_MAGN = 0x54;   // 磁场数据 (TYPE)
 
   // 解析权重常量 (物理量转换系数)
   static constexpr float ACCEL_SCALE =
@@ -77,14 +80,13 @@ class HWT9053Parser
   ~HWT9053Parser();
 
   /**
-   * @brief 解析 CAN 帧数据
-   * @param _can_id CAN ID
-   * @param _data CAN 数据字节数组
+   * @brief 解析 WIT 封装的 CAN 帧数据（要求 payload[0] == 0x55，payload[1] 为
+   * TYPE）
+   * @param _data CAN 数据字节数组（通常长度为 8）
    * @param _dlc 数据长度
-   * @return 解析成功返回 true，失败返回 false（如 DLC 无效）
+   * @return 解析成功返回 true，失败返回 false（如 DLC 无效或 TYPE 不支持）
    */
-  bool ParseCANFrame(uint32_t _can_id, const std::array<uint8_t, 8> &_data,
-                     uint8_t _dlc);
+  bool ParseCANFrame(const std::array<uint8_t, 8> &_data, uint8_t _dlc);
 
   /**
    * @brief 将解析的数据转换为 IMU 消息
