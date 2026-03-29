@@ -94,155 +94,205 @@ bool HWT9053Parser::ParseCANFrame(uint32_t _can_id,
   {
     return false;  // DLC 无效，解析失败
   }
-
   std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);
 
-  switch (_can_id)
+  // 支持两种封装：
+  // 1) 传统 HWT9053 CAN（CAN ID 表示类型，数据直接在 payload[0..7]）
+  // 2) WIT SDK 风格：payload[0] == 0x55，payload[1] 为类型（WIT_*），有效数据位于 payload[2..7]
+  bool is_wit_payload = (_data[0] == 0x55);
+  uint32_t msg_type = _can_id;
+
+  if (is_wit_payload)
+  {
+    msg_type = static_cast<uint32_t>(_data[1]);
+  }
+
+  switch (msg_type)
   {
     case HWT9053Parser::CAN_ID_TIME:
     {
-      // 时间输出格式 (按 High_Precision_Sensor_CAN_Protocol.txt):
-      // _data = [YY, MM, DD, HH, MN, SS, msl, msh]
-      this->pimpl_->data.year = _data[0];
-      this->pimpl_->data.month = _data[1];
-      this->pimpl_->data.day = _data[2];
-      this->pimpl_->data.hour = _data[3];
-      this->pimpl_->data.minute = _data[4];
-      this->pimpl_->data.second = _data[5];
-
-      // 提取毫秒 (ms)
-      this->pimpl_->data.millisecond = this->BytesToUInt16(_data[7], _data[6]);
+      if (is_wit_payload)
+      {
+        // WIT 常见封装：payload[2..7] 存放时间或寄存器压缩值
+        this->pimpl_->data.year = _data[2];
+        this->pimpl_->data.month = _data[3];
+        this->pimpl_->data.day = _data[4];
+        this->pimpl_->data.hour = _data[5];
+        this->pimpl_->data.minute = _data[6];
+        this->pimpl_->data.second = _data[7];
+        this->pimpl_->data.millisecond = 0;
+      }
+      else
+      {
+        // 原始 HWT9053 时间格式: [YY, MM, DD, HH, MN, SS, msl, msh]
+        this->pimpl_->data.year = _data[0];
+        this->pimpl_->data.month = _data[1];
+        this->pimpl_->data.day = _data[2];
+        this->pimpl_->data.hour = _data[3];
+        this->pimpl_->data.minute = _data[4];
+        this->pimpl_->data.second = _data[5];
+        this->pimpl_->data.millisecond = this->BytesToUInt16(_data[7], _data[6]);
+      }
       break;
     }
 
     case HWT9053Parser::CAN_ID_ACCEL:
     {
-      // 加速度数据格式: [AxL, AxH, AyL, AyH, AzL, AzH, ?, ?]
+      int16_t ax_raw, ay_raw, az_raw;
+      if (is_wit_payload)
+      {
+        // WIT CAN: data in payload[2..7] as three 16-bit values (low,high order)
+        ax_raw = this->BytesToInt16(_data[3], _data[2]);
+        ay_raw = this->BytesToInt16(_data[5], _data[4]);
+        az_raw = this->BytesToInt16(_data[7], _data[6]);
+      }
+      else
+      {
+        // 原始 HWT9053: [AxL, AxH, AyL, AyH, AzL, AzH, ?, ?]
+        ax_raw = this->BytesToInt16(_data[1], _data[0]);
+        ay_raw = this->BytesToInt16(_data[3], _data[2]);
+        az_raw = this->BytesToInt16(_data[5], _data[4]);
+      }
 
-      // 低字节在 Data[0], 高字节在 Data[1]（按 CAN 协议）
-      int16_t ax_raw = this->BytesToInt16(_data[1], _data[0]);
-      int16_t ay_raw = this->BytesToInt16(_data[3], _data[2]);
-      int16_t az_raw = this->BytesToInt16(_data[5], _data[4]);
-
-      this->pimpl_->data.accel_x =
-          this->Int16ToFloat(ax_raw, HWT9053Parser::ACCEL_SCALE);
-      this->pimpl_->data.accel_y =
-          this->Int16ToFloat(ay_raw, HWT9053Parser::ACCEL_SCALE);
-      this->pimpl_->data.accel_z =
-          this->Int16ToFloat(az_raw, HWT9053Parser::ACCEL_SCALE);
+      this->pimpl_->data.accel_x = this->Int16ToFloat(ax_raw, HWT9053Parser::ACCEL_SCALE);
+      this->pimpl_->data.accel_y = this->Int16ToFloat(ay_raw, HWT9053Parser::ACCEL_SCALE);
+      this->pimpl_->data.accel_z = this->Int16ToFloat(az_raw, HWT9053Parser::ACCEL_SCALE);
       this->pimpl_->data.accel_valid = true;
       break;
     }
 
     case HWT9053Parser::CAN_ID_GYRO:
     {
-      // 角速度数据格式: [GxL, GxH, GyL, GyH, GzL, GzH, ?, ?]
-      // 量程: ±2000°/s, 分辨率: 1/16.4 °/s = 0.061 °/s = 0.00106 rad/s
+      int16_t gx_raw, gy_raw, gz_raw;
+      if (is_wit_payload)
+      {
+        gx_raw = this->BytesToInt16(_data[3], _data[2]);
+        gy_raw = this->BytesToInt16(_data[5], _data[4]);
+        gz_raw = this->BytesToInt16(_data[7], _data[6]);
+      }
+      else
+      {
+        gx_raw = this->BytesToInt16(_data[1], _data[0]);
+        gy_raw = this->BytesToInt16(_data[3], _data[2]);
+        gz_raw = this->BytesToInt16(_data[5], _data[4]);
+      }
 
-      // 低字节在 Data[0], 高字节在 Data[1]（按 CAN 协议）
-      int16_t gx_raw = this->BytesToInt16(_data[1], _data[0]);
-      int16_t gy_raw = this->BytesToInt16(_data[3], _data[2]);
-      int16_t gz_raw = this->BytesToInt16(_data[5], _data[4]);
-
-      this->pimpl_->data.gyro_x =
-          this->Int16ToFloat(gx_raw, HWT9053Parser::GYRO_SCALE);
-      this->pimpl_->data.gyro_y =
-          this->Int16ToFloat(gy_raw, HWT9053Parser::GYRO_SCALE);
-      this->pimpl_->data.gyro_z =
-          this->Int16ToFloat(gz_raw, HWT9053Parser::GYRO_SCALE);
+      this->pimpl_->data.gyro_x = this->Int16ToFloat(gx_raw, HWT9053Parser::GYRO_SCALE);
+      this->pimpl_->data.gyro_y = this->Int16ToFloat(gy_raw, HWT9053Parser::GYRO_SCALE);
+      this->pimpl_->data.gyro_z = this->Int16ToFloat(gz_raw, HWT9053Parser::GYRO_SCALE);
       this->pimpl_->data.gyro_valid = true;
       break;
     }
 
     case HWT9053Parser::CAN_ID_ANGLE:
     {
-      // 欧拉角数据格式（协议: High_Precision_Sensor_CAN_Protocol.txt）
-      // CAN 0x53 帧使用第1字节作为数据指示符:
-      //   0x01: Roll 数据 - _data = [0x01, 0x00, LRollL, LRollH, HRollL,
-      //   HRollH, ?, ?] 0x02: Pitch 数据 - _data = [0x02, 0x00, LPitchL,
-      //   LPitchH, HPitchL, HPitchH, ?, ?] 0x03: Yaw 数据 - _data = [0x03,
-      //   0x00, LYawL, LYawH, HYawL, HYawH, ?, ?]
-      // 计算公式: 角度 = ((byte5<<24) | (byte4<<16) | (byte3<<8) | byte2) /
-      // 1000.0 量程: ±180° (主要用于 9轴算法)
-
-      // 老化机制：如果上一帧角度数据太旧（超过50ms），则重置缓冲区
+      // 支持两种常见角度封装：
+      // - 原始 HWT9053: data[0]=angle_type, data[2..5] 为 32-bit 角度 (低字节优先)
+      // - WIT 905x_CAN: payload[0]=0x55, payload[1]=0x53, payload[2]=angle_type, payload[4..7] 为 32-bit 角度
+      // 老化机制
       auto now = std::chrono::steady_clock::now();
-      auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-          now - this->pimpl_->last_angle_time);
+      auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - this->pimpl_->last_angle_time);
       if (duration.count() > 50)
       {
         this->pimpl_->ResetAngleBuffer();
       }
       this->pimpl_->last_angle_time = now;
 
-      uint8_t angle_type = _data[0];  // 获取数据指示符 (0x01/0x02/0x03)
+      if (is_wit_payload)
+      {
+        uint8_t angle_type = _data[2];
+        if (angle_type == 0x01 || angle_type == 0x02 || angle_type == 0x03)
+        {
+          int32_t angle_raw = this->BytesToInt32(_data[4], _data[5], _data[6], _data[7]);
+          if (angle_type == 0x01)
+          {
+            this->pimpl_->data.roll = static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
+            this->pimpl_->roll_ready = true;
+          }
+          else if (angle_type == 0x02)
+          {
+            this->pimpl_->data.pitch = static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
+            this->pimpl_->pitch_ready = true;
+          }
+          else if (angle_type == 0x03)
+          {
+            this->pimpl_->data.yaw = static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
+            this->pimpl_->yaw_ready = true;
+          }
 
-      // 有效数据从 _data[2] 开始，_data[1] 是保留字节
-      int32_t angle_raw =
-          this->BytesToInt32(_data[2], _data[3], _data[4], _data[5]);
-
-      if (angle_type == 0x01)
-      {
-        // Roll 数据
-        this->pimpl_->data.roll =
-            static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
-        this->pimpl_->roll_ready = true;
-      }
-      else if (angle_type == 0x02)
-      {
-        // Pitch 数据
-        this->pimpl_->data.pitch =
-            static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
-        this->pimpl_->pitch_ready = true;
-      }
-      else if (angle_type == 0x03)
-      {
-        // Yaw 数据
-        this->pimpl_->data.yaw =
-            static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
-        this->pimpl_->yaw_ready = true;
+          if (this->pimpl_->IsAngleDataComplete())
+          {
+            this->pimpl_->data.angle_valid = true;
+            this->pimpl_->ResetAngleBuffer();
+          }
+        }
+        else
+        {
+          return false;
+        }
       }
       else
       {
-        // 无效的角度类型，忽略此帧
-        return false;
-      }
+        uint8_t angle_type = _data[0];
+        int32_t angle_raw = this->BytesToInt32(_data[2], _data[3], _data[4], _data[5]);
+        if (angle_type == 0x01)
+        {
+          this->pimpl_->data.roll = static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
+          this->pimpl_->roll_ready = true;
+        }
+        else if (angle_type == 0x02)
+        {
+          this->pimpl_->data.pitch = static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
+          this->pimpl_->pitch_ready = true;
+        }
+        else if (angle_type == 0x03)
+        {
+          this->pimpl_->data.yaw = static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
+          this->pimpl_->yaw_ready = true;
+        }
+        else
+        {
+          return false;
+        }
 
-      // 只有在三个角度都准备好时，才标记数据有效并重置缓冲
-      if (this->pimpl_->IsAngleDataComplete())
-      {
-        this->pimpl_->data.angle_valid = true;
-        this->pimpl_->ResetAngleBuffer();
+        if (this->pimpl_->IsAngleDataComplete())
+        {
+          this->pimpl_->data.angle_valid = true;
+          this->pimpl_->ResetAngleBuffer();
+        }
       }
       break;
     }
 
     case HWT9053Parser::CAN_ID_MAGN:
     {
-      // 磁场数据格式: [MxL, MxH, MyL, MyH, MzL, MzH, ?, ?]
-      // 按产品规格分辨率 13nT/LSB 解析，内部统一使用 SI 单位 Tesla。
+      int16_t mx_raw, my_raw, mz_raw;
+      if (is_wit_payload)
+      {
+        mx_raw = this->BytesToInt16(_data[3], _data[2]);
+        my_raw = this->BytesToInt16(_data[5], _data[4]);
+        mz_raw = this->BytesToInt16(_data[7], _data[6]);
+      }
+      else
+      {
+        mx_raw = this->BytesToInt16(_data[1], _data[0]);
+        my_raw = this->BytesToInt16(_data[3], _data[2]);
+        mz_raw = this->BytesToInt16(_data[5], _data[4]);
+      }
 
-      // 低字节在 Data[0], 高字节在 Data[1]（按 CAN 协议）
-      int16_t mx_raw = this->BytesToInt16(_data[1], _data[0]);
-      int16_t my_raw = this->BytesToInt16(_data[3], _data[2]);
-      int16_t mz_raw = this->BytesToInt16(_data[5], _data[4]);
-
-      this->pimpl_->data.mag_x =
-          this->Int16ToFloat(mx_raw, HWT9053Parser::MAG_SCALE);
-      this->pimpl_->data.mag_y =
-          this->Int16ToFloat(my_raw, HWT9053Parser::MAG_SCALE);
-      this->pimpl_->data.mag_z =
-          this->Int16ToFloat(mz_raw, HWT9053Parser::MAG_SCALE);
+      this->pimpl_->data.mag_x = this->Int16ToFloat(mx_raw, HWT9053Parser::MAG_SCALE);
+      this->pimpl_->data.mag_y = this->Int16ToFloat(my_raw, HWT9053Parser::MAG_SCALE);
+      this->pimpl_->data.mag_z = this->Int16ToFloat(mz_raw, HWT9053Parser::MAG_SCALE);
       this->pimpl_->data.mag_valid = true;
       break;
     }
 
     default:
-      // 忽略不支持的 CAN ID
+      // 不支持的消息类型（既不是 HWT9053 的 CAN ID，也不是 Wit payload 的 type）
       return false;
   }
 
-  return true;  // 解析成功
+  return true;
 }
 
 sensor_msgs::msg::Imu HWT9053Parser::ToIMUMessage() const
