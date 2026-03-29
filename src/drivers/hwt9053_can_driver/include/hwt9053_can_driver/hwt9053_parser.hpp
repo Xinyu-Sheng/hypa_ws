@@ -126,6 +126,13 @@ class HWT9053Parser
   void SetAccelCovariance(double _covariance);
 
   /**
+   * @brief 设置数据过期超时（毫秒）。当某类数据超过此阈值未更新时，相关 *_valid
+   * 会被视为 false。
+   * @param _ms 超时时间，单位毫秒
+   */
+  void SetDataTimeoutMs(uint32_t _ms);
+
+  /**
    * @brief 设置角速度协方差
    * @param _covariance 协方差值 (rad/s)^2
    */

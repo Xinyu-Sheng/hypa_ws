@@ -77,8 +77,8 @@ HWT9053CANDriverNode::Impl::Impl()
       can_interface_("can0"),
       imu_frame_id_("imu_link"),
       log_debug_(false),
-      accel_covariance_(3.4e-5),
-      gyro_covariance_(5.8e-8)
+      accel_covariance_(1.18e-9),
+      gyro_covariance_(2.39e-7)
 {
 }
 
@@ -106,9 +106,15 @@ HWT9053CANDriverNode::Impl::on_configure(HWT9053CANDriverNode *_node,
       _node->get_parameter("accel_covariance").as_double();
   this->gyro_covariance_ = _node->get_parameter("gyro_covariance").as_double();
 
+  // 数据过期阈值
+  uint32_t data_timeout_ms =
+      static_cast<uint32_t>(_node->get_parameter("data_timeout_ms").as_int());
+
   // 设置协方差到解析器
   this->parser_->SetAccelCovariance(this->accel_covariance_);
   this->parser_->SetGyroCovariance(this->gyro_covariance_);
+  // 设置数据过期阈值到解析器
+  this->parser_->SetDataTimeoutMs(data_timeout_ms);
 
   this->imu_topic_name_ = _node->get_parameter("imu_topic_name").as_string();
   this->can_bus_topic_ = _node->get_parameter("can_bus_topic").as_string();
@@ -130,6 +136,7 @@ HWT9053CANDriverNode::Impl::on_configure(HWT9053CANDriverNode *_node,
               this->accel_covariance_);
   RCLCPP_INFO(_node->get_logger(), "  gyro_covariance: %.6e",
               this->gyro_covariance_);
+  RCLCPP_INFO(_node->get_logger(), "  data_timeout_ms: %u", data_timeout_ms);
 
   RCLCPP_INFO(_node->get_logger(), "HWT9053 CAN 驱动节点配置完成");
 
@@ -272,7 +279,7 @@ void HWT9053CANDriverNode::Impl::CanFrameCallback(
     return;
   }
   // 先把 CAN 数据拷贝到固定数组
-  std::array<uint8_t, 8> can_data;
+  std::array<uint8_t, 8> can_data{};
   for (size_t i = 0; i < 8 && i < _msg->data.size(); ++i)
   {
     can_data[i] = _msg->data[i];
@@ -389,8 +396,12 @@ HWT9053CANDriverNode::HWT9053CANDriverNode(const rclcpp::NodeOptions &_options)
   this->declare_parameter("can_bus_topic",
                           rclcpp::ParameterValue("from_can_bus"));
   this->declare_parameter("log_debug", rclcpp::ParameterValue(false));
-  this->declare_parameter("accel_covariance", rclcpp::ParameterValue(3.4e-5));
-  this->declare_parameter("gyro_covariance", rclcpp::ParameterValue(5.8e-8));
+  // 参数语义：`*_covariance` 为方差 (variance)，单位分别为 (m/s^2)^2 和
+  // (rad/s)^2
+  this->declare_parameter("accel_covariance", rclcpp::ParameterValue(1.18e-9));
+  this->declare_parameter("gyro_covariance", rclcpp::ParameterValue(2.39e-7));
+  // 数据过期阈值（毫秒）
+  this->declare_parameter("data_timeout_ms", rclcpp::ParameterValue(500));
 }
 
 HWT9053CANDriverNode::~HWT9053CANDriverNode() = default;

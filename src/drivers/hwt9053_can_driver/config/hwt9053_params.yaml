@@ -27,6 +27,9 @@
     # 方差 = (4.8869e-4)^2 ≈ 2.39e-7
     gyro_covariance: 2.39e-7
 
+    # 数据过期阈值（毫秒）：当某类数据在此时间内未更新，则对应 *_valid 将被视为 false
+    data_timeout_ms: 500
+
     # 机器人名称和是否使用仿真（需要上层launch文件或CLI指定）
     # robot_name: "robot"
     # use_sim_time: false
