@@ -1,13 +1,13 @@
-#include "zmc432_driver/motion_topic_node.hpp"
+#include "zmc432_driver/motion_topic_handler.hpp"
 
 namespace zmc432_driver
 {
 
 // Private implementation class
-class MotionTopicNode::MotionTopicNodePrivate
+class MotionTopicHandler::MotionTopicHandlerPrivate
 {
   public:
-  MotionTopicNodePrivate(
+  MotionTopicHandlerPrivate(
       const rclcpp::node_interfaces::NodeBaseInterface::SharedPtr &_node_base,
       const rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr
           &_node_topics,
@@ -33,14 +33,15 @@ class MotionTopicNode::MotionTopicNodePrivate
   {
   }
 
-  ~MotionTopicNodePrivate()
+  ~MotionTopicHandlerPrivate()
   {
     shutdown();
   }
 
   // 禁止拷贝
-  MotionTopicNodePrivate(const MotionTopicNodePrivate &) = delete;
-  MotionTopicNodePrivate &operator=(const MotionTopicNodePrivate &) = delete;
+  MotionTopicHandlerPrivate(const MotionTopicHandlerPrivate &) = delete;
+  MotionTopicHandlerPrivate &operator=(const MotionTopicHandlerPrivate &) =
+      delete;
 
   rclcpp::node_interfaces::NodeBaseInterface::SharedPtr node_base;
   rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr node_topics;
@@ -75,7 +76,7 @@ class MotionTopicNode::MotionTopicNodePrivate
 };
 
 // Public interface implementations
-MotionTopicNode::MotionTopicNode(
+MotionTopicHandler::MotionTopicHandler(
     const rclcpp::node_interfaces::NodeBaseInterface::SharedPtr &_node_base,
     const rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr &_node_topics,
     const rclcpp::node_interfaces::NodeLoggingInterface::SharedPtr
@@ -86,29 +87,29 @@ MotionTopicNode::MotionTopicNode(
     const std::shared_ptr<MotionController> &_controller,
     const std::string &_command_topic, const std::string &_status_topic,
     int _status_publish_rate_ms)
-    : pimpl_(std::make_unique<MotionTopicNodePrivate>(
+    : pimpl_(std::make_unique<MotionTopicHandlerPrivate>(
           _node_base, _node_topics, _node_logging, _node_timers, _node_params,
           _controller, _command_topic, _status_topic, _status_publish_rate_ms))
 {
 }
 
-MotionTopicNode::~MotionTopicNode()
+MotionTopicHandler::~MotionTopicHandler()
 {
   shutdown();
 }
 
-bool MotionTopicNode::initialize()
+bool MotionTopicHandler::initialize()
 {
   return pimpl_->initialize();
 }
 
-void MotionTopicNode::shutdown()
+void MotionTopicHandler::shutdown()
 {
   pimpl_->shutdown();
 }
 
-// MotionTopicNodePrivate method implementations
-bool MotionTopicNode::MotionTopicNodePrivate::initialize()
+// MotionTopicHandlerPrivate method implementations
+bool MotionTopicHandler::MotionTopicHandlerPrivate::initialize()
 {
   if (this->running)
   {
@@ -160,13 +161,13 @@ bool MotionTopicNode::MotionTopicNodePrivate::initialize()
 
   this->running = true;
   RCLCPP_INFO(this->node_logging->get_logger(),
-              "Motion topic node initialized (command_topic='%s', "
+              "Motion topic handler initialized (command_topic='%s', "
               "status_topic='%s')",
               this->command_topic.c_str(), this->status_topic.c_str());
   return true;
 }
 
-void MotionTopicNode::MotionTopicNodePrivate::shutdown()
+void MotionTopicHandler::MotionTopicHandlerPrivate::shutdown()
 {
   if (this->running)
   {
@@ -178,11 +179,12 @@ void MotionTopicNode::MotionTopicNodePrivate::shutdown()
     this->status_timer.reset();
     this->command_subscription.reset();
     this->status_publisher.reset();
-    RCLCPP_INFO(this->node_logging->get_logger(), "Motion topic node shutdown");
+    RCLCPP_INFO(this->node_logging->get_logger(),
+                "Motion topic handler shutdown");
   }
 }
 
-void MotionTopicNode::MotionTopicNodePrivate::handle_command(
+void MotionTopicHandler::MotionTopicHandlerPrivate::handle_command(
     const hypa_msgs::msg::MotionCommand::ConstSharedPtr _msg)
 {
   if (!this->running)
@@ -227,7 +229,7 @@ void MotionTopicNode::MotionTopicNodePrivate::handle_command(
               "Motion command queued successfully");
 }
 
-void MotionTopicNode::MotionTopicNodePrivate::publish_status()
+void MotionTopicHandler::MotionTopicHandlerPrivate::publish_status()
 {
   if (!this->running)
   {
@@ -241,7 +243,7 @@ void MotionTopicNode::MotionTopicNodePrivate::publish_status()
 }
 
 MotionController::MotionCommand
-MotionTopicNode::MotionTopicNodePrivate::convert_msg_to_command(
+MotionTopicHandler::MotionTopicHandlerPrivate::convert_msg_to_command(
     const hypa_msgs::msg::MotionCommand::ConstSharedPtr _msg) const
 {
   MotionController::MotionCommand cmd;
@@ -262,7 +264,7 @@ MotionTopicNode::MotionTopicNodePrivate::convert_msg_to_command(
 }
 
 hypa_msgs::msg::MotionStatus
-MotionTopicNode::MotionTopicNodePrivate::convert_status_to_msg(
+MotionTopicHandler::MotionTopicHandlerPrivate::convert_status_to_msg(
     const MotionController::ControllerStatus &_status) const
 {
   hypa_msgs::msg::MotionStatus msg;

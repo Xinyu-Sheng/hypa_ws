@@ -58,7 +58,7 @@ ament_target_dependencies(${PROJECT_NAME}
 # Executable
 add_executable(motion_node
   src/motion_node.cpp
-  src/motion_topic_node.cpp
+  src/motion_topic_handler.cpp
 )
 
 target_link_libraries(motion_node ${PROJECT_NAME})

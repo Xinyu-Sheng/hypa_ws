@@ -1,5 +1,5 @@
-#ifndef MOTION_TOPIC_NODE_HPP
-#define MOTION_TOPIC_NODE_HPP
+#ifndef MOTION_TOPIC_HANDLER_HPP
+#define MOTION_TOPIC_HANDLER_HPP
 
 #include <memory>
 #include <mutex>
@@ -19,15 +19,15 @@ namespace zmc432_driver
 {
 
 /**
- * @brief ROS 2 Topic 节点，用于运动命令和状态的发布/订阅
+ * @brief ROS 2 Topic 处理器，用于运动命令和状态的发布/订阅
  *
  * 订阅 MotionCommand 主题接收运动指令，发布 MotionStatus 主题反馈运动状态。
  * 使用 PIMPL 模式隐藏实现细节。
  */
-class MotionTopicNode
+class MotionTopicHandler
 {
   public:
-  MotionTopicNode(
+  MotionTopicHandler(
       const rclcpp::node_interfaces::NodeBaseInterface::SharedPtr &_node_base,
       const rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr
           &_node_topics,
@@ -42,20 +42,20 @@ class MotionTopicNode
       const std::string &_status_topic = "motion_status",
       int _status_publish_rate_ms = 50);
 
-  ~MotionTopicNode();
+  ~MotionTopicHandler();
 
   // 禁止拷贝
-  MotionTopicNode(const MotionTopicNode &) = delete;
-  MotionTopicNode &operator=(const MotionTopicNode &) = delete;
+  MotionTopicHandler(const MotionTopicHandler &) = delete;
+  MotionTopicHandler &operator=(const MotionTopicHandler &) = delete;
 
   bool initialize();
   void shutdown();
 
   private:
-  class MotionTopicNodePrivate;
-  std::unique_ptr<MotionTopicNodePrivate> pimpl_;
+  class MotionTopicHandlerPrivate;
+  std::unique_ptr<MotionTopicHandlerPrivate> pimpl_;
 };
 
 }  // namespace zmc432_driver
 
-#endif  // MOTION_TOPIC_NODE_HPP
+#endif  // MOTION_TOPIC_HANDLER_HPP

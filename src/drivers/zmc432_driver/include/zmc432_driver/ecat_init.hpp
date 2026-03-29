@@ -152,8 +152,8 @@ struct EcatInitInfo
     out.LocalAxisNum = local_axis_num;
     out.DriveAxisStart = drive_axis_start;
     out.DriveAxisNum = drive_axis_num;
-    out.DriveIoStara = drive_io_stara;
-    out.DriveIoSpa = drive_io_spa;
+    out.DriveIoStara = drive_io_stara;  // 实际上是DriveIoStartAddress
+    out.DriveIoSpa = drive_io_spa;      // 实际上是DriveIoSpan
     for (size_t i = 0; i < drive_pdo_mode.size(); ++i)
     {
       out.DrivePdoMode[i] = drive_pdo_mode[i];

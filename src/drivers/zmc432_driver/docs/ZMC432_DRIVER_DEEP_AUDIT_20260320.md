@@ -164,7 +164,7 @@ ROS 版本确认：`ROS_DISTRO=humble`。
 - 状态：待关闭
 - 定位：
   - [src/hypa_msgs/msg/MotionCommand.msg#L26](src/hypa_msgs/msg/MotionCommand.msg#L26)
-  - [src/drivers/zmc432_driver/src/motion_topic_node.cpp#L249](src/drivers/zmc432_driver/src/motion_topic_node.cpp#L249)
+  - [src/drivers/zmc432_driver/src/motion_topic_handler.cpp#L249](src/drivers/zmc432_driver/src/motion_topic_handler.cpp#L249)
 - 问题：消息字段有定义与赋值，但执行层未使用。
 - 影响：上层对节拍等待的预期落空。
 

@@ -7,7 +7,7 @@
 
 #include "zmc432_driver/ecat_init.hpp"
 #include "zmc432_driver/motion_controller.hpp"
-#include "zmc432_driver/motion_topic_node.hpp"
+#include "zmc432_driver/motion_topic_handler.hpp"
 
 namespace zmc432_driver
 {
@@ -273,7 +273,7 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
     // ✅ topic 命名空间由 launch 层通过 PushRosNamespace
     // 处理，无需在节点中手动添加前缀
 
-    topic_node_ = std::make_unique<MotionTopicNode>(
+    topic_node_ = std::make_unique<MotionTopicHandler>(
         this->get_node_base_interface(), this->get_node_topics_interface(),
         this->get_node_logging_interface(), this->get_node_timers_interface(),
         this->get_node_parameters_interface(), controller_, command_topic_,
@@ -282,7 +282,7 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
     if (!topic_node_->initialize())
     {
       RCLCPP_FATAL(this->get_logger(),
-                   "Failed to initialize motion topic node");
+                   "Failed to initialize motion topic handler");
       controller_->stop();
       controller_.reset();
       topic_node_.reset();
@@ -291,7 +291,7 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
 
     RCLCPP_INFO(
         this->get_logger(),
-        "Motion topic node ready (command_topic='%s', status_topic='%s')",
+        "Motion topic handler ready (command_topic='%s', status_topic='%s')",
         command_topic_.c_str(), status_topic_.c_str());
     RCLCPP_INFO(this->get_logger(), "Listening for motion commands...");
 
@@ -312,7 +312,7 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
     if (topic_node_ && !topic_node_->initialize())
     {
       RCLCPP_ERROR(this->get_logger(),
-                   "Cannot activate: failed to reinitialize topic node");
+                   "Cannot activate: failed to reinitialize topic handler");
       return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::
           CallbackReturn::FAILURE;
     }
@@ -414,7 +414,7 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
   int status_publish_rate_ms_ = 50;
 
   std::shared_ptr<MotionController> controller_;
-  std::unique_ptr<MotionTopicNode> topic_node_;
+  std::unique_ptr<MotionTopicHandler> topic_node_;
 };
 
 }  // namespace zmc432_driver
