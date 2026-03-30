@@ -123,7 +123,10 @@ class ZMotionWrapper
                             // 条终点：DPOS = 50 → 第 2 条起点 = 50 → 终点 = 80
                             // → 第 3 条起点 = 80 → 终点 = 100
     std::optional<std::string> set_mpos(
-        int _axis, double _position);               // TODO：到底怎么回事？
+        int _axis,
+        double _position);  // ZMC 内部有一个 位置偏移寄存器（OFFS），SetMpos
+    // 本质就是修改这个偏移值： 控制器显示 MPOS = 伺服编码器硬件绝对位置（经
+    // UNITS 换算） + 软件偏移量。注意，掉电重启需要重新设置，无法持久化。
     std::optional<int> get_atype(int _axis) const;  // 获取轴当前类型
     std::optional<std::string> set_atype(
         int _axis,
@@ -172,8 +175,10 @@ class ZMotionWrapper
     // 彻底停止（终止运动，清空指令，不能恢复）
     // ✅ 多轴：ZAux_Direct_MoveStopGroup
     // ✅ 单轴：ZAux_Direct_MoveStop
-    // 紧急停止（所有轴同步停、最快响应、抱闸锁定）
-    // ✅ 单/多轴：ZAux_Direct_QuickStopAll	紧急情况（安全优先）
+    // 紧急停止
+    // ✅ 所有轴：ZAux_Direct_Rapidstop：
+    // 模式 0-2：按 FASTDEC 减速→清缓存→断使能
+    // 模式 3：立即中断脉冲→清缓存→断使能
 
     private:
     int64_t physical_to_pulses(int _axis, double _physical_position)
