@@ -914,8 +914,7 @@ std::optional<bool> ZMotionWrapper::ZMotionWrapperPrivate::is_axis_idle(
   return (value == -1);
 }
 
-bool ZMotionWrapper::ZMotionWrapperPrivate::is_axis_moving(
-    int _axis) const  // ✅ 修复#8：添加const
+bool ZMotionWrapper::ZMotionWrapperPrivate::is_axis_moving(int _axis) const
 {
   auto status_opt = AxisStatus(_axis);
   if (!status_opt)
@@ -998,7 +997,7 @@ std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::stop_all()
 }
 
 std::optional<std::string>
-ZMotionWrapper::ZMotionWrapperPrivate::emergency_stop()
+ZMotionWrapper::ZMotionWrapperPrivate::emergency_stop_all()
 {
   char ack[2048] = {0};
   int32_t ret = ZAux_DirectCommand(handle, "EMERGENCY STOP", ack, sizeof(ack));
