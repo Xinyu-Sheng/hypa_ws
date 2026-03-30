@@ -104,13 +104,16 @@ class ZMotionWrapper
             _spherical_params);  // 保留接口，没有用到，因为目前没有这个运动需求，最终可删除。
     std::optional<std::string> buffer_move(
         const std::vector<int> &_axes,
-        const std::vector<double> &_positions);     // TODO：根本不存在！
-    std::optional<std::string> start_continuous();  // TODO:？
-    std::optional<std::string> stop_continuous();   // TODO:？
+        const std::vector<double> &_positions);  // TODO：根本不存在！
     std::optional<std::string>
-    stop_all();  // TODO: 本意是稳定停止，但是调用ZBASIC不存在的指令
+    start_continuous();  // TODO: 由：单轴：ZAux_Direct_MoveResume替代
     std::optional<std::string>
-    emergency_stop_all();  // TODO: 本意是紧急停止，但是调用ZBASIC不存在的指令
+    stop_continuous();  // TODO:由：ZAux_Direct_MovePause
+    std::optional<std::string>
+    stop_all();  // TODO:
+                 // 本意是稳定停止，但是调用ZBASIC不存在的指令，由ZAux_Direct_MoveStop替代
+    std::optional<std::string>
+    emergency_stop_all();  // TODO: 由ZAux_Direct_QuickStopAll替代
     std::optional<std::string> set_dpos(
         int _axis,
         double _position);  // 只使用绝对运动指令以机械零点为基准，完全不依赖
@@ -132,9 +135,10 @@ class ZMotionWrapper
     std::optional<uint32_t> AxisStatus(int _axis) const;   // 获取轴状态，参考表
     std::optional<bool> is_axis_idle(
         int _axis) const;  // 运动缓冲区为空、最后一条运动指令物理执行完成
-    bool is_axis_moving(
-        int _axis) const;  // 从轴状态判断是否正在运动，参考表 "Moving" 位
-    // 运动缓冲 / 段查询
+    bool is_axis_moving(int _axis)
+        const;  // 从轴状态判断是否正在运动，参考表
+                // "Moving位"：即使缓冲区有，但是暂停了也不算moving：只有电机在运动才是
+
     std::optional<int> get_moves_buffered(
         int _axis) const;  // 已经排队、等待执行的运动指令 有多少条
     std::optional<int> get_remain_buffer(
@@ -168,6 +172,9 @@ class ZMotionWrapper
     // 彻底停止（终止运动，清空指令，不能恢复）
     // ✅ 多轴：ZAux_Direct_MoveStopGroup
     // ✅ 单轴：ZAux_Direct_MoveStop
+    // 紧急停止（所有轴同步停、最快响应、抱闸锁定）
+    // ✅ 单/多轴：ZAux_Direct_QuickStopAll	紧急情况（安全优先）
+
     private:
     int64_t physical_to_pulses(int _axis, double _physical_position)
         const;  // TODO：应该不需要，因为只需要发送单位量，不用转换

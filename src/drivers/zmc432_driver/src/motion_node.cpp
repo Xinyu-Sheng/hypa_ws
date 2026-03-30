@@ -270,7 +270,7 @@ class MotionHardwareNode : public rclcpp_lifecycle::LifecycleNode
       }
     }
 
-    // ✅ topic 命名空间由 launch 层通过 PushRosNamespace
+    // topic 命名空间由 launch 层通过 PushRosNamespace
     // 处理，无需在节点中手动添加前缀
 
     topic_node_ = std::make_unique<MotionTopicHandler>(
