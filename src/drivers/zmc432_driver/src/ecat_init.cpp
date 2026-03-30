@@ -1,3 +1,7 @@
+// #include "zmc432_driver/ecat_init.hpp"
+
+#include "zmc432_driver/ecat_init.hpp"
+
 #include <unistd.h>
 
 #include <cstdio>
@@ -6,7 +10,6 @@
 
 #include "zmc432_driver/zmcaux.h"
 #include "zmc432_driver/zmotion.h"
-#include "zmc432_driver/zmotion_ecat.h"
 
 /**************************************************************************************************
 Description:   //延时函数
