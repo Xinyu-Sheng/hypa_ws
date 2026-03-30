@@ -95,9 +95,9 @@ class ZMotionWrapper
     std::optional<std::string> set_mpos(int _axis, double _position);
     std::optional<int> get_atype(int _axis) const;
     std::optional<std::string> set_atype(int _axis, int _atype);
-    std::optional<double> Position(int _axis) const;
-    std::optional<double> Feedback(int _axis) const;
-    std::optional<double> Speed(int _axis) const;
+    std::optional<double> CommandedPosition(int _axis) const;
+    std::optional<double> MeasuredPosition(int _axis) const;
+    std::optional<double> MeasuredSpeed(int _axis) const;
     std::optional<uint32_t> AxisStatus(int _axis) const;
     std::optional<bool> is_axis_idle(int _axis) const;
     bool is_axis_moving(int _axis) const;  // ✅ 修复#8：添加const
@@ -166,9 +166,9 @@ class ZMotionWrapper
   std::optional<std::string> set_atype(int _axis, int _atype);
   std::optional<std::string> stop_all();
   std::optional<std::string> emergency_stop();
-  std::optional<double> Position(int _axis) const;
-  std::optional<double> Feedback(int _axis) const;
-  std::optional<double> Speed(int _axis) const;
+  std::optional<double> CommandedPosition(int _axis) const;
+  std::optional<double> MeasuredPosition(int _axis) const;
+  std::optional<double> MeasuredSpeed(int _axis) const;
   std::optional<uint32_t> AxisStatus(int _axis) const;
   std::optional<bool> is_axis_idle(int _axis) const;
   bool is_axis_moving(int _axis) const;  // ✅ 修复#8：添加const

@@ -31,12 +31,18 @@ class HWT9053Parser::Impl
   double accel_variance{1.18e-9};  // (m/s^2)^2
   double gyro_variance{2.39e-7};   // (rad/s)^2
 
-  // 重置缓冲状态并清除 angle_valid
-  void ResetAngleBuffer()
+  // 重置角度组帧状态，不影响已发布的角度有效标志
+  void ResetAngleAssembly()
   {
     this->roll_ready = false;
     this->pitch_ready = false;
     this->yaw_ready = false;
+  }
+
+  // 重置角度状态与超时基准
+  void ResetAngleState()
+  {
+    this->ResetAngleAssembly();
     this->data.angle_valid = false;
     this->last_angle_time = std::chrono::steady_clock::time_point{};
   }
@@ -178,7 +184,7 @@ bool HWT9053Parser::ParseCANFrame(const std::array<uint8_t, 8> &_data,
           now - this->pimpl_->last_angle_time);
       if (duration.count() > 50)
       {
-        this->pimpl_->ResetAngleBuffer();
+        this->pimpl_->ResetAngleState();
       }
       this->pimpl_->last_angle_time = now;
 
@@ -212,7 +218,7 @@ bool HWT9053Parser::ParseCANFrame(const std::array<uint8_t, 8> &_data,
       if (this->pimpl_->IsAngleDataComplete())
       {
         this->pimpl_->data.angle_valid = true;
-        this->pimpl_->ResetAngleBuffer();
+        this->pimpl_->ResetAngleAssembly();
       }
       break;
     }
@@ -393,7 +399,7 @@ void HWT9053Parser::Reset()
 {
   std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);  // 防御性设计
   this->pimpl_->data = HWT9053Data();
-  this->pimpl_->ResetAngleBuffer();
+  this->pimpl_->ResetAngleState();
 }
 
 void HWT9053Parser::SetAccelVariance(double _variance)

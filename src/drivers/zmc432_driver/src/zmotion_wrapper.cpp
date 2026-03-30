@@ -155,19 +155,19 @@ std::optional<std::string> ZMotionWrapper::set_atype(int _axis, int _atype)
   return pimpl_->set_atype(_axis, _atype);
 }
 
-std::optional<double> ZMotionWrapper::Position(int _axis) const
+std::optional<double> ZMotionWrapper::CommandedPosition(int _axis) const
 {
-  return pimpl_->Position(_axis);
+  return pimpl_->CommandedPosition(_axis);
 }
 
-std::optional<double> ZMotionWrapper::Feedback(int _axis) const
+std::optional<double> ZMotionWrapper::MeasuredPosition(int _axis) const
 {
-  return pimpl_->Feedback(_axis);
+  return pimpl_->MeasuredPosition(_axis);
 }
 
-std::optional<double> ZMotionWrapper::Speed(int _axis) const
+std::optional<double> ZMotionWrapper::MeasuredSpeed(int _axis) const
 {
-  return pimpl_->Speed(_axis);
+  return pimpl_->MeasuredSpeed(_axis);
 }
 
 std::optional<uint32_t> ZMotionWrapper::AxisStatus(int _axis) const
@@ -834,42 +834,44 @@ ZMotionWrapper::ZMotionWrapperPrivate::stop_continuous()
   return std::nullopt;
 }
 
-std::optional<double> ZMotionWrapper::ZMotionWrapperPrivate::Position(
+std::optional<double> ZMotionWrapper::ZMotionWrapperPrivate::CommandedPosition(
     int _axis) const
 {
   float dpos = 0.0f;
   int32_t ret = ZAux_Direct_GetDpos(handle, _axis, &dpos);
   if (ret != ERR_OK)
   {
-    last_error = "Get position failed for axis " + std::to_string(_axis) +
-                 " (error: " + std::to_string(ret) + ")";
+    last_error = "Get commanded position failed for axis " +
+                 std::to_string(_axis) + " (error: " + std::to_string(ret) +
+                 ")";
     return std::nullopt;
   }
   return static_cast<double>(dpos);
 }
 
-std::optional<double> ZMotionWrapper::ZMotionWrapperPrivate::Feedback(
+std::optional<double> ZMotionWrapper::ZMotionWrapperPrivate::MeasuredPosition(
     int _axis) const
 {
   float mpos = 0.0f;
   int32_t ret = ZAux_Direct_GetMpos(handle, _axis, &mpos);
   if (ret != ERR_OK)
   {
-    last_error = "Get feedback failed for axis " + std::to_string(_axis) +
-                 " (error: " + std::to_string(ret) + ")";
+    last_error = "Get measured position failed for axis " +
+                 std::to_string(_axis) + " (error: " + std::to_string(ret) +
+                 ")";
     return std::nullopt;
   }
   return static_cast<double>(mpos);
 }
 
-std::optional<double> ZMotionWrapper::ZMotionWrapperPrivate::Speed(
+std::optional<double> ZMotionWrapper::ZMotionWrapperPrivate::MeasuredSpeed(
     int _axis) const
 {
   float mspeed = 0.0f;
   int32_t ret = ZAux_Direct_GetMspeed(handle, _axis, &mspeed);
   if (ret != ERR_OK)
   {
-    last_error = "Get speed failed for axis " + std::to_string(_axis) +
+    last_error = "Get measured speed failed for axis " + std::to_string(_axis) +
                  " (error: " + std::to_string(ret) + ")";
     return std::nullopt;
   }

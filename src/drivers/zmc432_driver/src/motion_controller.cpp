@@ -274,7 +274,7 @@ std::optional<double> MotionController::get_current_position(int _axis) const
   {
     return std::nullopt;
   }
-  return this->pimpl_->zmotion->Feedback(_axis);
+  return this->pimpl_->zmotion->MeasuredPosition(_axis);
 }
 
 bool MotionController::start()
@@ -422,10 +422,11 @@ MotionController::ControllerStatus MotionController::CurrentStatus() const
     if (this->pimpl_->zmotion)
     {
       axis_status.position =
-          this->pimpl_->zmotion->Position(axis).value_or(0.0);
+          this->pimpl_->zmotion->CommandedPosition(axis).value_or(0.0);
       axis_status.feedback =
-          this->pimpl_->zmotion->Feedback(axis).value_or(0.0);
-      axis_status.speed = this->pimpl_->zmotion->Speed(axis).value_or(0.0);
+          this->pimpl_->zmotion->MeasuredPosition(axis).value_or(0.0);
+      axis_status.speed =
+          this->pimpl_->zmotion->MeasuredSpeed(axis).value_or(0.0);
       axis_status.type = this->pimpl_->zmotion->get_atype(axis).value_or(0);
       auto status_opt = this->pimpl_->zmotion->AxisStatus(axis);
       if (status_opt)
@@ -958,7 +959,7 @@ double MotionController::MotionControllerPrivate::calculate_progress(
     double start_position = 0.0;
     if (zmotion)
     {
-      auto start_opt = zmotion->Position(axis);
+      auto start_opt = zmotion->CommandedPosition(axis);
       if (start_opt)
       {
         // 实际上我们需要知道命令开始时的位置，这里先用当前位置
@@ -980,7 +981,7 @@ double MotionController::MotionControllerPrivate::calculate_progress(
     double current = 0.0;
     if (zmotion)
     {
-      auto pos_opt = zmotion->Position(axis);
+      auto pos_opt = zmotion->CommandedPosition(axis);
       if (pos_opt)
       {
         current = pos_opt.value();
@@ -991,7 +992,7 @@ double MotionController::MotionControllerPrivate::calculate_progress(
     double start_position = 0.0;  // 理想情况：应该保存_cmd开始时的位置
     if (zmotion)
     {
-      auto start_opt = zmotion->Position(axis);
+      auto start_opt = zmotion->CommandedPosition(axis);
       if (start_opt)
       {
         start_position = start_opt.value();
@@ -1081,13 +1082,13 @@ bool MotionController::MotionControllerPrivate::is_motion_complete(
     double target = _cmd.positions[i];
 
     // 获取反馈位置和反馈速度
-    auto feedback_opt = zmotion->Feedback(axis);
+    auto feedback_opt = zmotion->MeasuredPosition(axis);
     if (!feedback_opt)
     {
       return false;
     }
 
-    auto speed_opt = zmotion->Speed(axis);
+    auto speed_opt = zmotion->MeasuredSpeed(axis);
     if (!speed_opt)
     {
       return false;
