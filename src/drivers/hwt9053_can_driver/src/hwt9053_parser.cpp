@@ -250,13 +250,12 @@ bool HWT9053Parser::ParseCANFrame(const std::array<uint8_t, 8> &_data,
 
 sensor_msgs::msg::Imu HWT9053Parser::ToIMUMessage() const
 {
-  // 仅在临界区内复制需要的数据，缩小锁范围
-  HWT9053Data data_snapshot;
+  // 先获取带超时裁剪的数据快照，避免发布过期角度/磁场状态
+  HWT9053Data data_snapshot = this->GetData();
   double accel_variance = 0.0;
   double gyro_variance = 0.0;
   {
     std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);  // 防御性设计
-    data_snapshot = this->pimpl_->data;
     accel_variance = this->pimpl_->accel_variance;
     gyro_variance = this->pimpl_->gyro_variance;
   }
