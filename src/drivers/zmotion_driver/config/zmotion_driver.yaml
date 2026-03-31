@@ -1,9 +1,7 @@
 zmotion_driver:
   ros__parameters:
     # 节点通用参数
-    namespace: ""
     use_sim_time: false
-    robot_name: "hypa"
 
     controller:
       ip: "192.168.0.11"

@@ -23,11 +23,14 @@ class imuDriverNode(Node):
         super().__init__("imuDriverNode")
 
         # 参数
+        self.declare_parameter("namespace", "")
+        self.declare_parameter("use_sim_time", False)
         self.declare_parameter("port", "/dev/imu_usb")
         self.declare_parameter("baudrate", 230400)
         self.declare_parameter("protocol", "RS485_HIGH")
         self.declare_parameter("modbusID", 0x50)
 
+        self.namespace_param = self.get_parameter("namespace").value
         self.port = self.get_parameter("port").value
         self.baudrate = self.get_parameter("baudrate").value
         self.modbusID = self.get_parameter("modbusID").value
@@ -44,6 +47,7 @@ class imuDriverNode(Node):
         )
 
         self.get_logger().info(f"Serial opened: {self.port} @ {self.baudrate}")
+        self.get_logger().info(f"Configured with namespace={self.namespace_param}")
 
         self.modbusAddrList = [0x34, 0x37, 0x3A, 0x3D]
         self.modbusIndex = 0

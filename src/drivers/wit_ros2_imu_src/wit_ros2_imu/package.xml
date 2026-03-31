@@ -3,11 +3,18 @@
 <package format="3">
   <name>wit_ros2_imu</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="bgzerol@todo.todo">bgzerol</maintainer>
+  <description>ROS 2 driver for WIT IMU devices</description>
+  <maintainer email="sheng.xin.yu@faxmail.com">Xinyu Sheng</maintainer>
   <license>TODO: License declaration</license>
 
   <depend>rclpy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>imu_msg</depend>
+  <depend>launch</depend>
+  <depend>launch_ros</depend>
+
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-serial</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

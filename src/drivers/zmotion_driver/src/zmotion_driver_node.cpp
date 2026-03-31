@@ -231,13 +231,8 @@ class ZMotionDriverNode::Impl
     {
       this->node->declare_parameter<bool>("use_sim_time", false);
     }
-    if (!this->node->has_parameter("robot_name"))
-    {
-      this->node->declare_parameter<std::string>("robot_name", "hypa");
-    }
 
     this->namespace_param = this->node->get_parameter("namespace").as_string();
-    this->robot_name = this->node->get_parameter("robot_name").as_string();
 
     this->controller_ip = this->node->declare_parameter<std::string>(
         "controller.ip", "192.168.0.11");
@@ -1451,7 +1446,6 @@ class ZMotionDriverNode::Impl
   std::mutex mutex;
 
   std::string namespace_param;
-  std::string robot_name;
   std::string controller_ip;
   std::string log_file_path;
 
@@ -1546,8 +1540,7 @@ CallbackReturn ZMotionDriverNode::on_configure(
   }
 
   this->pimpl_->configured = true;
-  RCLCPP_INFO(this->get_logger(), "configured with robot_name=%s namespace=%s",
-              this->pimpl_->robot_name.c_str(),
+  RCLCPP_INFO(this->get_logger(), "configured with namespace=%s",
               this->pimpl_->namespace_param.c_str());
   return CallbackReturn::SUCCESS;
 }

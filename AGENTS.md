@@ -40,9 +40,8 @@ ros2 --version
 ### 节点参数支持
 
 所有节点必须支持：
-- `namespace` - 命名空间
+- `namespace` - 命名空间 (用机器人名称`robot_name` 作为namespace)
 - `use_sim_time` - 仿真时钟
-- `robot_name` - 机器人名称
 
 ### 禁止项
 
