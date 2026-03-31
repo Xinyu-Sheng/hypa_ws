@@ -1,0 +1,139 @@
+zmotion_driver:
+  ros__parameters:
+    # 节点通用参数
+    namespace: ""
+    use_sim_time: false
+    robot_name: "hypa"
+
+    controller:
+      ip: "192.168.0.11"
+      slot_id: 0
+      backup_slot_id: 1
+      timeout_ms: 10000
+      control_period_ms: 5
+      feedback_period_ms: 20
+      io_period_ms: 20
+      min_remain_buffer: 20
+      command_queue_size: 4096
+      enable_axis_on_activate: true
+      disable_buffer_check_on_error: true
+      log_file: "/tmp/zmotion_driver_log.csv"
+
+    control:
+      velocity_topic: "cmd/velocity_axes"
+      single_axis_topic: "cmd/single_axis"
+      mimic_group1_topic: "cmd/mimic_group1"
+      mimic_group2_topic: "cmd/mimic_group2"
+      brake_topic: "cmd/brake"
+
+      velocity_logical_indices: [0, 1, 2, 3]
+      single_axis_logical_index: 4
+      mimic_group1_logical_indices: [5, 6]
+      mimic_group2_logical_indices: [7, 8]
+
+    feedback:
+      joint_state_topic: "joint_states"
+      mimic_position_topics:
+        - "feedback/mimic_group1/position"
+        - "feedback/mimic_group2/position"
+
+    axis:
+      logical_indices: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+      physical_axes: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+
+      logical_names:
+        - "logical_axis_0"
+        - "logical_axis_1"
+        - "logical_axis_2"
+        - "logical_axis_3"
+        - "logical_axis_4"
+        - "logical_axis_5"
+        - "logical_axis_6"
+        - "logical_axis_7"
+        - "logical_axis_8"
+
+      joint_names:
+        - "joint_0"
+        - "joint_1"
+        - "joint_2"
+        - "joint_3"
+        - "joint_4"
+        - "joint_5"
+        - "joint_6"
+        - "joint_7"
+        - "joint_8"
+
+      # 前 4 轴默认速度模式，第 5 轴和 mimic 组默认位置模式
+      control_modes:
+        - "velocity"
+        - "velocity"
+        - "velocity"
+        - "velocity"
+        - "position"
+        - "position"
+        - "position"
+        - "position"
+        - "position"
+
+      # 位置模式支持 absolute / relative
+      position_modes:
+        - "absolute"
+        - "absolute"
+        - "absolute"
+        - "absolute"
+        - "absolute"
+        - "absolute"
+        - "absolute"
+        - "absolute"
+        - "absolute"
+
+      # 绝对位置零点补偿（发布反馈时会减去补偿，发送绝对命令时会加上补偿）
+      zero_offsets: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+      units: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+      speeds: [10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0]
+      accels: [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+      decels: [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+
+      # mimic 组轴不单独发布位置，使用 feedback.mimic_position_topics
+      position_topics:
+        - "feedback/axis0/position"
+        - "feedback/axis1/position"
+        - "feedback/axis2/position"
+        - "feedback/axis3/position"
+        - "feedback/axis4/position"
+        - "feedback/axis5/position"
+        - "feedback/axis6/position"
+        - "feedback/axis7/position"
+        - "feedback/axis8/position"
+
+    io:
+      # 按需填写输入口编号与状态 topic；为空时不启用 IO 轮询
+      input_ids: []
+      state_topics: []
+      emergency_stop_on_high: []
+
+    ecat:
+      init:
+        # 按约束固定为 0，不走默认初始化结构体路径
+        local_axis_id: 0
+        local_axis_num: 0
+        drive_axis_start: 0
+        drive_axis_num: 9
+        drive_io_start: 256
+        drive_io_space: 16
+        drive_enable: 0
+
+        # -1 表示不强制校验节点数量
+        ecat_node_num: -1
+        sys_clock_mode: 1
+        bus_red_switch: 0
+        red_spare_slot: 0
+
+        # 可按驱动类型覆盖；默认未填写时代码将对 drive_axis_num 范围使用 10
+        drive_pdo_mode: []
+        node_io_id: []
+        node_aio_id: []
+
+        # DC 偏移按节点配置
+        dc_offset_flag: []
+        dc_offset_time: []

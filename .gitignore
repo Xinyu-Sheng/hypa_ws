@@ -13,6 +13,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+!src/drivers/zmotion_driver/third_party/zmotion_sdk/libzmotion.so
 .Python
 env/
 venv/
