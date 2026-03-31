@@ -68,6 +68,7 @@ class HWT9053CANDriverNode::Impl
   bool log_debug_;
   double accel_variance_;
   double gyro_variance_;
+  uint32_t angle_assembly_window_ms_;
 };
 
 // Impl 构造函数实现
@@ -78,7 +79,8 @@ HWT9053CANDriverNode::Impl::Impl()
       imu_frame_id_("imu_link"),
       log_debug_(false),
       accel_variance_(1.18e-9),
-      gyro_variance_(2.39e-7)
+      gyro_variance_(2.39e-7),
+      angle_assembly_window_ms_(50)
 {
 }
 
@@ -108,12 +110,15 @@ HWT9053CANDriverNode::Impl::on_configure(HWT9053CANDriverNode *_node,
   // 数据过期阈值
   uint32_t data_timeout_ms =
       static_cast<uint32_t>(_node->get_parameter("data_timeout_ms").as_int());
+  this->angle_assembly_window_ms_ = static_cast<uint32_t>(
+      _node->get_parameter("angle_assembly_window_ms").as_int());
 
   // 设置方差到解析器
   this->parser_->SetAccelVariance(this->accel_variance_);
   this->parser_->SetGyroVariance(this->gyro_variance_);
   // 设置数据过期阈值到解析器
   this->parser_->SetDataTimeoutMs(data_timeout_ms);
+  this->parser_->SetAngleAssemblyWindowMs(this->angle_assembly_window_ms_);
 
   this->imu_topic_name_ = _node->get_parameter("imu_topic_name").as_string();
   this->can_bus_topic_ = _node->get_parameter("can_bus_topic").as_string();
@@ -136,6 +141,8 @@ HWT9053CANDriverNode::Impl::on_configure(HWT9053CANDriverNode *_node,
   RCLCPP_INFO(_node->get_logger(), "  gyro_variance: %.6e",
               this->gyro_variance_);
   RCLCPP_INFO(_node->get_logger(), "  data_timeout_ms: %u", data_timeout_ms);
+  RCLCPP_INFO(_node->get_logger(), "  angle_assembly_window_ms: %u",
+              this->angle_assembly_window_ms_);
 
   RCLCPP_INFO(_node->get_logger(), "HWT9053 CAN 驱动节点配置完成");
 
@@ -401,6 +408,9 @@ HWT9053CANDriverNode::HWT9053CANDriverNode(const rclcpp::NodeOptions &_options)
   this->declare_parameter("gyro_variance", rclcpp::ParameterValue(2.39e-7));
   // 数据过期阈值（毫秒）
   this->declare_parameter("data_timeout_ms", rclcpp::ParameterValue(500));
+  // 角度三轴组帧窗口（毫秒）：三轴时间差超过该值则 angle_valid=false
+  this->declare_parameter("angle_assembly_window_ms",
+                          rclcpp::ParameterValue(50));
 }
 
 HWT9053CANDriverNode::~HWT9053CANDriverNode() = default;

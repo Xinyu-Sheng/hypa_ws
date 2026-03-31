@@ -30,6 +30,9 @@
     # 数据过期阈值（毫秒）：当某类数据在此时间内未更新，则对应 *_valid 将被视为 false
     data_timeout_ms: 500
 
+    # 角度三轴组帧窗口（毫秒）：三轴时间戳最大差值超过该窗口，则 angle_valid=false
+    angle_assembly_window_ms: 50
+
     # 机器人名称和是否使用仿真（需要上层launch文件或CLI指定）
     # robot_name: "robot"
     # use_sim_time: false

@@ -1,5 +1,6 @@
 #include "hwt9053_can_driver/hwt9053_parser.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 
@@ -17,7 +18,17 @@ class HWT9053Parser::Impl
   bool roll_ready{false};
   bool pitch_ready{false};
   bool yaw_ready{false};
-  std::chrono::steady_clock::time_point last_angle_time{};  // 用于老化机制
+
+  // 最近一次“完整三轴组帧”的时间（用于记录完整组帧时刻）
+  std::chrono::steady_clock::time_point last_angle_time{};
+
+  // 每个角度轴的最后接收时间
+  std::chrono::steady_clock::time_point last_roll_time{};
+  std::chrono::steady_clock::time_point last_pitch_time{};
+  std::chrono::steady_clock::time_point last_yaw_time{};
+
+  // 当前角度组帧起始时间（用于组帧窗口超时重置）
+  std::chrono::steady_clock::time_point angle_assembly_start_time{};
 
   // 各物理量最后接收时间，用于过期判断
   std::chrono::steady_clock::time_point last_accel_time{};
@@ -26,6 +37,9 @@ class HWT9053Parser::Impl
 
   // 数据过期阈值（毫秒）
   uint32_t data_timeout_ms{500};
+
+  // 角度组帧窗口（毫秒）
+  uint32_t angle_assembly_window_ms{50};
 
   // 方差值（variance）
   double accel_variance{1.18e-9};  // (m/s^2)^2
@@ -37,6 +51,7 @@ class HWT9053Parser::Impl
     this->roll_ready = false;
     this->pitch_ready = false;
     this->yaw_ready = false;
+    this->angle_assembly_start_time = std::chrono::steady_clock::time_point{};
   }
 
   // 重置角度状态与超时基准
@@ -45,6 +60,9 @@ class HWT9053Parser::Impl
     this->ResetAngleAssembly();
     this->data.angle_valid = false;
     this->last_angle_time = std::chrono::steady_clock::time_point{};
+    this->last_roll_time = std::chrono::steady_clock::time_point{};
+    this->last_pitch_time = std::chrono::steady_clock::time_point{};
+    this->last_yaw_time = std::chrono::steady_clock::time_point{};
   }
 
   // 检查三个角度是否都已准备好
@@ -114,7 +132,7 @@ bool HWT9053Parser::ParseCANFrame(const std::array<uint8_t, 8> &_data,
   }
   std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);  // 防御性设计
 
-  const auto now = std::chrono::steady_clock::now();
+  const auto frame_time = std::chrono::steady_clock::now();
 
   // 严格按照 WIT 封装解析：payload[0] == 0x55, payload[1] == TYPE
   if (_data[0] != 0x55)
@@ -153,7 +171,7 @@ bool HWT9053Parser::ParseCANFrame(const std::array<uint8_t, 8> &_data,
       this->pimpl_->data.accel_z =
           this->Int16ToFloat(az_raw, HWT9053Parser::ACCEL_SCALE);
       this->pimpl_->data.accel_valid = true;
-      this->pimpl_->last_accel_time = now;
+      this->pimpl_->last_accel_time = frame_time;
       break;
     }
 
@@ -171,7 +189,7 @@ bool HWT9053Parser::ParseCANFrame(const std::array<uint8_t, 8> &_data,
       this->pimpl_->data.gyro_z =
           this->Int16ToFloat(gz_raw, HWT9053Parser::GYRO_SCALE);
       this->pimpl_->data.gyro_valid = true;
-      this->pimpl_->last_gyro_time = now;
+      this->pimpl_->last_gyro_time = frame_time;
       break;
     }
 
@@ -179,14 +197,26 @@ bool HWT9053Parser::ParseCANFrame(const std::array<uint8_t, 8> &_data,
     {
       // WIT 角度：payload[2] = angle_type(0x01/0x02/0x03), payload[4..7] 为
       // 32-bit angle
-      auto now = std::chrono::steady_clock::now();
-      auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-          now - this->pimpl_->last_angle_time);
-      if (duration.count() > 50)
+      const auto assembly_window =
+          std::chrono::milliseconds(this->pimpl_->angle_assembly_window_ms);
+
+      // 若已有部分轴进入组帧，且组帧耗时超过窗口，则丢弃该次不完整组帧。
+      if ((this->pimpl_->roll_ready || this->pimpl_->pitch_ready ||
+           this->pimpl_->yaw_ready) &&
+          this->pimpl_->angle_assembly_start_time.time_since_epoch().count() !=
+              0 &&
+          (frame_time - this->pimpl_->angle_assembly_start_time) >
+              assembly_window)
       {
-        this->pimpl_->ResetAngleState();
+        this->pimpl_->ResetAngleAssembly();
       }
-      this->pimpl_->last_angle_time = now;
+
+      // 新一轮组帧开始时记录起始时间。
+      if (!this->pimpl_->roll_ready && !this->pimpl_->pitch_ready &&
+          !this->pimpl_->yaw_ready)
+      {
+        this->pimpl_->angle_assembly_start_time = frame_time;
+      }
 
       uint8_t angle_type = _data[2];
       if (angle_type != 0x01 && angle_type != 0x02 && angle_type != 0x03)
@@ -201,23 +231,45 @@ bool HWT9053Parser::ParseCANFrame(const std::array<uint8_t, 8> &_data,
         this->pimpl_->data.roll =
             static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
         this->pimpl_->roll_ready = true;
+        this->pimpl_->last_roll_time = frame_time;
       }
       else if (angle_type == 0x02)
       {
         this->pimpl_->data.pitch =
             static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
         this->pimpl_->pitch_ready = true;
+        this->pimpl_->last_pitch_time = frame_time;
       }
       else if (angle_type == 0x03)
       {
         this->pimpl_->data.yaw =
             static_cast<float>(angle_raw) * HWT9053Parser::ANGLE_SCALE;
         this->pimpl_->yaw_ready = true;
+        this->pimpl_->last_yaw_time = frame_time;
       }
 
       if (this->pimpl_->IsAngleDataComplete())
       {
-        this->pimpl_->data.angle_valid = true;
+        const auto max_axis_time = std::max({this->pimpl_->last_roll_time,
+                                             this->pimpl_->last_pitch_time,
+                                             this->pimpl_->last_yaw_time});
+        const auto min_axis_time = std::min({this->pimpl_->last_roll_time,
+                                             this->pimpl_->last_pitch_time,
+                                             this->pimpl_->last_yaw_time});
+        const auto axis_span =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                max_axis_time - min_axis_time);
+
+        if (axis_span <= assembly_window)
+        {
+          this->pimpl_->data.angle_valid = true;
+          this->pimpl_->last_angle_time = max_axis_time;
+        }
+        else
+        {
+          this->pimpl_->data.angle_valid = false;
+        }
+
         this->pimpl_->ResetAngleAssembly();
       }
       break;
@@ -237,7 +289,7 @@ bool HWT9053Parser::ParseCANFrame(const std::array<uint8_t, 8> &_data,
       this->pimpl_->data.mag_z =
           this->Int16ToFloat(mz_raw, HWT9053Parser::MAG_SCALE);
       this->pimpl_->data.mag_valid = true;
-      this->pimpl_->last_mag_time = now;
+      this->pimpl_->last_mag_time = frame_time;
       break;
     }
 
@@ -354,10 +406,41 @@ HWT9053Data HWT9053Parser::GetData() const
   // 角度过期检测
   if (snapshot.angle_valid)
   {
-    if (this->pimpl_->last_angle_time.time_since_epoch().count() == 0 ||
-        (now - this->pimpl_->last_angle_time) > timeout)
+    if (this->pimpl_->last_roll_time.time_since_epoch().count() == 0 ||
+        this->pimpl_->last_pitch_time.time_since_epoch().count() == 0 ||
+        this->pimpl_->last_yaw_time.time_since_epoch().count() == 0)
     {
       snapshot.angle_valid = false;
+    }
+    else
+    {
+      const auto roll_age = now - this->pimpl_->last_roll_time;
+      const auto pitch_age = now - this->pimpl_->last_pitch_time;
+      const auto yaw_age = now - this->pimpl_->last_yaw_time;
+
+      if (roll_age > timeout || pitch_age > timeout || yaw_age > timeout)
+      {
+        snapshot.angle_valid = false;
+      }
+      else
+      {
+        const auto max_axis_time = std::max({this->pimpl_->last_roll_time,
+                                             this->pimpl_->last_pitch_time,
+                                             this->pimpl_->last_yaw_time});
+        const auto min_axis_time = std::min({this->pimpl_->last_roll_time,
+                                             this->pimpl_->last_pitch_time,
+                                             this->pimpl_->last_yaw_time});
+        const auto axis_span =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                max_axis_time - min_axis_time);
+        const auto assembly_window =
+            std::chrono::milliseconds(this->pimpl_->angle_assembly_window_ms);
+
+        if (axis_span > assembly_window)
+        {
+          snapshot.angle_valid = false;
+        }
+      }
     }
   }
 
@@ -417,6 +500,12 @@ void HWT9053Parser::SetDataTimeoutMs(uint32_t _ms)
 {
   std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);  // 防御性设计
   this->pimpl_->data_timeout_ms = _ms;
+}
+
+void HWT9053Parser::SetAngleAssemblyWindowMs(uint32_t _ms)
+{
+  std::lock_guard<std::mutex> lock(this->pimpl_->data_mutex);  // 防御性设计
+  this->pimpl_->angle_assembly_window_ms = (_ms == 0) ? 1 : _ms;
 }
 
 }  // namespace hwt9053_can_driver

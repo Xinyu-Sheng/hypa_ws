@@ -133,6 +133,13 @@ class HWT9053Parser
   void SetDataTimeoutMs(uint32_t _ms);
 
   /**
+   * @brief 设置角度组帧窗口（毫秒）。三轴角度时间戳最大差值超过该窗口时，
+   * angle_valid 会被判定为 false。
+   * @param _ms 组帧窗口，单位毫秒
+   */
+  void SetAngleAssemblyWindowMs(uint32_t _ms);
+
+  /**
    * @brief 设置角速度方差（variance）
    * @param _variance 方差值 (rad/s)^2
    */
