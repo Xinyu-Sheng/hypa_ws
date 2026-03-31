@@ -15,7 +15,6 @@ find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
-find_package(hypa_msgs REQUIRED)
 
 # Find Gazebo dependencies
 find_package(gz-transport13 REQUIRED)
@@ -25,8 +24,6 @@ find_package(gz-msgs10 REQUIRED)
 include_directories(
   include
 )
-
-# Interfaces are now in hypa_msgs package
 
 # Create library targets (TODO: Uncomment when source files are created)
 # add_library(${PROJECT_NAME}_core SHARED

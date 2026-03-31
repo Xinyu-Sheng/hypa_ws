@@ -149,7 +149,7 @@ feat: add trajectory planning algorithm
 - Add velocity and acceleration constraints
 - Support waypoint smoothing
 
-affected-packages: hypa_application, hypa_msgs
+affected-packages: hypa_application
 ```
 
 禁止自动暂存，commit内容要精简，commit要用英文。

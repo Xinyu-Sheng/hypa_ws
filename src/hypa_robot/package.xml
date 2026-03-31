@@ -13,7 +13,6 @@
   <!-- 元包依赖：使用exec_depend而不是depend -->
   <exec_depend>hypa_description</exec_depend>
   <exec_depend>hypa_bringup</exec_depend>
-  <exec_depend>hypa_msgs</exec_depend>
   <exec_depend>hypa_application</exec_depend>
   <exec_depend>hypa_gazebo</exec_depend>
   <exec_depend>hypa_launch</exec_depend>
