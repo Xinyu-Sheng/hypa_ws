@@ -17,7 +17,7 @@ def generate_launch_description():
 
     gazebo_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(pkg_project_gazebo, "launch", "hypa.launch.py")
+            os.path.join(pkg_project_gazebo, "launch", "hypa_sim.launch.py")
         )
     )
 
