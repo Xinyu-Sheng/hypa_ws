@@ -104,16 +104,17 @@ class ZMotionWrapper
             _spherical_params);  // 保留接口，没有用到，因为目前没有这个运动需求，最终可删除。
     std::optional<std::string> buffer_move(
         const std::vector<int> &_axes,
-        const std::vector<double> &_positions);  // TODO：根本不存在！
-    std::optional<std::string>
-    start_continuous();  // TODO: 由：单轴：ZAux_Direct_MoveResume替代
-    std::optional<std::string>
-    stop_continuous();  // TODO:由：ZAux_Direct_MovePause
-    std::optional<std::string>
-    stop_all();  // TODO:
-                 // 本意是稳定停止，但是调用ZBASIC不存在的指令，由ZAux_Direct_MoveStop替代
-    std::optional<std::string>
-    emergency_stop_all();  // TODO: 由ZAux_Direct_QuickStopAll替代
+        const std::vector<double> &_positions);  // 连续轨迹缓冲运动
+    std::optional<std::string> move_pause(int _axis, int _mode = 0);
+    std::optional<std::string> move_resume(int _axis);
+    std::optional<std::string> cancel_axis_list(const std::vector<int> &_axes,
+                                                int _mode = 2);
+    std::optional<std::string> single_cancel(int _axis, int _mode = 2);
+    std::optional<std::string> rapidstop(int _mode = 2);
+    std::optional<std::string> start_continuous();  // 连续轨迹开始
+    std::optional<std::string> stop_continuous();   // 连续轨迹结束
+    std::optional<std::string> stop_all();
+    std::optional<std::string> emergency_stop_all();
     std::optional<std::string> set_dpos(
         int _axis,
         double _position);  // 只使用绝对运动指令以机械零点为基准，完全不依赖
@@ -165,21 +166,6 @@ class ZMotionWrapper
     std::optional<std::string> ecat_init(int slot_id, const EcatInitInfo &info,
                                          int timeout_ms);
 
-    // TODO：添加API替换/配合
-    // 暂停【暂停】（暂停运动，保持伺服使能，后续可继续跑）
-    // ✅ 多轴插补运动（必用）：ZAux_Direct_MovePauseGroup
-    // ✅ 单轴运动：ZAux_Direct_MovePause
-    // 暂停后【继续运动】
-    // ✅ 多轴：ZAux_Direct_MoveResumeGroup
-    // ✅ 单轴：ZAux_Direct_MoveResume
-    // 彻底停止（终止运动，清空指令，不能恢复）
-    // ✅ 多轴：ZAux_Direct_MoveStopGroup
-    // ✅ 单轴：ZAux_Direct_MoveStop
-    // 紧急停止
-    // ✅ 所有轴：ZAux_Direct_Rapidstop：
-    // 模式 0-2：按 FASTDEC 减速→清缓存→断使能
-    // 模式 3：立即中断脉冲→清缓存→断使能
-
     private:
     int64_t physical_to_pulses(int _axis, double _physical_position)
         const;  // TODO：应该不需要，因为只需要发送单位量，不用转换
@@ -221,6 +207,12 @@ class ZMotionWrapper
       const std::vector<double> &_spherical_params);
   std::optional<std::string> buffer_move(const std::vector<int> &_axes,
                                          const std::vector<double> &_positions);
+  std::optional<std::string> move_pause(int _axis, int _mode = 0);
+  std::optional<std::string> move_resume(int _axis);
+  std::optional<std::string> cancel_axis_list(const std::vector<int> &_axes,
+                                              int _mode = 2);
+  std::optional<std::string> single_cancel(int _axis, int _mode = 2);
+  std::optional<std::string> rapidstop(int _mode = 2);
   std::optional<std::string> start_continuous();
   std::optional<std::string> stop_continuous();
   std::optional<std::string> set_dpos(int _axis, double _position);

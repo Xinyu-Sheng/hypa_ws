@@ -135,6 +135,32 @@ std::optional<std::string> ZMotionWrapper::stop_continuous()
   return pimpl_->stop_continuous();
 }
 
+std::optional<std::string> ZMotionWrapper::move_pause(int _axis, int _mode)
+{
+  return pimpl_->move_pause(_axis, _mode);
+}
+
+std::optional<std::string> ZMotionWrapper::move_resume(int _axis)
+{
+  return pimpl_->move_resume(_axis);
+}
+
+std::optional<std::string> ZMotionWrapper::cancel_axis_list(
+    const std::vector<int> &_axes, int _mode)
+{
+  return pimpl_->cancel_axis_list(_axes, _mode);
+}
+
+std::optional<std::string> ZMotionWrapper::single_cancel(int _axis, int _mode)
+{
+  return pimpl_->single_cancel(_axis, _mode);
+}
+
+std::optional<std::string> ZMotionWrapper::rapidstop(int _mode)
+{
+  return pimpl_->rapidstop(_mode);
+}
+
 std::optional<std::string> ZMotionWrapper::set_dpos(int _axis, double _position)
 {
   return pimpl_->set_dpos(_axis, _position);
@@ -834,6 +860,137 @@ ZMotionWrapper::ZMotionWrapperPrivate::stop_continuous()
   return std::nullopt;
 }
 
+std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::move_pause(
+    int _axis, int _mode)
+{
+  if (!handle)
+  {
+    last_error = "Controller not connected";
+    return last_error;
+  }
+
+  if (_mode < 0 || _mode > 3)
+  {
+    last_error = "Invalid move pause mode: " + std::to_string(_mode);
+    return last_error;
+  }
+
+  int32_t ret = ZAux_Direct_MovePause(handle, _axis, _mode);
+  if (ret != ERR_OK)
+  {
+    last_error = "Move pause failed for axis " + std::to_string(_axis) +
+                 " (error: " + std::to_string(ret) + ")";
+    return last_error;
+  }
+
+  return std::nullopt;
+}
+
+std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::move_resume(
+    int _axis)
+{
+  if (!handle)
+  {
+    last_error = "Controller not connected";
+    return last_error;
+  }
+
+  int32_t ret = ZAux_Direct_MoveResume(handle, _axis);
+  if (ret != ERR_OK)
+  {
+    last_error = "Move resume failed for axis " + std::to_string(_axis) +
+                 " (error: " + std::to_string(ret) + ")";
+    return last_error;
+  }
+
+  return std::nullopt;
+}
+
+std::optional<std::string>
+ZMotionWrapper::ZMotionWrapperPrivate::cancel_axis_list(
+    const std::vector<int> &_axes, int _mode)
+{
+  if (!handle)
+  {
+    last_error = "Controller not connected";
+    return last_error;
+  }
+
+  if (_axes.empty())
+  {
+    last_error = "Axis list is empty";
+    return last_error;
+  }
+
+  if (_mode < 0 || _mode > 3)
+  {
+    last_error = "Invalid cancel mode: " + std::to_string(_mode);
+    return last_error;
+  }
+
+  int32_t ret =
+      ZAux_Direct_CancelAxisList(handle, static_cast<int>(_axes.size()),
+                                 const_cast<int *>(_axes.data()), _mode);
+  if (ret != ERR_OK)
+  {
+    last_error = "Cancel axis list failed (error: " + std::to_string(ret) + ")";
+    return last_error;
+  }
+
+  return std::nullopt;
+}
+
+std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::single_cancel(
+    int _axis, int _mode)
+{
+  if (!handle)
+  {
+    last_error = "Controller not connected";
+    return last_error;
+  }
+
+  if (_mode < 0 || _mode > 3)
+  {
+    last_error = "Invalid cancel mode: " + std::to_string(_mode);
+    return last_error;
+  }
+
+  int32_t ret = ZAux_Direct_Single_Cancel(handle, _axis, _mode);
+  if (ret != ERR_OK)
+  {
+    last_error = "Single cancel failed for axis " + std::to_string(_axis) +
+                 " (error: " + std::to_string(ret) + ")";
+    return last_error;
+  }
+
+  return std::nullopt;
+}
+
+std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::rapidstop(
+    int _mode)
+{
+  if (!handle)
+  {
+    last_error = "Controller not connected";
+    return last_error;
+  }
+
+  if (_mode < 0 || _mode > 3)
+  {
+    last_error = "Invalid rapidstop mode: " + std::to_string(_mode);
+    return last_error;
+  }
+
+  int32_t ret = ZAux_Direct_Rapidstop(handle, _mode);
+  if (ret != ERR_OK)
+  {
+    last_error = "Rapidstop failed (error: " + std::to_string(ret) + ")";
+    return last_error;
+  }
+
+  return std::nullopt;
+}
+
 std::optional<double> ZMotionWrapper::ZMotionWrapperPrivate::CommandedPosition(
     int _axis) const
 {
@@ -986,27 +1143,13 @@ std::optional<int> ZMotionWrapper::ZMotionWrapperPrivate::get_move_curmark(
 
 std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::stop_all()
 {
-  char ack[2048] = {0};
-  int32_t ret = ZAux_DirectCommand(handle, "STOP ALL", ack, sizeof(ack));
-  if (ret != ERR_OK)
-  {
-    last_error = "Stop all failed (error: " + std::to_string(ret) + ")";
-    return last_error;
-  }
-  return std::nullopt;
+  return rapidstop(2);
 }
 
 std::optional<std::string>
 ZMotionWrapper::ZMotionWrapperPrivate::emergency_stop_all()
 {
-  char ack[2048] = {0};
-  int32_t ret = ZAux_DirectCommand(handle, "EMERGENCY STOP", ack, sizeof(ack));
-  if (ret != ERR_OK)
-  {
-    last_error = "Emergency stop failed (error: " + std::to_string(ret) + ")";
-    return last_error;
-  }
-  return std::nullopt;
+  return rapidstop(3);
 }
 
 std::optional<std::string> ZMotionWrapper::ZMotionWrapperPrivate::set_dpos(
