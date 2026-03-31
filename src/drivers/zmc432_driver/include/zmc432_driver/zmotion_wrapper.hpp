@@ -71,11 +71,11 @@ class ZMotionWrapper
         int _axis, double _decel);  // 写入最大减速度到控制器
     std::optional<std::string> move_absolute(
         int _axis,
-        double _position);  // TODO：更换到ZAux_Direct_Single_MoveAbs
+        double _position);  // TODO：内部实现更换到ZAux_Direct_Single_MoveAbs
                             // 单轴相对移动
-    std::optional<std::string> move_relative(
-        int _axis,
-        double _distance);  // TODO：更换到ZAux_Direct_Single_Move 单轴绝对移动
+    std::optional<std::string> move_relative(int _axis,
+                                             double _distance);  // TODO：内部实现更换到ZAux_Direct_Single_Move
+                                                                 // 单轴绝对移动
     std::optional<std::string> move_velocity(
         int _axis,
         double
@@ -104,15 +104,22 @@ class ZMotionWrapper
             _spherical_params);  // 保留接口，没有用到，因为目前没有这个运动需求，最终可删除。
     std::optional<std::string> buffer_move(
         const std::vector<int> &_axes,
-        const std::vector<double> &_positions);  // 连续轨迹缓冲运动
-    std::optional<std::string> move_pause(int _axis, int _mode = 0);
-    std::optional<std::string> move_resume(int _axis);
-    std::optional<std::string> cancel_axis_list(const std::vector<int> &_axes,
-                                                int _mode = 2);
-    std::optional<std::string> single_cancel(int _axis, int _mode = 2);
-    std::optional<std::string> rapidstop(int _mode = 2);
-    std::optional<std::string> start_continuous();  // 连续轨迹开始
-    std::optional<std::string> stop_continuous();   // 连续轨迹结束
+        const std::vector<double>
+            &_positions);  // TODO:新代码不要使用，此项接口未来淘汰
+    std::optional<std::string> move_pause(int _axis,
+                                          int _mode = 0);  // 暂停某个轴的运动
+    std::optional<std::string> move_resume(int _axis);     // 再启动某个轴的运动
+    std::optional<std::string> cancel_axis_list(
+        const std::vector<int> &_axes,
+        int _mode = 2);  // 批量取消某些轴的运动
+    std::optional<std::string> single_cancel(
+        int _axis, int _mode = 2);  // 取消某个轴的运动
+    std::optional<std::string> rapidstop(
+        int _mode = 2);  // 全局急停，停止所有轴的运动
+    std::optional<std::string>
+    start_continuous();  // TODO:新代码不要使用，此项接口未来淘汰
+    std::optional<std::string>
+    stop_continuous();  // TODO:新代码不要使用，此项接口未来淘汰
     std::optional<std::string> stop_all();
     std::optional<std::string> emergency_stop_all();
     std::optional<std::string> set_dpos(
