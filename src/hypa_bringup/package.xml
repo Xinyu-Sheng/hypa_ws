@@ -11,6 +11,11 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
+  <depend>launch</depend>
+  <depend>launch_ros</depend>
+  <depend>hypa_gazebo</depend>
+  <depend>rviz2</depend>
+
   <!-- rosout_bridge 节点依赖 -->
   <depend>rclcpp</depend>
   <depend>rclcpp_lifecycle</depend>

@@ -65,12 +65,20 @@ add_subdirectory(plugins/gui/hypa_state_display)
 # DESTINATION lib/${PROJECT_NAME}
 # )
 
-# Following 'install' directive ensures that the 'worlds' subfolder
-# will be copied to the 'share/hypa_gazebo/worlds'
-# subfolder of the installation directory.
+# 安装世界、启动和配置资源到对应的 share 子目录。
 install(
   DIRECTORY worlds/
   DESTINATION share/${PROJECT_NAME}/worlds
+)
+
+install(
+  DIRECTORY launch/
+  DESTINATION share/${PROJECT_NAME}/launch
+)
+
+install(
+  DIRECTORY config/
+  DESTINATION share/${PROJECT_NAME}/config
 )
 
 # TODO: Install plugin configuration files when plugins are properly structured
