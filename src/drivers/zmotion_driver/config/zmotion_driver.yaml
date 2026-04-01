@@ -6,7 +6,6 @@ zmotion_driver:
     controller:
       ip: "192.168.0.11"
       slot_id: 0
-      backup_slot_id: 1
       timeout_ms: 10000
       control_period_ms: 5
       feedback_period_ms: 20

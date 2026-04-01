@@ -79,7 +79,6 @@ struct EcatInitInfoSet
 struct EcatConfig
 {
   int slot_id = 0;
-  int backup_slot_id = 0;
   int timeout_ms = 10000;
   EcatInitInfoSet init;
 };

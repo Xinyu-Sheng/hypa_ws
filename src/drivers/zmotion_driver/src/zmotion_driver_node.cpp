@@ -238,8 +238,6 @@ class ZMotionDriverNode::Impl
         "controller.ip", "192.168.0.11");
     this->ecat_config.slot_id =
         this->node->declare_parameter<int>("controller.slot_id", 0);
-    this->ecat_config.backup_slot_id =
-        this->node->declare_parameter<int>("controller.backup_slot_id", 1);
     this->ecat_config.timeout_ms =
         this->node->declare_parameter<int>("controller.timeout_ms", 10000);
 
