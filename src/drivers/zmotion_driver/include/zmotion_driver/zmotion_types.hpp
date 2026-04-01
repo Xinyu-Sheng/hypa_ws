@@ -20,13 +20,6 @@ enum class AxisPositionMode
   kRelative = 1,
 };
 
-enum class AxisOpKind
-{
-  kVelocity = 0,
-  kPositionAbsolute = 1,
-  kPositionRelative = 2,
-};
-
 struct AxisConfig
 {
   int logical_index = -1;
@@ -85,7 +78,8 @@ struct EcatConfig
 
 struct AxisOperation
 {
-  AxisOpKind kind = AxisOpKind::kPositionAbsolute;
+  AxisControlMode control_mode = AxisControlMode::kPosition;
+  AxisPositionMode position_mode = AxisPositionMode::kAbsolute;
   int logical_axis = -1;
   double value = 0.0;
 };
