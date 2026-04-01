@@ -17,23 +17,23 @@ zmotion_driver:
       log_file: "/tmp/zmotion_driver_log.csv"
 
     control:
-      velocity_topic: "cmd/velocity_axes"
-      single_axis_topic: "cmd/single_axis"
-      mimic_group1_topic: "cmd/mimic_group1"
-      mimic_group2_topic: "cmd/mimic_group2"
-      brake_topic: "cmd/brake"
+      velocity_topic: "cmd/velocity_axes" # std_msgs/msg/Float64MultiArray
+      single_axis_topic: "cmd/single_axis" # std_msgs/msg/Float64
+      mimic_group1_topic: "cmd/mimic_group1" # std_msgs/msg/Float64
+      mimic_group2_topic: "cmd/mimic_group2" # std_msgs/msg/Float64
+      brake_topic: "cmd/brake" # std_msgs/msg/Bool
 
-      # 是“哪些逻辑轴接收哪种控制话题”的分组，按逻辑轴编号来写
+      # 是“哪些逻辑轴接收哪种控制话题”的分组，按逻辑轴编号来写，服务上面的topic（决定的是“哪些逻辑轴归到哪类控制”，不是每个topic的数组多大：代码里强制 velocity 组必须正好 4 个逻辑轴，mimic 组各 2 个，轴级数组必须 9 个）
       velocity_logical_indices: [0, 1, 2, 3]
       single_axis_logical_index: 4
       mimic_group1_logical_indices: [5, 6]
       mimic_group2_logical_indices: [7, 8]
 
     feedback:
-      joint_state_topic: "joint_states"
+      joint_state_topic: "joint_states" # sensor_msgs/msg/JointState
       mimic_position_topics:
-        - "feedback/mimic_group1/position"
-        - "feedback/mimic_group2/position"
+        - "feedback/mimic_group1/position" # std_msgs/msg/Float64
+        - "feedback/mimic_group2/position" # std_msgs/msg/Float64
 
     axis:
       logical_indices: [0, 1, 2, 3, 4, 5, 6, 7, 8] #逻辑轴索引
@@ -96,15 +96,15 @@ zmotion_driver:
 
       # mimic 组轴不单独发布位置，使用 feedback.mimic_position_topics
       position_topics:
-        - "feedback/axis0/position"
-        - "feedback/axis1/position"
-        - "feedback/axis2/position"
-        - "feedback/axis3/position"
-        - "feedback/axis4/position"
-        - "feedback/axis5/position"
-        - "feedback/axis6/position"
-        - "feedback/axis7/position"
-        - "feedback/axis8/position"
+        - "feedback/axis0/position" # std_msgs/msg/Float64
+        - "feedback/axis1/position" # std_msgs/msg/Float64
+        - "feedback/axis2/position" # std_msgs/msg/Float64
+        - "feedback/axis3/position" # std_msgs/msg/Float64
+        - "feedback/axis4/position" # std_msgs/msg/Float64
+        - "feedback/axis5/position" # placeholder, not used when configured as mimic
+        - "feedback/axis6/position" # placeholder, not used when configured as mimic
+        - "feedback/axis7/position" # placeholder, not used when configured as mimic
+        - "feedback/axis8/position" # placeholder, not used when configured as mimic
 
     io:
       # 按需填写输入口编号与状态 topic；为空时不启用 IO 轮询
