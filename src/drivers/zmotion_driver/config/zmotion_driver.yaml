@@ -36,10 +36,10 @@ zmotion_driver:
         - "feedback/mimic_group2/position" # std_msgs/msg/Float64
 
     axis:
-      logical_indices: [0, 1, 2, 3, 4, 5, 6, 7, 8] #逻辑轴索引
-      physical_axes: [0, 1, 2, 3, 4, 5, 6, 7, 8] # EtherCAT / 硬件接线对应的轴顺序
+      # 数组顺序表示 EtherCAT / 硬件接线顺序，值表示对应的逻辑轴编号
+      logical_indices: [0, 1, 2, 3, 4, 5, 6, 7, 8]
 
-      # 以下都按照逻辑顺序
+      # 以下数组都与 logical_indices 保持同一顺序
       # 是“每个轴自己的能力/模式”
       logical_names:
         - "logical_axis_0"

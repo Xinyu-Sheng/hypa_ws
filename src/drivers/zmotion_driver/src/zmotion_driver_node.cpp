@@ -300,10 +300,6 @@ class ZMotionDriverNode::Impl
         this->node->declare_parameter<std::vector<int64_t>>(
             "axis.logical_indices",
             DefaultIntSequence(static_cast<int>(kAxisCount)));
-    const std::vector<int64_t> physical_axes =
-        this->node->declare_parameter<std::vector<int64_t>>(
-            "axis.physical_axes",
-            DefaultIntSequence(static_cast<int>(kAxisCount)));
     const std::vector<std::string> logical_names =
         this->node->declare_parameter<std::vector<std::string>>(
             "axis.logical_names",
@@ -355,7 +351,6 @@ class ZMotionDriverNode::Impl
                 "feedback/axis8/position"});
 
     if ((logical_indices.size() != kAxisCount) ||
-        (physical_axes.size() != kAxisCount) ||
         (logical_names.size() != kAxisCount) ||
         (joint_names.size() != kAxisCount) ||
         (control_modes.size() != kAxisCount) ||
@@ -374,7 +369,6 @@ class ZMotionDriverNode::Impl
     this->logical_to_axis_index.clear();
 
     std::set<int> logical_seen;
-    std::set<int> physical_seen;
 
     for (std::size_t i = 0; i < kAxisCount; ++i)
     {
@@ -395,7 +389,7 @@ class ZMotionDriverNode::Impl
 
       AxisConfig config;
       config.logical_index = static_cast<int>(logical_indices[i]);
-      config.physical_axis = static_cast<int>(physical_axes[i]);
+      config.physical_axis = static_cast<int>(i);
       config.logical_name = logical_names[i];
       config.joint_name = joint_names[i];
       config.control_mode = control_mode;
@@ -413,15 +407,8 @@ class ZMotionDriverNode::Impl
                      config.logical_index);
         return false;
       }
-      if (physical_seen.count(config.physical_axis) > 0U)
-      {
-        RCLCPP_ERROR(this->logger, "duplicated physical axis index: %d",
-                     config.physical_axis);
-        return false;
-      }
 
       logical_seen.insert(config.logical_index);
-      physical_seen.insert(config.physical_axis);
       this->logical_to_axis_index[config.logical_index] = i;
       this->axes.push_back(config);
     }
