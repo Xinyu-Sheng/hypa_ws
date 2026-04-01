@@ -276,7 +276,7 @@ class ZMotionDriverNode::Impl
     this->enable_axis_on_activate = this->node->declare_parameter<bool>(
         "controller.enable_axis_on_activate", true);
     this->disable_buffer_check_on_error = this->node->declare_parameter<bool>(
-        "controller.disable_buffer_check_on_error", true);
+        "controller.disable_buffer_check_on_error", false);
     this->log_file_path = this->node->declare_parameter<std::string>(
         "controller.log_file", "/tmp/zmotion_driver_log.csv");
 
@@ -1592,7 +1592,7 @@ class ZMotionDriverNode::Impl
   int min_remain_buffer = 20;
   std::size_t queue_size = 4096;
   bool enable_axis_on_activate = true;
-  bool disable_buffer_check_on_error = true;
+  bool disable_buffer_check_on_error = false;
 
   std::string velocity_topic;
   std::string single_axis_topic;
