@@ -23,6 +23,7 @@ zmotion_driver:
       mimic_group2_topic: "cmd/mimic_group2"
       brake_topic: "cmd/brake"
 
+      # 是“哪些逻辑轴接收哪种控制话题”的分组，按逻辑轴编号来写
       velocity_logical_indices: [0, 1, 2, 3]
       single_axis_logical_index: 4
       mimic_group1_logical_indices: [5, 6]
@@ -35,9 +36,11 @@ zmotion_driver:
         - "feedback/mimic_group2/position"
 
     axis:
-      logical_indices: [0, 1, 2, 3, 4, 5, 6, 7, 8]
-      physical_axes: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+      logical_indices: [0, 1, 2, 3, 4, 5, 6, 7, 8] #逻辑轴索引
+      physical_axes: [0, 1, 2, 3, 4, 5, 6, 7, 8] # EtherCAT / 硬件接线对应的轴顺序
 
+      # 以下都按照逻辑顺序
+      # 是“每个轴自己的能力/模式”
       logical_names:
         - "logical_axis_0"
         - "logical_axis_1"
