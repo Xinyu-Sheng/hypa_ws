@@ -997,7 +997,7 @@ class ZMotionDriverNode::Impl
   void EnqueueCommand(const PendingCommand &_cmd)
   {
     std::lock_guard<std::mutex> lock(this->mutex);
-    if (!this->configured)
+    if (!this->configured || !this->active || this->emergency_stop)
     {
       return;
     }
@@ -1225,6 +1225,7 @@ class ZMotionDriverNode::Impl
     joint_state.effort.reserve(this->axes.size());
 
     std::vector<double> logical_positions(this->axes.size(), 0.0);
+    std::vector<double> logical_velocities(this->axes.size(), 0.0);
 
     for (std::size_t i = 0; i < this->axes.size(); ++i)
     {
@@ -1246,6 +1247,7 @@ class ZMotionDriverNode::Impl
 
       const double logical_position = mpos - axis.zero_offset;
       logical_positions[i] = logical_position;
+  logical_velocities[i] = mspeed;
 
       joint_state.name.push_back(axis.joint_name);
       joint_state.position.push_back(logical_position);
@@ -1290,7 +1292,9 @@ class ZMotionDriverNode::Impl
 
     this->WriteLogLocked(
         "feedback",
-        "joint_state_size=" + std::to_string(joint_state.name.size()));
+    "joint_state_size=" + std::to_string(joint_state.name.size()) +
+      " positions=" + JoinDoubles(logical_positions) +
+      " velocities=" + JoinDoubles(logical_velocities));
   }
 
   void PollIoInputs()
@@ -1301,6 +1305,9 @@ class ZMotionDriverNode::Impl
       return;
     }
 
+    std::vector<int> io_values;
+    io_values.reserve(this->io_inputs.size());
+
     for (std::size_t i = 0; i < this->io_inputs.size(); ++i)
     {
       int value = 0;
@@ -1310,6 +1317,7 @@ class ZMotionDriverNode::Impl
         this->WriteLogLocked(
             "io_err",
             "read io failed id=" + std::to_string(this->io_inputs[i].io_id));
+        io_values.push_back(value);
         continue;
       }
 
@@ -1328,6 +1336,13 @@ class ZMotionDriverNode::Impl
         this->TriggerEmergencyStopLocked(
             "io_" + std::to_string(this->io_inputs[i].io_id));
       }
+
+      io_values.push_back(value);
+    }
+
+    if (!io_values.empty())
+    {
+      this->WriteLogLocked("io", "io_values=" + JoinInts(io_values));
     }
   }
 
@@ -1461,7 +1476,32 @@ class ZMotionDriverNode::Impl
   {
     std::lock_guard<std::mutex> lock(this->mutex);
 
+    if (this->enable_axis_on_activate && !this->emergency_stop)
+    {
+      for (std::size_t i = 0; i < this->axes.size(); ++i)
+      {
+        CallResult result =
+            this->sdk->SetAxisEnable(this->axes[i].physical_axis, true);
+        if (!result.ok)
+        {
+          RCLCPP_ERROR(this->logger, "axis enable failed (logical=%d): %s",
+                       this->axes[i].logical_index, result.message.c_str());
+
+          (void)this->sdk->StopAll();
+          for (std::size_t j = 0; j < this->axes.size(); ++j)
+          {
+            (void)this->sdk->SetAxisEnable(this->axes[j].physical_axis, false);
+          }
+          this->pending_commands.clear();
+          this->active = false;
+          this->WriteLogLocked("lifecycle", "activate_failed");
+          return false;
+        }
+      }
+    }
+
     this->active = true;
+
     if (this->joint_state_pub != nullptr)
     {
       this->joint_state_pub->on_activate();
@@ -1488,21 +1528,6 @@ class ZMotionDriverNode::Impl
       if (this->io_state_pubs[i] != nullptr)
       {
         this->io_state_pubs[i]->on_activate();
-      }
-    }
-
-    if (this->enable_axis_on_activate && !this->emergency_stop)
-    {
-      for (std::size_t i = 0; i < this->axes.size(); ++i)
-      {
-        CallResult result =
-            this->sdk->SetAxisEnable(this->axes[i].physical_axis, true);
-        if (!result.ok)
-        {
-          RCLCPP_ERROR(this->logger, "axis enable failed (logical=%d): %s",
-                       this->axes[i].logical_index, result.message.c_str());
-          return false;
-        }
       }
     }
 
