@@ -622,7 +622,7 @@ class ZMotionDriverNode::Impl
       const int axis_num = std::max(0, this->ecat_config.init.DriveAxisNum);
       for (int i = 0; (i < axis_num) && (i < 128); ++i)
       {
-        this->ecat_config.init.DrivePdoMode[i] = 10;
+        this->ecat_config.init.DrivePdoMode[i] = -1;
       }
     }
     else
