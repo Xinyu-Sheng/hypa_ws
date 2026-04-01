@@ -1,5 +1,10 @@
 #include "zmotion_driver/zmotion_driver_node.hpp"
 
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
 #include <algorithm>
 #include <chrono>
 #include <deque>
@@ -9,6 +14,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -82,6 +88,20 @@ std::string JoinInts(const std::vector<int> &_values)
 }
 
 std::string JoinDoubles(const std::vector<double> &_values)
+{
+  std::ostringstream oss;
+  for (std::size_t i = 0; i < _values.size(); ++i)
+  {
+    if (i > 0)
+    {
+      oss << ";";
+    }
+    oss << _values[i];
+  }
+  return oss.str();
+}
+
+std::string JoinStrings(const std::vector<std::string> &_values)
 {
   std::ostringstream oss;
   for (std::size_t i = 0; i < _values.size(); ++i)
@@ -278,6 +298,16 @@ class ZMotionDriverNode::Impl
     this->joint_state_topic =
         this->ResolveTopic(this->node->declare_parameter<std::string>(
             "feedback.joint_state_topic", "joint_states"));
+
+    // recording parameters
+    this->record_csv_enabled = this->node->declare_parameter<bool>(
+        "feedback.record_csv_enabled", false);
+    this->record_csv_file = this->node->declare_parameter<std::string>(
+        "feedback.record_csv_file", "/tmp/zmotion_driver_joint_states.csv");
+    this->record_rosbag_enabled = this->node->declare_parameter<bool>(
+        "feedback.record_rosbag_enabled", false);
+    this->record_rosbag_file = this->node->declare_parameter<std::string>(
+        "feedback.record_rosbag_file", "/tmp/zmotion_driver_joint_states_bag");
 
     const std::vector<std::string> mimic_position_topics =
         this->node->declare_parameter<std::vector<std::string>>(
@@ -668,6 +698,112 @@ class ZMotionDriverNode::Impl
     }
   }
 
+  bool OpenJointStateFile()
+  {
+    if (!this->record_csv_enabled)
+    {
+      return true;
+    }
+
+    this->joint_state_stream.open(this->record_csv_file,
+                                  std::ios::out | std::ios::app);
+    if (!this->joint_state_stream.is_open())
+    {
+      RCLCPP_ERROR(this->logger, "failed to open joint_state file: %s",
+                   this->record_csv_file.c_str());
+      return false;
+    }
+
+    if (this->joint_state_stream.tellp() == std::streampos(0))
+    {
+      this->joint_state_stream
+          << "stamp_ns,names,positions,velocities,efforts\n";
+      this->joint_state_stream.flush();
+    }
+    return true;
+  }
+
+  void CloseJointStateFile()
+  {
+    std::lock_guard<std::mutex> lock(this->joint_state_stream_mutex);
+    if (this->joint_state_stream.is_open())
+    {
+      this->joint_state_stream.flush();
+      this->joint_state_stream.close();
+    }
+  }
+
+  void WriteJointStateCsv(const sensor_msgs::msg::JointState &_js)
+  {
+    if (!this->record_csv_enabled)
+    {
+      return;
+    }
+    std::lock_guard<std::mutex> lock(this->joint_state_stream_mutex);
+    if (!this->joint_state_stream.is_open())
+    {
+      return;
+    }
+
+    const auto stamp = rclcpp::Clock(RCL_SYSTEM_TIME).now();
+    const std::string names = JoinStrings(_js.name);
+    const std::string positions = JoinDoubles(_js.position);
+    const std::string velocities = JoinDoubles(_js.velocity);
+    const std::string efforts = JoinDoubles(_js.effort);
+
+    this->joint_state_stream << stamp.nanoseconds() << "," << SanitizeCsv(names)
+                             << "," << SanitizeCsv(positions) << ","
+                             << SanitizeCsv(velocities) << ","
+                             << SanitizeCsv(efforts) << "\n";
+    this->joint_state_stream.flush();
+  }
+
+  bool StartRosbagRecorder()
+  {
+    if (!this->record_rosbag_enabled)
+    {
+      return true;
+    }
+    if (this->rosbag_pid > 0)
+    {
+      // already running
+      return true;
+    }
+
+    pid_t pid = fork();
+    if (pid < 0)
+    {
+      RCLCPP_ERROR(this->logger, "failed to fork for rosbag recorder");
+      return false;
+    }
+    if (pid == 0)
+    {
+      // child: exec ros2 bag record -o <file> <topic>
+      execlp("ros2", "ros2", "bag", "record", "-o",
+             this->record_rosbag_file.c_str(), this->joint_state_topic.c_str(),
+             (char *)NULL);
+      _exit(127);
+    }
+    this->rosbag_pid = pid;
+    RCLCPP_INFO(this->logger, "started rosbag record pid=%d",
+                static_cast<int>(pid));
+    return true;
+  }
+
+  void StopRosbagRecorder()
+  {
+    if (this->rosbag_pid <= 0)
+    {
+      return;
+    }
+    (void)kill(this->rosbag_pid, SIGINT);
+    int status = 0;
+    (void)waitpid(this->rosbag_pid, &status, 0);
+    RCLCPP_INFO(this->logger, "stopped rosbag record pid=%d",
+                static_cast<int>(this->rosbag_pid));
+    this->rosbag_pid = -1;
+  }
+
   bool ConfigureHardware()
   {
     std::lock_guard<std::mutex> lock(this->mutex);
@@ -831,6 +967,8 @@ class ZMotionDriverNode::Impl
 
     this->ResetInterfaces();
     this->CloseLogFile();
+    this->StopRosbagRecorder();
+    this->CloseJointStateFile();
   }
 
   std::string DescribeCommand(const PendingCommand &_cmd) const
@@ -1126,6 +1264,9 @@ class ZMotionDriverNode::Impl
 
     this->joint_state_pub->publish(joint_state);
 
+    // record joint_state to CSV if enabled
+    this->WriteJointStateCsv(joint_state);
+
     for (int group = 0; group < 2; ++group)
     {
       if ((this->mimic_position_pubs[group] == nullptr) ||
@@ -1365,6 +1506,12 @@ class ZMotionDriverNode::Impl
       }
     }
 
+    // start rosbag recorder if requested
+    if (!this->StartRosbagRecorder())
+    {
+      RCLCPP_ERROR(this->logger, "failed to start rosbag recorder");
+    }
+
     this->WriteLogLocked("lifecycle", "activate");
     return true;
   }
@@ -1407,6 +1554,9 @@ class ZMotionDriverNode::Impl
         this->io_state_pubs[i]->on_deactivate();
       }
     }
+
+    // stop rosbag recorder if running
+    this->StopRosbagRecorder();
 
     this->WriteLogLocked("lifecycle", "deactivate");
     return true;
@@ -1464,6 +1614,14 @@ class ZMotionDriverNode::Impl
 
   std::ofstream log_stream;
 
+  std::ofstream joint_state_stream;
+  std::mutex joint_state_stream_mutex;
+  bool record_csv_enabled = false;
+  std::string record_csv_file;
+  bool record_rosbag_enabled = false;
+  std::string record_rosbag_file;
+  pid_t rosbag_pid = -1;
+
   rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::JointState>::SharedPtr
       joint_state_pub;
   std::vector<
@@ -1509,6 +1667,12 @@ CallbackReturn ZMotionDriverNode::on_configure(
 
   if (!this->pimpl_->OpenLogFile())
   {
+    return CallbackReturn::FAILURE;
+  }
+
+  if (!this->pimpl_->OpenJointStateFile())
+  {
+    this->pimpl_->CloseLogFile();
     return CallbackReturn::FAILURE;
   }
 

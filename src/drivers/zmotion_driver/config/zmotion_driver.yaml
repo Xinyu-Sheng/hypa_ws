@@ -34,6 +34,13 @@ zmotion_driver:
       mimic_position_topics:
         - "feedback/mimic_group1/position" # std_msgs/msg/Float64
         - "feedback/mimic_group2/position" # std_msgs/msg/Float64
+      # 记录相关参数：可将 joint_states 保存为 CSV，并可选启动 ros2 bag 记录
+      record_csv_enabled: false
+      record_csv_file: "/tmp/zmotion_driver_joint_states.csv"
+      record_rosbag_enabled: false
+      record_rosbag_file: "/tmp/zmotion_driver_joint_states_bag"
+      # record_format 可选值：csv / jsonl （当前实现以 CSV 为主）
+      record_format: "csv"
 
     axis:
       # 数组顺序表示 EtherCAT / 硬件接线顺序，值表示对应的逻辑轴编号
