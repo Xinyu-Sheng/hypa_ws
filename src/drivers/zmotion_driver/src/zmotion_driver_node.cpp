@@ -1468,7 +1468,29 @@ class ZMotionDriverNode::Impl
     // Keep actions minimal to avoid blocking the polling loop.
     if (cfg.io_id == 1)
     {
-      this->WriteLogLocked("io_action", "io_1 triggered: placeholder action");
+      this->WriteLogLocked("io_action", "io_1 triggered: enqueue velocity=1");
+      if (!this->configured || !this->active || this->emergency_stop)
+      {
+        this->WriteLogLocked(
+            "io_action",
+            "io_1 triggered but node not active/configured or in emergency");
+      }
+      else
+      {
+        PendingCommand cmd;
+        cmd.type = PendingType::kVelocity;
+        cmd.logical_axes = std::vector<int>{1};
+        cmd.values = std::vector<double>{1.0};
+
+        if (this->pending_commands.size() >= this->queue_size)
+        {
+          this->pending_commands.pop_front();
+          RCLCPP_WARN(this->logger,
+                      "command queue overflow, drop oldest command");
+        }
+        this->pending_commands.push_back(cmd);
+        this->WriteLogLocked("control_rx", this->DescribeCommand(cmd));
+      }
     }
     else if (cfg.io_id == 2)
     {
