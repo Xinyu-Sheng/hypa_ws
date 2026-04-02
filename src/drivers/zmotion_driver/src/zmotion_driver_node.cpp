@@ -1425,11 +1425,31 @@ class ZMotionDriverNode::Impl
                           " prev=" + std::to_string(prev) +
                           " cur=" + std::to_string(current_value));
 
+    // Auto-clear emergency stop when the same IO that triggered it returns low.
+    if (cfg.emergency_stop_on_high && !high && this->emergency_stop &&
+        (this->last_emergency_stop_io == cfg.io_id))
+    {
+      this->emergency_stop = false;
+      if (this->active && this->enable_axis_on_activate)
+      {
+        for (std::size_t i = 0; i < this->axes.size(); ++i)
+        {
+          (void)this->sdk->SetAxisEnable(this->axes[i].physical_axis, true);
+        }
+      }
+      this->WriteLogLocked("safety",
+                           "emergency_cleared_io:" + std::to_string(cfg.io_id));
+      RCLCPP_INFO(this->logger, "emergency stop cleared by io_%d", cfg.io_id);
+      this->last_emergency_stop_io = -1;
+      // continue processing triggers for this IO
+    }
+
     // Maintain compatibility: explicit emergency_stop_on_high still forces an
     // emergency stop
     if (cfg.emergency_stop_on_high && high && !this->emergency_stop)
     {
       this->TriggerEmergencyStopLocked("io_" + std::to_string(cfg.io_id));
+      this->last_emergency_stop_io = cfg.io_id;
       return;
     }
 
@@ -1612,6 +1632,7 @@ class ZMotionDriverNode::Impl
     if (_msg->data)
     {
       this->TriggerEmergencyStopLocked("brake_topic");
+      this->last_emergency_stop_io = -1;
       return;
     }
 
@@ -1756,6 +1777,8 @@ class ZMotionDriverNode::Impl
   bool configured = false;
   bool active = false;
   bool emergency_stop = false;
+  // The IO id that last triggered an emergency stop (or -1 if none/unknown).
+  int last_emergency_stop_io = -1;
   bool remain_buffer_check_enabled = true;
 
   ZMotionDriverNode *node;
