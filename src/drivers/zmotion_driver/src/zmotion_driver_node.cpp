@@ -1497,8 +1497,28 @@ class ZMotionDriverNode::Impl
         return;
       }
 
-      const int logical_axis = (cfg.io_id == 1) ? 1 : 2;
-      const double target_vel = (high ? 0.1 : 0.0);
+      // Both IO1 and IO2 control logical axis 1: IO1 -> forward, IO2 ->
+      // reverse.
+      const int logical_axis = 1;
+
+      // Determine a sensible velocity magnitude: prefer configured axis speed
+      double speed_mag = 0.1;
+      auto it = this->logical_to_axis_index.find(logical_axis);
+      if (it != this->logical_to_axis_index.end())
+      {
+        speed_mag = this->axes[it->second].speed;
+      }
+
+      double target_vel = 0.0;
+      if (cfg.io_id == 1)
+      {
+        target_vel = (high ? speed_mag : 0.0);
+      }
+      else
+      {
+        // io_id == 2 -> opposite direction
+        target_vel = (high ? -speed_mag : 0.0);
+      }
 
       this->WriteLogLocked("io_action", "io_" + std::to_string(cfg.io_id) +
                                             " triggered: set velocity=" +
