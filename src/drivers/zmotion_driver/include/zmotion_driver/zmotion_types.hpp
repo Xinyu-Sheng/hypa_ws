@@ -36,11 +36,22 @@ struct AxisConfig
   std::string position_topic;
 };
 
+enum class IoTriggerMode
+{
+  kNone = 0,
+  kLevelHigh = 1,
+  kLevelLow = 2,
+  kRisingEdge = 3,
+  kFallingEdge = 4,
+  kBothEdges = 5,
+};
+
 struct IoInputConfig
 {
   int io_id = -1;
   std::string state_topic;
   bool emergency_stop_on_high = false;
+  IoTriggerMode trigger_mode = IoTriggerMode::kNone;
 };
 
 struct EcatInitInfoSet

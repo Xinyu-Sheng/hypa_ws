@@ -96,7 +96,8 @@ zmotion_driver:
 
       # 绝对位置零点补偿（发布反馈时会减去补偿，发送绝对命令时会加上补偿）
       zero_offsets: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-      units: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+      units:
+        [1048576.0, 1048576.0, 1048576.0, 1048576.0, 1.0, 1.0, 1.0, 1.0, 1.0]
       speeds: [10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0]
       accels: [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
       decels: [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
@@ -118,6 +119,10 @@ zmotion_driver:
       input_ids: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
       state_topics: []
       emergency_stop_on_high: []
+      # trigger_modes 与 input_ids 按序对齐：
+      # 0=none, 1=level_high, 2=level_low, 3=rising_edge, 4=falling_edge, 5=both_edges
+      # 如果未提供，则兼容性回退：emergency_stop_on_high==true -> level_high
+      trigger_modes: []
 
     ecat:
       init:

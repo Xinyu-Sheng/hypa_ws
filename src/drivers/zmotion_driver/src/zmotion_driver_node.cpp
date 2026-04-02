@@ -551,6 +551,11 @@ class ZMotionDriverNode::Impl
         this->node->declare_parameter<std::vector<bool>>(
             "io.emergency_stop_on_high", std::vector<bool>{});
 
+    // new: trigger modes per-IO (integer enum values)
+    const std::vector<int64_t> io_trigger_modes =
+        this->node->declare_parameter<std::vector<int64_t>>(
+            "io.trigger_modes", std::vector<int64_t>{});
+
     if (!io_ids.empty() && io_topics.empty())
     {
       io_topics.reserve(io_ids.size());
@@ -580,8 +585,50 @@ class ZMotionDriverNode::Impl
       io.io_id = static_cast<int>(io_ids[i]);
       io.state_topic = this->ResolveTopic(io_topics[i]);
       io.emergency_stop_on_high = io_estop[i];
+
+      if (i < io_trigger_modes.size())
+      {
+        switch (static_cast<int>(io_trigger_modes[i]))
+        {
+          case 1:
+            io.trigger_mode = IoTriggerMode::kLevelHigh;
+            break;
+          case 2:
+            io.trigger_mode = IoTriggerMode::kLevelLow;
+            break;
+          case 3:
+            io.trigger_mode = IoTriggerMode::kRisingEdge;
+            break;
+          case 4:
+            io.trigger_mode = IoTriggerMode::kFallingEdge;
+            break;
+          case 5:
+            io.trigger_mode = IoTriggerMode::kBothEdges;
+            break;
+          case 0:
+          default:
+            io.trigger_mode = IoTriggerMode::kNone;
+            break;
+        }
+      }
+      else
+      {
+        // compatibility: if emergency_stop_on_high was set, treat as level-high
+        if (io.emergency_stop_on_high)
+        {
+          io.trigger_mode = IoTriggerMode::kLevelHigh;
+        }
+        else
+        {
+          io.trigger_mode = IoTriggerMode::kNone;
+        }
+      }
+
       this->io_inputs.push_back(io);
     }
+
+    // initialize previous values cache for edge detection (-1 == unknown)
+    this->previous_io_values.assign(this->io_inputs.size(), -1);
 
     this->ecat_config.init.InitStructFlag = 0;
     this->ecat_config.init.LocalAxisId =
@@ -953,6 +1000,7 @@ class ZMotionDriverNode::Impl
       this->configured = false;
       this->pending_commands.clear();
       this->emergency_stop = false;
+      this->previous_io_values.clear();
       if (this->sdk)
       {
         (void)this->sdk->StopAll();
@@ -1247,7 +1295,7 @@ class ZMotionDriverNode::Impl
 
       const double logical_position = mpos - axis.zero_offset;
       logical_positions[i] = logical_position;
-  logical_velocities[i] = mspeed;
+      logical_velocities[i] = mspeed;
 
       joint_state.name.push_back(axis.joint_name);
       joint_state.position.push_back(logical_position);
@@ -1292,9 +1340,9 @@ class ZMotionDriverNode::Impl
 
     this->WriteLogLocked(
         "feedback",
-    "joint_state_size=" + std::to_string(joint_state.name.size()) +
-      " positions=" + JoinDoubles(logical_positions) +
-      " velocities=" + JoinDoubles(logical_velocities));
+        "joint_state_size=" + std::to_string(joint_state.name.size()) +
+            " positions=" + JoinDoubles(logical_positions) +
+            " velocities=" + JoinDoubles(logical_velocities));
   }
 
   void PollIoInputs()
@@ -1321,20 +1369,14 @@ class ZMotionDriverNode::Impl
         continue;
       }
 
-      if ((i < this->io_state_pubs.size()) &&
-          (this->io_state_pubs[i] != nullptr) &&
-          this->io_state_pubs[i]->is_activated())
-      {
-        std_msgs::msg::Bool msg;
-        msg.data = (value != 0);
-        this->io_state_pubs[i]->publish(msg);
-      }
+      // publish state and dispatch configured trigger action (synchronous,
+      // locked)
+      this->DispatchIoTriggerLocked(i, value);
 
-      if (this->io_inputs[i].emergency_stop_on_high && (value != 0) &&
-          !this->emergency_stop)
+      // update previous value for edge detection
+      if (i < this->previous_io_values.size())
       {
-        this->TriggerEmergencyStopLocked(
-            "io_" + std::to_string(this->io_inputs[i].io_id));
+        this->previous_io_values[i] = value;
       }
 
       io_values.push_back(value);
@@ -1343,6 +1385,99 @@ class ZMotionDriverNode::Impl
     if (!io_values.empty())
     {
       this->WriteLogLocked("io", "io_values=" + JoinInts(io_values));
+    }
+  }
+
+  void DispatchIoTriggerLocked(std::size_t index, int current_value)
+  {
+    if (index >= this->io_inputs.size())
+    {
+      return;
+    }
+
+    const IoInputConfig &cfg = this->io_inputs[index];
+
+    // Always publish state to the state topic if available
+    if ((index < this->io_state_pubs.size()) &&
+        (this->io_state_pubs[index] != nullptr) &&
+        this->io_state_pubs[index]->is_activated())
+    {
+      std_msgs::msg::Bool msg;
+      msg.data = (current_value != 0);
+      this->io_state_pubs[index]->publish(msg);
+    }
+
+    int prev = -1;
+    if (index < this->previous_io_values.size())
+    {
+      prev = this->previous_io_values[index];
+    }
+    const bool prev_known = (prev != -1);
+    const bool changed = prev_known && (prev != current_value);
+    const bool rising = prev_known && (prev == 0 && current_value != 0);
+    const bool falling = prev_known && (prev != 0 && current_value == 0);
+    const bool high = (current_value != 0);
+    const bool low = !high;
+
+    this->WriteLogLocked(
+        "io_trigger", "io_id=" + std::to_string(cfg.io_id) + " mode=" +
+                          std::to_string(static_cast<int>(cfg.trigger_mode)) +
+                          " prev=" + std::to_string(prev) +
+                          " cur=" + std::to_string(current_value));
+
+    // Maintain compatibility: explicit emergency_stop_on_high still forces an
+    // emergency stop
+    if (cfg.emergency_stop_on_high && high && !this->emergency_stop)
+    {
+      this->TriggerEmergencyStopLocked("io_" + std::to_string(cfg.io_id));
+      return;
+    }
+
+    bool should_trigger = false;
+    switch (cfg.trigger_mode)
+    {
+      case IoTriggerMode::kNone:
+        should_trigger = false;
+        break;
+      case IoTriggerMode::kLevelHigh:
+        should_trigger = high;
+        break;
+      case IoTriggerMode::kLevelLow:
+        should_trigger = low;
+        break;
+      case IoTriggerMode::kRisingEdge:
+        should_trigger = rising;
+        break;
+      case IoTriggerMode::kFallingEdge:
+        should_trigger = falling;
+        break;
+      case IoTriggerMode::kBothEdges:
+        should_trigger = changed;
+        break;
+      default:
+        should_trigger = false;
+        break;
+    }
+
+    if (!should_trigger)
+    {
+      return;
+    }
+
+    // Execute per-IO action synchronously while mutex is held.
+    // Keep actions minimal to avoid blocking the polling loop.
+    if (cfg.io_id == 1)
+    {
+      this->WriteLogLocked("io_action", "io_1 triggered: placeholder action");
+    }
+    else if (cfg.io_id == 2)
+    {
+      this->WriteLogLocked("io_action", "io_2 triggered: placeholder action");
+    }
+    else
+    {
+      this->WriteLogLocked("io_action",
+                           "io_" + std::to_string(cfg.io_id) + " triggered");
     }
   }
 
@@ -1547,6 +1682,7 @@ class ZMotionDriverNode::Impl
 
     this->active = false;
     this->pending_commands.clear();
+    this->previous_io_values.clear();
 
     (void)this->sdk->StopAll();
     for (std::size_t i = 0; i < this->axes.size(); ++i)
@@ -1634,6 +1770,7 @@ class ZMotionDriverNode::Impl
   std::set<int> mimic_member_logical_axes;
 
   std::vector<IoInputConfig> io_inputs;
+  std::vector<int> previous_io_values;
 
   std::deque<PendingCommand> pending_commands;
 
