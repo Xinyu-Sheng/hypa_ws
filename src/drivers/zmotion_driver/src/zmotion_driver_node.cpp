@@ -27,6 +27,10 @@
 #include "zmotion_driver/zmotion_sdk_wrapper.hpp"
 #include "zmotion_driver/zmotion_types.hpp"
 
+#ifndef ZMOTION_DRIVER_ENABLE_TRY_DIRECT_EXECUTE
+  #define ZMOTION_DRIVER_ENABLE_TRY_DIRECT_EXECUTE 1
+#endif
+
 namespace zmotion_driver
 {
 namespace
@@ -1049,6 +1053,45 @@ class ZMotionDriverNode::Impl
     {
       return;
     }
+
+#if ZMOTION_DRIVER_ENABLE_TRY_DIRECT_EXECUTE
+    CallResult direct_buffer_result = this->CheckHardwareBufferLocked(_cmd);
+    if (direct_buffer_result.ok)
+    {
+      CallResult direct_exec_result = this->ExecuteCommandLocked(_cmd);
+      if (direct_exec_result.ok)
+      {
+        this->WriteLogLocked("control_tx", this->DescribeCommand(_cmd));
+        return;
+      }
+
+      if (direct_exec_result.retriable)
+      {
+        this->WriteLogLocked("control_retry", direct_exec_result.message);
+      }
+      else
+      {
+        this->WriteLogLocked("control_err", direct_exec_result.message);
+        RCLCPP_WARN(this->logger,
+                    "direct execute failed, fall back to queue: %s",
+                    direct_exec_result.message.c_str());
+      }
+    }
+    else
+    {
+      if (direct_buffer_result.retriable)
+      {
+        this->WriteLogLocked("control_retry", direct_buffer_result.message);
+      }
+      else
+      {
+        this->WriteLogLocked("control_err", direct_buffer_result.message);
+        RCLCPP_WARN(this->logger,
+                    "direct execute skipped, fall back to queue: %s",
+                    direct_buffer_result.message.c_str());
+      }
+    }
+#endif
 
     if (this->pending_commands.size() >= this->queue_size)
     {
