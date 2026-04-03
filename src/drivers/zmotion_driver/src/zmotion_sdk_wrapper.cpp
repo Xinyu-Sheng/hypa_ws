@@ -6,6 +6,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <unordered_set>
 #include <vector>
 
 #if defined(__GNUC__)
@@ -105,6 +106,7 @@ class ZMotionSdkWrapper::Impl
   public:
   ZMC_HANDLE handle = nullptr;
   bool connected = false;
+  std::unordered_set<int> moving_axes;
 
   CallResult Execute(const std::string &_command, std::string *_response) const
   {
@@ -403,6 +405,7 @@ CallResult ZMotionSdkWrapper::Disconnect()
   const int32 code = ZAux_Close(this->pimpl_->handle);
   this->pimpl_->connected = false;
   this->pimpl_->handle = nullptr;
+  this->pimpl_->moving_axes.clear();
   return WrapCode(code, "ZAux_Close failed");
 }
 
@@ -797,21 +800,37 @@ CallResult ZMotionSdkWrapper::CommandVelocity(const int _axis,
   {
     const int32 cancel_code =
         ZAux_Direct_Single_Cancel(this->pimpl_->handle, _axis, 2);
-    return WrapCode(cancel_code, "ZAux_Direct_Single_Cancel failed");
+    const CallResult cancel_result =
+        WrapCode(cancel_code, "ZAux_Direct_Single_Cancel failed");
+    if (cancel_result.ok)
+    {
+      this->pimpl_->moving_axes.erase(_axis);
+    }
+    return cancel_result;
   }
 
-  const double speed = std::fabs(_velocity);
   const int32 speed_code = ZAux_Direct_SetSpeed(this->pimpl_->handle, _axis,
-                                                static_cast<float>(speed));
+                                                static_cast<float>(_velocity));
   if (speed_code != kErrOk)
   {
     return WrapCode(speed_code, "ZAux_Direct_SetSpeed failed");
   }
 
+  if (this->pimpl_->moving_axes.find(_axis) != this->pimpl_->moving_axes.end())
+  {
+    return CallResult::Success();
+  }
+
   const int direction = (_velocity > 0.0) ? 1 : -1;
   const int32 move_code =
       ZAux_Direct_Single_Vmove(this->pimpl_->handle, _axis, direction);
-  return WrapCode(move_code, "ZAux_Direct_Single_Vmove failed");
+  const CallResult move_result =
+      WrapCode(move_code, "ZAux_Direct_Single_Vmove failed");
+  if (move_result.ok)
+  {
+    this->pimpl_->moving_axes.insert(_axis);
+  }
+  return move_result;
 }
 
 CallResult ZMotionSdkWrapper::MoveAbsoluteMulti(
@@ -863,13 +882,23 @@ CallResult ZMotionSdkWrapper::MoveRelativeMulti(
 CallResult ZMotionSdkWrapper::CancelAxis(const int _axis)
 {
   const int32 code = ZAux_Direct_Single_Cancel(this->pimpl_->handle, _axis, 2);
-  return WrapCode(code, "ZAux_Direct_Single_Cancel failed");
+  const CallResult result = WrapCode(code, "ZAux_Direct_Single_Cancel failed");
+  if (result.ok)
+  {
+    this->pimpl_->moving_axes.erase(_axis);
+  }
+  return result;
 }
 
 CallResult ZMotionSdkWrapper::StopAll()
 {
   const int32 code = ZAux_Direct_Rapidstop(this->pimpl_->handle, 2);
-  return WrapCode(code, "ZAux_Direct_Rapidstop failed");
+  const CallResult result = WrapCode(code, "ZAux_Direct_Rapidstop failed");
+  if (result.ok)
+  {
+    this->pimpl_->moving_axes.clear();
+  }
+  return result;
 }
 
 CallResult ZMotionSdkWrapper::GetMpos(const int _axis, double *_value) const
