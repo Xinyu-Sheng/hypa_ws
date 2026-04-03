@@ -1486,7 +1486,9 @@ class ZMotionDriverNode::Impl
 
     // Execute per-IO action synchronously while mutex is held.
     // Keep actions minimal to avoid blocking the polling loop.
-    if ((cfg.io_id == 1) || (cfg.io_id == 2))
+    // IO pairs: (0,1)->logical 0, (2,3)->logical 1, (4,5)->logical 2,
+    // (6,7)->logical 3
+    if ((cfg.io_id >= 0) && (cfg.io_id <= 7))
     {
       if (!this->configured || !this->active || this->emergency_stop)
       {
@@ -1497,9 +1499,8 @@ class ZMotionDriverNode::Impl
         return;
       }
 
-      // Both IO1 and IO2 control logical axis 1: IO1 -> forward, IO2 ->
-      // reverse.
-      const int logical_axis = 1;
+      // Map IO pair to logical axis: integer division by 2 gives 0..3
+      const int logical_axis = cfg.io_id / 2;
 
       // Determine a sensible velocity magnitude: prefer configured axis speed
       double speed_mag = 0.1;
@@ -1510,13 +1511,13 @@ class ZMotionDriverNode::Impl
       }
 
       double target_vel = 0.0;
-      if (cfg.io_id == 1)
+      // even IO id -> positive, odd -> negative
+      if ((cfg.io_id % 2) == 0)
       {
         target_vel = (high ? speed_mag : 0.0);
       }
       else
       {
-        // io_id == 2 -> opposite direction
         target_vel = (high ? -speed_mag : 0.0);
       }
 
