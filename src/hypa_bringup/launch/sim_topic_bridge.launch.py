@@ -30,7 +30,7 @@ def generate_launch_description():
 
     # Include the hypa_sim launch from hypa_gazebo so simulation is started together
     hypa_gazebo_launch = os.path.join(
-        get_package_share_directory("hypa_gazebo"), "launch", "hypa_sim.launch.py"
+        get_package_share_directory("hypa_gazebo"), "launch", "hypa_gazebo.launch.py"
     )
     ld.add_action(
         IncludeLaunchDescription(
