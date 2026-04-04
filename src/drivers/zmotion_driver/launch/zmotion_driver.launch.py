@@ -12,7 +12,7 @@ def generate_launch_description():
 
     namespace_arg = DeclareLaunchArgument(
         "namespace",
-        default_value="",
+        default_value="hypa",
         description="ROS namespace for zmotion_driver",
     )
 
@@ -22,16 +22,20 @@ def generate_launch_description():
         description="Path to zmotion_driver parameter file",
     )
 
+    use_sim_time = LaunchConfiguration("use_sim_time")
+    use_sim_time_arg = DeclareLaunchArgument(
+        "use_sim_time",
+        default_value="false",
+        description="Use simulation clock",
+    )
+
     driver_node = LifecycleNode(
         package="zmotion_driver",
         executable="zmotion_driver_node",
         name="zmotion_driver",
         namespace=LaunchConfiguration("namespace"),
         output="screen",
-        parameters=[
-            LaunchConfiguration("params_file"),
-            {"namespace": LaunchConfiguration("namespace")},
-        ],
+        parameters=[LaunchConfiguration("params_file")],
     )
 
     return LaunchDescription(

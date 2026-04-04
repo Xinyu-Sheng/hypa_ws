@@ -1,37 +1,31 @@
 zmotion_driver:
   ros__parameters:
-    # 节点通用参数
-    use_sim_time: false
+    use_sim_time: false #必须有这个参数
 
     controller:
-      ip: "192.168.0.11"
-      slot_id: 0
+      ip: "192.168.0.11" #Ethernet/IP 地址
+      slot_id: 0 #Ethercat 插槽号
       timeout_ms: 10000
       feedback_period_ms: 20
       io_period_ms: 20
-      # 安全阈值：硬件 remain buffer 小于或等于该值时直接触发 emergency_stop
-      min_remain_buffer: 20
-      enable_axis_on_activate: true
+      min_remain_buffer: 20 # 安全阈值：硬件 remain buffer 小于或等于该值时直接触发 emergency_stop
+      enable_axis_on_activate: true #on_activate 时是否自动使能轴
       log_file: "/tmp/zmotion_driver_log.csv"
 
     control:
       velocity_topic: "cmd/velocity_axes" # std_msgs/msg/Float64MultiArray
-      single_axis_topic: "cmd/single_axis" # std_msgs/msg/Float64
       mimic_group1_topic: "cmd/mimic_group1" # std_msgs/msg/Float64
       mimic_group2_topic: "cmd/mimic_group2" # std_msgs/msg/Float64
+      single_axis_topic: "cmd/single_axis" # std_msgs/msg/Float64
       brake_topic: "cmd/brake" # std_msgs/msg/Bool
 
       # 是“哪些逻辑轴接收哪种控制话题”的分组，按逻辑轴编号来写，服务上面的topic（决定的是“哪些逻辑轴归到哪类控制”，不是每个topic的数组多大：代码里强制 velocity 组必须正好 4 个逻辑轴，mimic 组各 2 个，轴级数组必须 9 个）
       velocity_logical_indices: [0, 1, 2, 3]
-      single_axis_logical_index: 4
-      mimic_group1_logical_indices: [5, 6]
-      mimic_group2_logical_indices: [7, 8]
+      mimic_group1_logical_indices: [4, 5]
+      mimic_group2_logical_indices: [6, 7]
+      single_axis_logical_index: 8
 
     feedback:
-      joint_state_topic: "joint_states" # sensor_msgs/msg/JointState
-      mimic_position_topics:
-        - "feedback/mimic_group1/position" # std_msgs/msg/Float64
-        - "feedback/mimic_group2/position" # std_msgs/msg/Float64
       # 记录相关参数：可将 joint_states 保存为 CSV，并可选启动 ros2 bag 记录
       record_csv_enabled: false
       record_csv_file: "/tmp/zmotion_driver_joint_states.csv"
@@ -39,21 +33,10 @@ zmotion_driver:
       record_rosbag_file: "/tmp/zmotion_driver_joint_states_bag"
 
     axis:
-      # 数组顺序表示 EtherCAT / 硬件接线顺序，值表示对应的逻辑轴编号
+      # 数组中填写数字表示 EtherCAT / 硬件接线的下标/顺序，值表示对应的逻辑轴编号
       logical_indices: [0, 1, 2, 3, 4, 5, 6, 7, 8]
 
       # 以下数组都与 logical_indices 保持同一顺序
-      # 是“每个轴自己的能力/模式”
-      logical_names:
-        - "logical_axis_0"
-        - "logical_axis_1"
-        - "logical_axis_2"
-        - "logical_axis_3"
-        - "logical_axis_4"
-        - "logical_axis_5"
-        - "logical_axis_6"
-        - "logical_axis_7"
-        - "logical_axis_8"
 
       joint_names:
         - "joint_0"
@@ -64,7 +47,7 @@ zmotion_driver:
         - "joint_5"
         - "joint_6"
         - "joint_7"
-        - "joint_8"
+        - "joint_single"
 
       # 前 4 轴默认速度模式，第 5 轴和 mimic 组默认位置模式
       control_modes:
@@ -76,7 +59,7 @@ zmotion_driver:
         - "position"
         - "position"
         - "position"
-        - "position"
+        - "velocity"
 
       # 位置模式支持 absolute / relative
       position_modes:
@@ -108,17 +91,21 @@ zmotion_driver:
       accels: [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
       decels: [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
 
+      joint_state_topic: "joint_states" # sensor_msgs/msg/JointState
+      mimic_position_topics:
+        - "feedback/mimic_group1/position" # std_msgs/msg/Float64
+        - "feedback/mimic_group2/position" # std_msgs/msg/Float64
       # mimic 组轴不单独发布位置，使用 feedback.mimic_position_topics
       position_topics:
         - "feedback/axis0/position" # std_msgs/msg/Float64
         - "feedback/axis1/position" # std_msgs/msg/Float64
         - "feedback/axis2/position" # std_msgs/msg/Float64
         - "feedback/axis3/position" # std_msgs/msg/Float64
-        - "feedback/axis4/position" # std_msgs/msg/Float64
         - "feedback/axis5/position" # placeholder, not used when configured as mimic
         - "feedback/axis6/position" # placeholder, not used when configured as mimic
         - "feedback/axis7/position" # placeholder, not used when configured as mimic
         - "feedback/axis8/position" # placeholder, not used when configured as mimic
+        - "feedback/axis4/position" # std_msgs/msg/Float64
 
     io:
       # 按需填写输入口编号与状态 topic；为空时不启用 IO 轮询
@@ -128,30 +115,30 @@ zmotion_driver:
       # trigger_modes 与 input_ids 按序对齐：
       # 0=none, 1=level_high, 2=level_low, 3=rising_edge, 4=falling_edge, 5=both_edges
       # 如果未提供，则兼容性回退：emergency_stop_on_high==true -> level_high
-      trigger_modes: []
+      trigger_modes: [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]
 
     ecat:
       init:
         # 按约束固定为 0，不走默认初始化结构体路径
-        local_axis_id: 0
-        local_axis_num: 0
+        local_axis_id: 0 #用不到，本地脉冲轴
+        local_axis_num: 0 #用不到，本地脉冲轴
         drive_axis_start: 0
         drive_axis_num: 9
-        drive_io_start: 256
-        drive_io_space: 16
-        drive_enable: 0
+        drive_io_start: 256 #用不到，这参数是给驱动器上IO
+        drive_io_space: 16 #用不到，这参数是给驱动器上IO
+        drive_enable: 0 #不在Ethercat启动阶段启用轴
 
         # -1 表示不强制校验节点数量
         ecat_node_num: -1
-        sys_clock_mode: 1
-        bus_red_switch: 0
-        red_spare_slot: 0
+        sys_clock_mode: 1 #启用
+        bus_red_switch: 0 #启不
+        red_spare_slot: 0 #不用
 
         # 可按驱动类型覆盖
         drive_pdo_mode: []
-        node_io_id: []
-        node_aio_id: []
+        node_io_id: [] #用不到，这参数是给IO从站
+        node_aio_id: [] #用不到，这参数是给IO从站
 
         # DC 偏移按节点配置
-        dc_offset_flag: []
-        dc_offset_time: []
+        dc_offset_flag: [] #默认这样
+        dc_offset_time: [] #默认这样

@@ -24,7 +24,6 @@ struct AxisConfig
 {
   int logical_index = -1;
   int physical_axis = -1;
-  std::string logical_name;
   std::string joint_name;
   AxisControlMode control_mode = AxisControlMode::kPosition;
   AxisPositionMode position_mode = AxisPositionMode::kAbsolute;

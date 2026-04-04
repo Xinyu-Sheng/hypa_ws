@@ -33,34 +33,6 @@ namespace
 
 constexpr std::size_t kAxisCount = 9;
 
-std::vector<int64_t> DefaultIntSequence(const int _count)
-{
-  std::vector<int64_t> values;
-  values.reserve(static_cast<std::size_t>(_count));
-  for (int i = 0; i < _count; ++i)
-  {
-    values.push_back(i);
-  }
-  return values;
-}
-
-std::vector<std::string> DefaultNames(const std::string &_prefix,
-                                      const int _count)
-{
-  std::vector<std::string> names;
-  names.reserve(static_cast<std::size_t>(_count));
-  for (int i = 0; i < _count; ++i)
-  {
-    names.push_back(_prefix + std::to_string(i));
-  }
-  return names;
-}
-
-std::vector<double> DefaultDoubleValues(const int _count, const double _value)
-{
-  return std::vector<double>(static_cast<std::size_t>(_count), _value);
-}
-
 std::vector<int> ConvertToIntVector(const std::vector<int64_t> &_input)
 {
   std::vector<int> output;
@@ -198,35 +170,6 @@ class ZMotionDriverNode::Impl
     this->TearDown();
   }
 
-  std::string ResolveTopic(const std::string &_topic) const
-  {
-    if (_topic.empty())
-    {
-      return _topic;
-    }
-
-    if (_topic.front() == '/')
-    {
-      return _topic;
-    }
-
-    if (this->namespace_param.empty())
-    {
-      return _topic;
-    }
-
-    std::string ns = this->namespace_param;
-    if (ns.front() != '/')
-    {
-      ns = "/" + ns;
-    }
-    while ((!ns.empty()) && (ns.back() == '/'))
-    {
-      ns.pop_back();
-    }
-    return ns + "/" + _topic;
-  }
-
   void WriteLogLocked(const std::string &_tag, const std::string &_message)
   {
     if (!this->log_stream.is_open())
@@ -242,143 +185,105 @@ class ZMotionDriverNode::Impl
 
   bool LoadParameters()
   {
-    if (!this->node->has_parameter("namespace"))
-    {
-      this->node->declare_parameter<std::string>("namespace", "");
-    }
-    if (!this->node->has_parameter("use_sim_time"))
-    {
-      this->node->declare_parameter<bool>("use_sim_time", false);
-    }
+    // controller.* parameters
+    this->controller_ip =
+        this->node->get_parameter("controller.ip").as_string();
 
-    this->namespace_param = this->node->get_parameter("namespace").as_string();
-
-    this->controller_ip = this->node->declare_parameter<std::string>(
-        "controller.ip", "192.168.0.11");
     this->ecat_config.slot_id =
-        this->node->declare_parameter<int>("controller.slot_id", 0);
+        this->node->get_parameter("controller.slot_id").as_int();
+
     this->ecat_config.timeout_ms =
-        this->node->declare_parameter<int>("controller.timeout_ms", 10000);
+        this->node->get_parameter("controller.timeout_ms").as_int();
 
     this->feedback_period_ms =
-        this->node->declare_parameter<int>("controller.feedback_period_ms", 20);
+        this->node->get_parameter("controller.feedback_period_ms").as_int();
+
     this->io_period_ms =
-        this->node->declare_parameter<int>("controller.io_period_ms", 20);
+        this->node->get_parameter("controller.io_period_ms").as_int();
 
     this->min_remain_buffer =
-        this->node->declare_parameter<int>("controller.min_remain_buffer", 20);
-    if (this->min_remain_buffer < 0)
-    {
-      RCLCPP_ERROR(this->logger, "controller.min_remain_buffer must be >= 0");
-      return false;
-    }
-    this->enable_axis_on_activate = this->node->declare_parameter<bool>(
-        "controller.enable_axis_on_activate", true);
-    this->log_file_path = this->node->declare_parameter<std::string>(
-        "controller.log_file", "/tmp/zmotion_driver_log.csv");
+        this->node->get_parameter("controller.min_remain_buffer").as_int();
 
+    this->enable_axis_on_activate =
+        this->node->get_parameter("controller.enable_axis_on_activate")
+            .as_bool();
+
+    this->log_file_path =
+        this->node->get_parameter("controller.log_file").as_string();
+
+    // control.* topics
     this->velocity_topic =
-        this->ResolveTopic(this->node->declare_parameter<std::string>(
-            "control.velocity_topic", "cmd/velocity_axes"));
+        this->node->get_parameter("control.velocity_topic").as_string();
+
     this->single_axis_topic =
-        this->ResolveTopic(this->node->declare_parameter<std::string>(
-            "control.single_axis_topic", "cmd/single_axis"));
+        this->node->get_parameter("control.single_axis_topic").as_string();
+
     this->mimic_group_topics[0] =
-        this->ResolveTopic(this->node->declare_parameter<std::string>(
-            "control.mimic_group1_topic", "cmd/mimic_group1"));
+        this->node->get_parameter("control.mimic_group1_topic").as_string();
+
     this->mimic_group_topics[1] =
-        this->ResolveTopic(this->node->declare_parameter<std::string>(
-            "control.mimic_group2_topic", "cmd/mimic_group2"));
+        this->node->get_parameter("control.mimic_group2_topic").as_string();
+
     this->brake_topic =
-        this->ResolveTopic(this->node->declare_parameter<std::string>(
-            "control.brake_topic", "cmd/brake"));
-    this->joint_state_topic =
-        this->ResolveTopic(this->node->declare_parameter<std::string>(
-            "feedback.joint_state_topic", "joint_states"));
+        this->node->get_parameter("control.brake_topic").as_string();
 
     // recording parameters
-    this->record_csv_enabled = this->node->declare_parameter<bool>(
-        "feedback.record_csv_enabled", false);
-    this->record_csv_file = this->node->declare_parameter<std::string>(
-        "feedback.record_csv_file", "/tmp/zmotion_driver_joint_states.csv");
-    this->record_rosbag_enabled = this->node->declare_parameter<bool>(
-        "feedback.record_rosbag_enabled", false);
-    this->record_rosbag_file = this->node->declare_parameter<std::string>(
-        "feedback.record_rosbag_file", "/tmp/zmotion_driver_joint_states_bag");
+    this->record_csv_enabled =
+        this->node->get_parameter("feedback.record_csv_enabled").as_bool();
 
-    const std::vector<std::string> mimic_position_topics =
-        this->node->declare_parameter<std::vector<std::string>>(
-            "feedback.mimic_position_topics",
-            std::vector<std::string>{"feedback/mimic_group1/position",
-                                     "feedback/mimic_group2/position"});
+    this->record_csv_file =
+        this->node->get_parameter("feedback.record_csv_file").as_string();
+
+    this->record_rosbag_enabled =
+        this->node->get_parameter("feedback.record_rosbag_enabled").as_bool();
+
+    this->record_rosbag_file =
+        this->node->get_parameter("feedback.record_rosbag_file").as_string();
+
+    std::vector<int64_t> logical_indices;
+    (void)this->node->get_parameter("axis.logical_indices", logical_indices);
+
+    std::vector<std::string> joint_names;
+    (void)this->node->get_parameter("axis.joint_names", joint_names);
+
+    std::vector<std::string> control_modes;
+    (void)this->node->get_parameter("axis.control_modes", control_modes);
+
+    std::vector<std::string> position_modes;
+    (void)this->node->get_parameter("axis.position_modes", position_modes);
+
+    std::vector<double> zero_offsets;
+    (void)this->node->get_parameter("axis.zero_offsets", zero_offsets);
+
+    std::vector<double> units;
+    (void)this->node->get_parameter("axis.units", units);
+
+    std::vector<double> speeds;
+    (void)this->node->get_parameter("axis.speeds", speeds);
+
+    std::vector<double> accels;
+    (void)this->node->get_parameter("axis.accels", accels);
+
+    std::vector<double> decels;
+    (void)this->node->get_parameter("axis.decels", decels);
+
+    this->joint_state_topic =
+        this->node->get_parameter("axis.joint_state_topic").as_string();
+
+    std::vector<std::string> mimic_position_topics;
+    (void)this->node->get_parameter("axis.mimic_position_topics",
+                                    mimic_position_topics);
     if (mimic_position_topics.size() != 2U)
     {
-      RCLCPP_ERROR(
-          this->logger,
-          "feedback.mimic_position_topics must contain exactly 2 topics");
+      RCLCPP_ERROR(this->logger,
+                   "axis.mimic_position_topics must contain exactly 2 topics");
       return false;
     }
-    this->mimic_position_topics[0] =
-        this->ResolveTopic(mimic_position_topics[0]);
-    this->mimic_position_topics[1] =
-        this->ResolveTopic(mimic_position_topics[1]);
 
-    const std::vector<int64_t> logical_indices =
-        this->node->declare_parameter<std::vector<int64_t>>(
-            "axis.logical_indices",
-            DefaultIntSequence(static_cast<int>(kAxisCount)));
-    const std::vector<std::string> logical_names =
-        this->node->declare_parameter<std::vector<std::string>>(
-            "axis.logical_names",
-            DefaultNames("logical_axis_", static_cast<int>(kAxisCount)));
-    const std::vector<std::string> joint_names =
-        this->node->declare_parameter<std::vector<std::string>>(
-            "axis.joint_names",
-            DefaultNames("joint_", static_cast<int>(kAxisCount)));
-    const std::vector<std::string> control_modes =
-        this->node->declare_parameter<std::vector<std::string>>(
-            "axis.control_modes",
-            std::vector<std::string>{"velocity", "velocity", "velocity",
-                                     "velocity", "position", "position",
-                                     "position", "position", "position"});
-    const std::vector<std::string> position_modes =
-        this->node->declare_parameter<std::vector<std::string>>(
-            "axis.position_modes",
-            std::vector<std::string>{"absolute", "absolute", "absolute",
-                                     "absolute", "absolute", "absolute",
-                                     "absolute", "absolute", "absolute"});
-    const std::vector<double> zero_offsets =
-        this->node->declare_parameter<std::vector<double>>(
-            "axis.zero_offsets",
-            DefaultDoubleValues(static_cast<int>(kAxisCount), 0.0));
-    const std::vector<double> units =
-        this->node->declare_parameter<std::vector<double>>(
-            "axis.units",
-            DefaultDoubleValues(static_cast<int>(kAxisCount), 1.0));
-    const std::vector<double> speeds =
-        this->node->declare_parameter<std::vector<double>>(
-            "axis.speeds",
-            DefaultDoubleValues(static_cast<int>(kAxisCount), 10.0));
-    const std::vector<double> accels =
-        this->node->declare_parameter<std::vector<double>>(
-            "axis.accels",
-            DefaultDoubleValues(static_cast<int>(kAxisCount), 100.0));
-    const std::vector<double> decels =
-        this->node->declare_parameter<std::vector<double>>(
-            "axis.decels",
-            DefaultDoubleValues(static_cast<int>(kAxisCount), 100.0));
-    const std::vector<std::string> position_topics =
-        this->node->declare_parameter<std::vector<std::string>>(
-            "axis.position_topics",
-            std::vector<std::string>{
-                "feedback/axis0/position", "feedback/axis1/position",
-                "feedback/axis2/position", "feedback/axis3/position",
-                "feedback/axis4/position", "feedback/axis5/position",
-                "feedback/axis6/position", "feedback/axis7/position",
-                "feedback/axis8/position"});
+    std::vector<std::string> position_topics;
+    (void)this->node->get_parameter("axis.position_topics", position_topics);
 
     if ((logical_indices.size() != kAxisCount) ||
-        (logical_names.size() != kAxisCount) ||
         (joint_names.size() != kAxisCount) ||
         (control_modes.size() != kAxisCount) ||
         (position_modes.size() != kAxisCount) ||
@@ -417,7 +322,6 @@ class ZMotionDriverNode::Impl
       AxisConfig config;
       config.logical_index = static_cast<int>(logical_indices[i]);
       config.physical_axis = static_cast<int>(i);
-      config.logical_name = logical_names[i];
       config.joint_name = joint_names[i];
       config.control_mode = control_mode;
       config.position_mode = position_mode;
@@ -426,7 +330,7 @@ class ZMotionDriverNode::Impl
       config.speed = speeds[i];
       config.accel = accels[i];
       config.decel = decels[i];
-      config.position_topic = this->ResolveTopic(position_topics[i]);
+      config.position_topic = position_topics[i];
 
       if (logical_seen.count(config.logical_index) > 0U)
       {
@@ -440,10 +344,12 @@ class ZMotionDriverNode::Impl
       this->axes.push_back(config);
     }
 
-    this->velocity_logical_axes =
-        ConvertToIntVector(this->node->declare_parameter<std::vector<int64_t>>(
-            "control.velocity_logical_indices",
-            std::vector<int64_t>{0, 1, 2, 3}));
+    {
+      std::vector<int64_t> vel_param;
+      (void)this->node->get_parameter("control.velocity_logical_indices",
+                                      vel_param);
+      this->velocity_logical_axes = ConvertToIntVector(vel_param);
+    }
     if (this->velocity_logical_axes.size() != 4U)
     {
       RCLCPP_ERROR(this->logger,
@@ -469,8 +375,8 @@ class ZMotionDriverNode::Impl
       }
     }
 
-    this->single_logical_axis = this->node->declare_parameter<int>(
-        "control.single_axis_logical_index", 4);
+    this->single_logical_axis =
+        this->node->get_parameter("control.single_axis_logical_index").as_int();
     if (this->logical_to_axis_index.count(this->single_logical_axis) == 0U)
     {
       RCLCPP_ERROR(this->logger,
@@ -479,14 +385,19 @@ class ZMotionDriverNode::Impl
       return false;
     }
 
-    this->mimic_groups[0] =
-        ConvertToIntVector(this->node->declare_parameter<std::vector<int64_t>>(
-            "control.mimic_group1_logical_indices",
-            std::vector<int64_t>{5, 6}));
-    this->mimic_groups[1] =
-        ConvertToIntVector(this->node->declare_parameter<std::vector<int64_t>>(
-            "control.mimic_group2_logical_indices",
-            std::vector<int64_t>{7, 8}));
+    {
+      std::vector<int64_t> mg1;
+      (void)this->node->get_parameter("control.mimic_group1_logical_indices",
+                                      mg1);
+
+      this->mimic_groups[0] = ConvertToIntVector(mg1);
+    }
+    {
+      std::vector<int64_t> mg2;
+      (void)this->node->get_parameter("control.mimic_group2_logical_indices",
+                                      mg2);
+      this->mimic_groups[1] = ConvertToIntVector(mg2);
+    }
 
     this->mimic_member_logical_axes.clear();
     for (int group = 0; group < 2; ++group)
@@ -538,21 +449,19 @@ class ZMotionDriverNode::Impl
       }
     }
 
-    const std::vector<int64_t> io_ids =
-        this->node->declare_parameter<std::vector<int64_t>>(
-            "io.input_ids", std::vector<int64_t>{});
-    std::vector<std::string> io_topics =
-        this->node->declare_parameter<std::vector<std::string>>(
-            "io.state_topics", std::vector<std::string>{});
-    std::vector<bool> io_estop =
-        this->node->declare_parameter<std::vector<bool>>(
-            "io.emergency_stop_on_high", std::vector<bool>{});
+    std::vector<int64_t> io_ids;
+    (void)this->node->get_parameter("io.input_ids", io_ids);
+
+    std::vector<std::string> io_topics;
+    (void)this->node->get_parameter("io.state_topics", io_topics);
+
+    std::vector<bool> io_estop;
+    (void)this->node->get_parameter("io.emergency_stop_on_high", io_estop);
 
     // new: trigger modes per-IO (integer enum values)
-    const std::vector<int64_t> io_trigger_modes =
-        this->node->declare_parameter<std::vector<int64_t>>(
-            "io.trigger_modes", std::vector<int64_t>{});
+    std::vector<int64_t> io_trigger_modes;
 
+    (void)this->node->get_parameter("io.trigger_modes", io_trigger_modes);
     if (!io_ids.empty() && io_topics.empty())
     {
       io_topics.reserve(io_ids.size());
@@ -580,7 +489,7 @@ class ZMotionDriverNode::Impl
     {
       IoInputConfig io;
       io.io_id = static_cast<int>(io_ids[i]);
-      io.state_topic = this->ResolveTopic(io_topics[i]);
+      io.state_topic = io_topics[i];
       io.emergency_stop_on_high = io_estop[i];
 
       if (i < io_trigger_modes.size())
@@ -628,44 +537,57 @@ class ZMotionDriverNode::Impl
     this->previous_io_values.assign(this->io_inputs.size(), -1);
 
     this->ecat_config.init.InitStructFlag = 0;
-    this->ecat_config.init.LocalAxisId =
-        this->node->declare_parameter<int>("ecat.init.local_axis_id", 0);
-    this->ecat_config.init.LocalAxisNum =
-        this->node->declare_parameter<int>("ecat.init.local_axis_num", 0);
-    this->ecat_config.init.DriveAxisStart =
-        this->node->declare_parameter<int>("ecat.init.drive_axis_start", 0);
-    this->ecat_config.init.DriveAxisNum =
-        this->node->declare_parameter<int>("ecat.init.drive_axis_num", 9);
-    this->ecat_config.init.DriveIoStara =
-        this->node->declare_parameter<int>("ecat.init.drive_io_start", 256);
-    this->ecat_config.init.DriveIoSpa =
-        this->node->declare_parameter<int>("ecat.init.drive_io_space", 16);
-    this->ecat_config.init.DriveEnable =
-        this->node->declare_parameter<int>("ecat.init.drive_enable", 0);
-    this->ecat_config.init.EcatNodeNum =
-        this->node->declare_parameter<int>("ecat.init.ecat_node_num", -1);
-    this->ecat_config.init.SysClockMode =
-        this->node->declare_parameter<int>("ecat.init.sys_clock_mode", 1);
-    this->ecat_config.init.BusRedSwitch =
-        this->node->declare_parameter<int>("ecat.init.bus_red_switch", 0);
-    this->ecat_config.init.RedSpareSlot =
-        this->node->declare_parameter<int>("ecat.init.red_spare_slot", 0);
 
-    const std::vector<int64_t> drive_pdo_modes =
-        this->node->declare_parameter<std::vector<int64_t>>(
-            "ecat.init.drive_pdo_mode", std::vector<int64_t>{});
-    const std::vector<int64_t> node_io_ids =
-        this->node->declare_parameter<std::vector<int64_t>>(
-            "ecat.init.node_io_id", std::vector<int64_t>{});
-    const std::vector<int64_t> node_aio_ids =
-        this->node->declare_parameter<std::vector<int64_t>>(
-            "ecat.init.node_aio_id", std::vector<int64_t>{});
-    const std::vector<int64_t> dc_offset_flags =
-        this->node->declare_parameter<std::vector<int64_t>>(
-            "ecat.init.dc_offset_flag", std::vector<int64_t>{});
-    const std::vector<double> dc_offset_times =
-        this->node->declare_parameter<std::vector<double>>(
-            "ecat.init.dc_offset_time", std::vector<double>{});
+    this->ecat_config.init.LocalAxisId =
+        this->node->get_parameter("ecat.init.local_axis_id").as_int();
+
+    this->ecat_config.init.LocalAxisNum =
+        this->node->get_parameter("ecat.init.local_axis_num").as_int();
+
+    this->ecat_config.init.DriveAxisStart =
+        this->node->get_parameter("ecat.init.drive_axis_start").as_int();
+
+    this->ecat_config.init.DriveAxisNum =
+        this->node->get_parameter("ecat.init.drive_axis_num").as_int();
+
+    this->ecat_config.init.DriveIoStara =
+        this->node->get_parameter("ecat.init.drive_io_start").as_int();
+
+    this->ecat_config.init.DriveIoSpa =
+        this->node->get_parameter("ecat.init.drive_io_space").as_int();
+
+    this->ecat_config.init.DriveEnable =
+        this->node->get_parameter("ecat.init.drive_enable").as_int();
+
+    this->ecat_config.init.EcatNodeNum =
+        this->node->get_parameter("ecat.init.ecat_node_num").as_int();
+
+    this->ecat_config.init.SysClockMode =
+        this->node->get_parameter("ecat.init.sys_clock_mode").as_int();
+
+    this->ecat_config.init.BusRedSwitch =
+        this->node->get_parameter("ecat.init.bus_red_switch").as_int();
+
+    this->ecat_config.init.RedSpareSlot =
+        this->node->get_parameter("ecat.init.red_spare_slot").as_int();
+
+    std::vector<int64_t> drive_pdo_modes;
+    (void)this->node->get_parameter("ecat.init.drive_pdo_mode",
+                                    drive_pdo_modes);
+
+    std::vector<int64_t> node_io_ids;
+    (void)this->node->get_parameter("ecat.init.node_io_id", node_io_ids);
+
+    std::vector<int64_t> node_aio_ids;
+    (void)this->node->get_parameter("ecat.init.node_aio_id", node_aio_ids);
+
+    std::vector<int64_t> dc_offset_flags;
+    (void)this->node->get_parameter("ecat.init.dc_offset_flag",
+                                    dc_offset_flags);
+
+    std::vector<double> dc_offset_times;
+    (void)this->node->get_parameter("ecat.init.dc_offset_time",
+                                    dc_offset_times);
 
     for (int i = 0; i < 128; ++i)
     {
@@ -742,6 +664,7 @@ class ZMotionDriverNode::Impl
     return true;
   }
 
+  // 关闭csv文件
   void CloseLogFile()
   {
     if (this->log_stream.is_open())
@@ -1787,7 +1710,6 @@ class ZMotionDriverNode::Impl
 
   std::mutex mutex;
 
-  std::string namespace_param;
   std::string controller_ip;
   std::string log_file_path;
 
@@ -1851,9 +1773,6 @@ class ZMotionDriverNode::Impl
   rclcpp::TimerBase::SharedPtr io_timer;
 };
 
-using CallbackReturn =
-    rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
-
 ZMotionDriverNode::ZMotionDriverNode(const rclcpp::NodeOptions &_options)
     : rclcpp_lifecycle::LifecycleNode("zmotion_driver", _options),
       pimpl_(std::make_unique<Impl>(this))
@@ -1862,8 +1781,8 @@ ZMotionDriverNode::ZMotionDriverNode(const rclcpp::NodeOptions &_options)
 
 ZMotionDriverNode::~ZMotionDriverNode() = default;
 
-CallbackReturn ZMotionDriverNode::on_configure(
-    const rclcpp_lifecycle::State &_state)
+rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+ZMotionDriverNode::on_configure(const rclcpp_lifecycle::State &_state)
 {
   (void)_state;
 
@@ -1879,13 +1798,13 @@ CallbackReturn ZMotionDriverNode::on_configure(
 
   if (!this->pimpl_->OpenJointStateFile())
   {
-    this->pimpl_->CloseLogFile();
+    this->pimpl_->TearDown();
     return CallbackReturn::FAILURE;
   }
 
   if (!this->pimpl_->ConfigureHardware())
   {
-    this->pimpl_->CloseLogFile();
+    this->pimpl_->TearDown();
     return CallbackReturn::FAILURE;
   }
 
@@ -1896,49 +1815,52 @@ CallbackReturn ZMotionDriverNode::on_configure(
   }
 
   this->pimpl_->configured = true;
-  RCLCPP_INFO(this->get_logger(), "configured with namespace=%s",
-              this->pimpl_->namespace_param.c_str());
+  RCLCPP_INFO(this->get_logger(), "configure successfully.");
   return CallbackReturn::SUCCESS;
 }
 
-CallbackReturn ZMotionDriverNode::on_activate(
-    const rclcpp_lifecycle::State &_state)
+rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+ZMotionDriverNode::on_activate(const rclcpp_lifecycle::State &_state)
 {
   (void)_state;
   if (!this->pimpl_->ActivateNode())
   {
     return CallbackReturn::FAILURE;
   }
+  RCLCPP_INFO(this->get_logger(), "activate successfully.");
   return CallbackReturn::SUCCESS;
 }
 
-CallbackReturn ZMotionDriverNode::on_deactivate(
-    const rclcpp_lifecycle::State &_state)
+rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+ZMotionDriverNode::on_deactivate(const rclcpp_lifecycle::State &_state)
 {
   (void)_state;
   if (!this->pimpl_->DeactivateNode())
   {
     return CallbackReturn::FAILURE;
   }
+  RCLCPP_INFO(this->get_logger(), "deactivate successfully.");
   return CallbackReturn::SUCCESS;
 }
 
-CallbackReturn ZMotionDriverNode::on_cleanup(
-    const rclcpp_lifecycle::State &_state)
+rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+ZMotionDriverNode::on_cleanup(const rclcpp_lifecycle::State &_state)
 {
   (void)_state;
   if (!this->pimpl_->CleanupNode())
   {
     return CallbackReturn::FAILURE;
   }
+  RCLCPP_INFO(this->get_logger(), "cleanup successfully.");
   return CallbackReturn::SUCCESS;
 }
 
-CallbackReturn ZMotionDriverNode::on_shutdown(
-    const rclcpp_lifecycle::State &_state)
+rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
+ZMotionDriverNode::on_shutdown(const rclcpp_lifecycle::State &_state)
 {
   (void)_state;
   this->pimpl_->TearDown();
+  RCLCPP_INFO(this->get_logger(), "shutdown successfully.");
   return CallbackReturn::SUCCESS;
 }
 
