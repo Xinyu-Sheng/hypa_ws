@@ -35,13 +35,17 @@ def generate_launch_description():
         name="zmotion_driver",
         namespace=LaunchConfiguration("namespace"),
         output="screen",
-        parameters=[LaunchConfiguration("params_file")],
+        parameters=[
+            LaunchConfiguration("params_file"),
+            {"use_sim_time": LaunchConfiguration("use_sim_time")},
+        ],
     )
 
     return LaunchDescription(
         [
             namespace_arg,
             params_arg,
+            use_sim_time_arg,
             driver_node,
         ]
     )

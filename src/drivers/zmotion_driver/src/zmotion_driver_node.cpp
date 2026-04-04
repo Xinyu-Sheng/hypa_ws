@@ -183,9 +183,22 @@ class ZMotionDriverNode::Impl
     this->log_stream.flush();
   }
 
+  void PrintAllParameters()
+  {
+    // 获取所有参数
+    auto param_names = node->list_parameters({}, 5).names;
+    for (const auto &name : param_names)
+    {
+      auto param = node->get_parameter(name);
+      RCLCPP_INFO(node->get_logger(), "Param: %s = %s", name.c_str(),
+                  param.value_to_string().c_str());
+    }
+  }
+
   bool LoadParameters()
   {
-    // controller.* parameters
+    PrintAllParameters();
+
     this->controller_ip =
         this->node->get_parameter("controller.ip").as_string();
 
@@ -227,18 +240,21 @@ class ZMotionDriverNode::Impl
     this->brake_topic =
         this->node->get_parameter("control.brake_topic").as_string();
 
-    // recording parameters
-    this->record_csv_enabled =
-        this->node->get_parameter("feedback.record_csv_enabled").as_bool();
+    this->record_joints_csv_enabled =
+        this->node->get_parameter("feedback.record_joints_csv_enabled")
+            .as_bool();
 
-    this->record_csv_file =
-        this->node->get_parameter("feedback.record_csv_file").as_string();
+    this->record_joints_csv_file =
+        this->node->get_parameter("feedback.record_joints_csv_file")
+            .as_string();
 
-    this->record_rosbag_enabled =
-        this->node->get_parameter("feedback.record_rosbag_enabled").as_bool();
+    this->record_rosbag_joints_enabled =
+        this->node->get_parameter("feedback.record_rosbag_joints_enabled")
+            .as_bool();
 
-    this->record_rosbag_file =
-        this->node->get_parameter("feedback.record_rosbag_file").as_string();
+    this->record_rosbag_joints_file =
+        this->node->get_parameter("feedback.record_rosbag_joints_file")
+            .as_string();
 
     std::vector<int64_t> logical_indices;
     (void)this->node->get_parameter("axis.logical_indices", logical_indices);
@@ -645,7 +661,6 @@ class ZMotionDriverNode::Impl
     return true;
   }
 
-  // 这个函数每次执行，都是在文件末尾续写，打开的是CSV文件
   bool OpenLogFile()
   {
     this->log_stream.open(this->log_file_path, std::ios::out | std::ios::app);
@@ -676,17 +691,17 @@ class ZMotionDriverNode::Impl
 
   bool OpenJointStateFile()
   {
-    if (!this->record_csv_enabled)
+    if (!this->record_joints_csv_enabled)
     {
       return true;
     }
 
-    this->joint_state_stream.open(this->record_csv_file,
+    this->joint_state_stream.open(this->record_joints_csv_file,
                                   std::ios::out | std::ios::app);
     if (!this->joint_state_stream.is_open())
     {
       RCLCPP_ERROR(this->logger, "failed to open joint_state file: %s",
-                   this->record_csv_file.c_str());
+                   this->record_joints_csv_file.c_str());
       return false;
     }
 
@@ -711,7 +726,7 @@ class ZMotionDriverNode::Impl
 
   void WriteJointStateCsv(const sensor_msgs::msg::JointState &_js)
   {
-    if (!this->record_csv_enabled)
+    if (!this->record_joints_csv_enabled)
     {
       return;
     }
@@ -736,7 +751,7 @@ class ZMotionDriverNode::Impl
 
   bool StartRosbagRecorder()
   {
-    if (!this->record_rosbag_enabled)
+    if (!this->record_rosbag_joints_enabled)
     {
       return true;
     }
@@ -756,8 +771,8 @@ class ZMotionDriverNode::Impl
     {
       // child: exec ros2 bag record -o <file> <topic>
       execlp("ros2", "ros2", "bag", "record", "-o",
-             this->record_rosbag_file.c_str(), this->joint_state_topic.c_str(),
-             (char *)NULL);
+             this->record_rosbag_joints_file.c_str(),
+             this->joint_state_topic.c_str(), (char *)NULL);
       _exit(127);
     }
     this->rosbag_pid = pid;
@@ -1746,10 +1761,10 @@ class ZMotionDriverNode::Impl
 
   std::ofstream joint_state_stream;
   std::mutex joint_state_stream_mutex;
-  bool record_csv_enabled = false;
-  std::string record_csv_file;
-  bool record_rosbag_enabled = false;
-  std::string record_rosbag_file;
+  bool record_joints_csv_enabled = false;
+  std::string record_joints_csv_file;
+  bool record_rosbag_joints_enabled = false;
+  std::string record_rosbag_joints_file;
   pid_t rosbag_pid = -1;
 
   rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::JointState>::SharedPtr
@@ -1790,12 +1805,13 @@ ZMotionDriverNode::on_configure(const rclcpp_lifecycle::State &_state)
   {
     return CallbackReturn::FAILURE;
   }
-
+  // 打开controller的log文件。函数每次执行，都是在文件末尾续写。
   if (!this->pimpl_->OpenLogFile())
   {
     return CallbackReturn::FAILURE;
   }
 
+  // 打开joint的log文件。函数每次执行，都是在文件末尾续写。
   if (!this->pimpl_->OpenJointStateFile())
   {
     this->pimpl_->TearDown();

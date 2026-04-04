@@ -1,13 +1,13 @@
 zmotion_driver:
   ros__parameters:
-    use_sim_time: false #必须有这个参数
+    use_sim_time: false
 
     controller:
       ip: "192.168.0.11" #Ethernet/IP 地址
       slot_id: 0 #Ethercat 插槽号
       timeout_ms: 10000
-      feedback_period_ms: 20
-      io_period_ms: 20
+      feedback_period_ms: 10
+      io_period_ms: 10
       min_remain_buffer: 20 # 安全阈值：硬件 remain buffer 小于或等于该值时直接触发 emergency_stop
       enable_axis_on_activate: true #on_activate 时是否自动使能轴
       log_file: "/tmp/zmotion_driver_log.csv"
@@ -27,10 +27,10 @@ zmotion_driver:
 
     feedback:
       # 记录相关参数：可将 joint_states 保存为 CSV，并可选启动 ros2 bag 记录
-      record_csv_enabled: false
-      record_csv_file: "/tmp/zmotion_driver_joint_states.csv"
-      record_rosbag_enabled: false
-      record_rosbag_file: "/tmp/zmotion_driver_joint_states_bag"
+      record_joints_csv_enabled: false
+      record_joints_csv_file: "/tmp/zmotion_driver_joint_states.csv"
+      record_rosbag_joints_enabled: false
+      record_rosbag_joints_file: "/tmp/zmotion_driver_joint_states_bag"
 
     axis:
       # 数组中填写数字表示 EtherCAT / 硬件接线的下标/顺序，值表示对应的逻辑轴编号
