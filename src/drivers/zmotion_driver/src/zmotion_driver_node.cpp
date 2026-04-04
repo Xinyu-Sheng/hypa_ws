@@ -7,7 +7,9 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <fstream>
+#include <limits>
 #include <memory>
 #include <mutex>
 #include <set>
@@ -710,6 +712,14 @@ class ZMotionDriverNode::Impl
           static_cast<float>(dc_offset_times[i]);
     }
 
+    // Initialize last-known feedback containers (NaN = unknown)
+    this->last_known_positions.assign(this->axes.size(),
+                                      std::numeric_limits<double>::quiet_NaN());
+    this->last_known_velocities.assign(
+        this->axes.size(), std::numeric_limits<double>::quiet_NaN());
+    this->last_known_efforts.assign(this->axes.size(),
+                                    std::numeric_limits<double>::quiet_NaN());
+
     return true;
   }
 
@@ -1250,30 +1260,70 @@ class ZMotionDriverNode::Impl
       CallResult speed_result =
           this->sdk->GetMspeed(axis.physical_axis, &mspeed);
 
-      if (!mpos_result.ok || !speed_result.ok)
+      double logical_position = std::numeric_limits<double>::quiet_NaN();
+      double logical_velocity = std::numeric_limits<double>::quiet_NaN();
+      double effort = std::numeric_limits<double>::quiet_NaN();
+
+      if (mpos_result.ok && speed_result.ok)
       {
+        logical_position = mpos - axis.zero_offset;
+        logical_velocity = mspeed;
+        // update last-known values
+        if (i < this->last_known_positions.size())
+        {
+          this->last_known_positions[i] = logical_position;
+        }
+        if (i < this->last_known_velocities.size())
+        {
+          this->last_known_velocities[i] = logical_velocity;
+        }
+        // effort not read here; preserve last_known_efforts if any
+        if (i < this->last_known_efforts.size())
+        {
+          effort = this->last_known_efforts[i];
+        }
+      }
+      else
+      {
+        // read failed: log and fall back to last-known or NaN
         this->WriteLogLocked(
             "feedback_err",
             "read failed axis=" + std::to_string(axis.logical_index));
-        continue;
+        if (i < this->last_known_positions.size() &&
+            !std::isnan(this->last_known_positions[i]))
+        {
+          logical_position = this->last_known_positions[i];
+        }
+        if (i < this->last_known_velocities.size() &&
+            !std::isnan(this->last_known_velocities[i]))
+        {
+          logical_velocity = this->last_known_velocities[i];
+        }
+        if (i < this->last_known_efforts.size() &&
+            !std::isnan(this->last_known_efforts[i]))
+        {
+          effort = this->last_known_efforts[i];
+        }
       }
 
-      const double logical_position = mpos - axis.zero_offset;
       logical_positions[i] = logical_position;
-      logical_velocities[i] = mspeed;
+      logical_velocities[i] = logical_velocity;
 
       joint_state.name.push_back(axis.joint_name);
       joint_state.position.push_back(logical_position);
-      joint_state.velocity.push_back(mspeed);
-      joint_state.effort.push_back(0.0);
+      joint_state.velocity.push_back(logical_velocity);
+      joint_state.effort.push_back(effort);
 
       if ((i < this->axis_position_pubs.size()) &&
           (this->axis_position_pubs[i] != nullptr) &&
           this->axis_position_pubs[i]->is_activated())
       {
-        std_msgs::msg::Float64 position_msg;
-        position_msg.data = logical_position;
-        this->axis_position_pubs[i]->publish(position_msg);
+        if (!std::isnan(logical_position))
+        {
+          std_msgs::msg::Float64 position_msg;
+          position_msg.data = logical_position;
+          this->axis_position_pubs[i]->publish(position_msg);
+        }
       }
     }
 
@@ -1763,6 +1813,11 @@ class ZMotionDriverNode::Impl
 
   std::vector<IoInputConfig> io_inputs;
   std::vector<int> previous_io_values;
+
+  // Last-known feedback values (persist across PublishFeedback calls).
+  std::vector<double> last_known_positions;
+  std::vector<double> last_known_velocities;
+  std::vector<double> last_known_efforts;
 
   std::ofstream log_stream;
 
