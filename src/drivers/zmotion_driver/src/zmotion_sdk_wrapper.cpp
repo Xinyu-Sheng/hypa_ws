@@ -9,14 +9,7 @@
 #include <unordered_set>
 #include <vector>
 
-#if defined(__GNUC__)
-  #pragma GCC diagnostic push
-  #pragma GCC diagnostic ignored "-Wcomment"
-#endif
 #include "zmcaux.h"
-#if defined(__GNUC__)
-  #pragma GCC diagnostic pop
-#endif
 #include "zmotion.h"
 
 namespace zmotion_driver

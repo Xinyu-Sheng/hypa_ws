@@ -723,6 +723,7 @@ class ZMotionDriverNode::Impl
     return true;
   }
 
+  // 这个函数每次执行，都是在文件末尾续写，打开的是CSV文件
   bool OpenLogFile()
   {
     this->log_stream.open(this->log_file_path, std::ios::out | std::ios::app);
