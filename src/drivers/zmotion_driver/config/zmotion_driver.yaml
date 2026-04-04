@@ -7,13 +7,11 @@ zmotion_driver:
       ip: "192.168.0.11"
       slot_id: 0
       timeout_ms: 10000
-      control_period_ms: 5
       feedback_period_ms: 20
       io_period_ms: 20
+      # 安全阈值：硬件 remain buffer 小于或等于该值时直接触发 emergency_stop
       min_remain_buffer: 20
-      command_queue_size: 4096
       enable_axis_on_activate: true
-      disable_buffer_check_on_error: false # false 更不激进，硬件 remain buffer 一旦读取失败，且 disable_buffer_check_on_error 为 true，代码会永久关闭缓冲检查。
       log_file: "/tmp/zmotion_driver_log.csv"
 
     control:

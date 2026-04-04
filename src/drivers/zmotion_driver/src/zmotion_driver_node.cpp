@@ -7,16 +7,13 @@
 
 #include <algorithm>
 #include <chrono>
-#include <deque>
 #include <fstream>
 #include <memory>
 #include <mutex>
 #include <set>
 #include <sstream>
 #include <string>
-#include <thread>
 #include <unordered_map>
-#include <utility>
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
@@ -26,10 +23,6 @@
 #include "std_msgs/msg/float64_multi_array.hpp"
 #include "zmotion_driver/zmotion_sdk_wrapper.hpp"
 #include "zmotion_driver/zmotion_types.hpp"
-
-#ifndef ZMOTION_DRIVER_ENABLE_TRY_DIRECT_EXECUTE
-  #define ZMOTION_DRIVER_ENABLE_TRY_DIRECT_EXECUTE 1
-#endif
 
 namespace zmotion_driver
 {
@@ -265,8 +258,6 @@ class ZMotionDriverNode::Impl
     this->ecat_config.timeout_ms =
         this->node->declare_parameter<int>("controller.timeout_ms", 10000);
 
-    this->control_period_ms =
-        this->node->declare_parameter<int>("controller.control_period_ms", 5);
     this->feedback_period_ms =
         this->node->declare_parameter<int>("controller.feedback_period_ms", 20);
     this->io_period_ms =
@@ -274,13 +265,13 @@ class ZMotionDriverNode::Impl
 
     this->min_remain_buffer =
         this->node->declare_parameter<int>("controller.min_remain_buffer", 20);
-    this->queue_size =
-        static_cast<std::size_t>(this->node->declare_parameter<int>(
-            "controller.command_queue_size", 4096));
+    if (this->min_remain_buffer < 0)
+    {
+      RCLCPP_ERROR(this->logger, "controller.min_remain_buffer must be >= 0");
+      return false;
+    }
     this->enable_axis_on_activate = this->node->declare_parameter<bool>(
         "controller.enable_axis_on_activate", true);
-    this->disable_buffer_check_on_error = this->node->declare_parameter<bool>(
-        "controller.disable_buffer_check_on_error", false);
     this->log_file_path = this->node->declare_parameter<std::string>(
         "controller.log_file", "/tmp/zmotion_driver_log.csv");
 
@@ -859,7 +850,7 @@ class ZMotionDriverNode::Impl
   {
     std::lock_guard<std::mutex> lock(this->mutex);
 
-    this->remain_buffer_check_enabled = true;
+    this->emergency_stop = false;
     CallResult connect_result = this->sdk->Connect(this->controller_ip);
     if (!connect_result.ok)
     {
@@ -962,10 +953,6 @@ class ZMotionDriverNode::Impl
         [this](const std_msgs::msg::Bool::SharedPtr _msg)
         { this->OnBrakeCommand(_msg); });
 
-    this->control_timer = this->node->create_wall_timer(
-        std::chrono::milliseconds(this->control_period_ms),
-        [this]() { this->ProcessPendingCommands(); });
-
     this->feedback_timer = this->node->create_wall_timer(
         std::chrono::milliseconds(this->feedback_period_ms),
         [this]() { this->PublishFeedback(); });
@@ -979,7 +966,6 @@ class ZMotionDriverNode::Impl
 
   void ResetInterfaces()
   {
-    this->control_timer.reset();
     this->feedback_timer.reset();
     this->io_timer.reset();
 
@@ -1002,7 +988,6 @@ class ZMotionDriverNode::Impl
       std::lock_guard<std::mutex> lock(this->mutex);
       this->active = false;
       this->configured = false;
-      this->pending_commands.clear();
       this->emergency_stop = false;
       this->previous_io_values.clear();
       if (this->sdk)
@@ -1046,60 +1031,69 @@ class ZMotionDriverNode::Impl
     return oss.str();
   }
 
-  void EnqueueCommand(const PendingCommand &_cmd)
+  void DispatchCommand(const PendingCommand &_cmd)
   {
     std::lock_guard<std::mutex> lock(this->mutex);
+    this->DispatchCommandLocked(_cmd);
+  }
+
+  void DispatchCommandLocked(const PendingCommand &_cmd)
+  {
     if (!this->configured || !this->active || this->emergency_stop)
     {
       return;
     }
 
-#if ZMOTION_DRIVER_ENABLE_TRY_DIRECT_EXECUTE
-    CallResult direct_buffer_result = this->CheckHardwareBufferLocked(_cmd);
-    if (direct_buffer_result.ok)
-    {
-      CallResult direct_exec_result = this->ExecuteCommandLocked(_cmd);
-      if (direct_exec_result.ok)
-      {
-        this->WriteLogLocked("control_tx", this->DescribeCommand(_cmd));
-        return;
-      }
-
-      if (direct_exec_result.retriable)
-      {
-        this->WriteLogLocked("control_retry", direct_exec_result.message);
-      }
-      else
-      {
-        this->WriteLogLocked("control_err", direct_exec_result.message);
-        RCLCPP_WARN(this->logger,
-                    "direct execute failed, fall back to queue: %s",
-                    direct_exec_result.message.c_str());
-      }
-    }
-    else
-    {
-      if (direct_buffer_result.retriable)
-      {
-        this->WriteLogLocked("control_retry", direct_buffer_result.message);
-      }
-      else
-      {
-        this->WriteLogLocked("control_err", direct_buffer_result.message);
-        RCLCPP_WARN(this->logger,
-                    "direct execute skipped, fall back to queue: %s",
-                    direct_buffer_result.message.c_str());
-      }
-    }
-#endif
-
-    if (this->pending_commands.size() >= this->queue_size)
-    {
-      this->pending_commands.pop_front();
-      RCLCPP_WARN(this->logger, "command queue overflow, drop oldest command");
-    }
-    this->pending_commands.push_back(_cmd);
     this->WriteLogLocked("control_rx", this->DescribeCommand(_cmd));
+
+    std::vector<int> physical_axes;
+    if (!this->MapLogicalAxesToPhysical(_cmd.logical_axes, &physical_axes))
+    {
+      this->WriteLogLocked("control_err", "logical axis map failed");
+      RCLCPP_ERROR(this->logger, "logical axis map failed: %s",
+                   this->DescribeCommand(_cmd).c_str());
+      return;
+    }
+
+    if ((_cmd.type != PendingType::kVelocity) &&
+        (_cmd.type != PendingType::kMoveAbsolute) &&
+        (_cmd.type != PendingType::kMoveRelative))
+    {
+      this->WriteLogLocked("control_err", "unknown command type");
+      RCLCPP_ERROR(this->logger, "unknown command type: %s",
+                   this->DescribeCommand(_cmd).c_str());
+      return;
+    }
+
+    if (_cmd.values.size() != physical_axes.size())
+    {
+      this->WriteLogLocked("control_err", "command value size mismatch");
+      RCLCPP_ERROR(this->logger, "command value size mismatch: %s",
+                   this->DescribeCommand(_cmd).c_str());
+      return;
+    }
+
+    CallResult buffer_result = this->CheckHardwareBufferLocked(physical_axes);
+    if (!buffer_result.ok)
+    {
+      this->WriteLogLocked("control_err", buffer_result.message);
+      RCLCPP_ERROR(this->logger, "hardware remain buffer check failed: %s",
+                   buffer_result.message.c_str());
+      this->TriggerEmergencyStopLocked(buffer_result.message);
+      return;
+    }
+
+    CallResult exec_result = this->ExecuteCommandLocked(_cmd, physical_axes);
+    if (!exec_result.ok)
+    {
+      this->WriteLogLocked("control_err", exec_result.message);
+      RCLCPP_ERROR(this->logger, "execute command failed: %s",
+                   exec_result.message.c_str());
+      this->TriggerEmergencyStopLocked(exec_result.message);
+      return;
+    }
+
+    this->WriteLogLocked("control_tx", this->DescribeCommand(_cmd));
   }
 
   bool MapLogicalAxesToPhysical(const std::vector<int> &_logical_axes,
@@ -1124,67 +1118,39 @@ class ZMotionDriverNode::Impl
     return true;
   }
 
-  CallResult CheckHardwareBufferLocked(const PendingCommand &_cmd)
+  CallResult CheckHardwareBufferLocked(
+      const std::vector<int> &_physical_axes) const
   {
-    if (!this->remain_buffer_check_enabled)
-    {
-      return CallResult::Success();
-    }
-
-    if (this->min_remain_buffer < 0)
-    {
-      return CallResult::Success();
-    }
-
-    std::vector<int> physical_axes;
-    if (!this->MapLogicalAxesToPhysical(_cmd.logical_axes, &physical_axes))
-    {
-      return CallResult::Failure(-201, "logical axis map failed", false);
-    }
-
-    for (std::size_t i = 0; i < physical_axes.size(); ++i)
+    for (std::size_t i = 0; i < _physical_axes.size(); ++i)
     {
       int remain = 0;
       CallResult remain_result =
-          this->sdk->GetRemainBuffer(physical_axes[i], &remain);
+          this->sdk->GetRemainBuffer(_physical_axes[i], &remain);
       if (!remain_result.ok)
       {
-        if (this->disable_buffer_check_on_error)
-        {
-          this->remain_buffer_check_enabled = false;
-          RCLCPP_WARN(this->logger,
-                      "disable hardware remain buffer check due to error: %s",
-                      remain_result.message.c_str());
-          return CallResult::Success();
-        }
         return remain_result;
       }
 
       if (remain <= this->min_remain_buffer)
       {
         return CallResult::Failure(
-            -202, "hardware remain buffer is below threshold", true);
+            -202, "hardware remain buffer is below threshold", false);
       }
     }
 
     return CallResult::Success();
   }
 
-  CallResult ExecuteCommandLocked(const PendingCommand &_cmd)
+  CallResult ExecuteCommandLocked(const PendingCommand &_cmd,
+                                  const std::vector<int> &_physical_axes)
   {
-    std::vector<int> physical_axes;
-    if (!this->MapLogicalAxesToPhysical(_cmd.logical_axes, &physical_axes))
-    {
-      return CallResult::Failure(-203, "logical axis map failed", false);
-    }
-
     if ((_cmd.type == PendingType::kVelocity) &&
-        (_cmd.values.size() == physical_axes.size()))
+        (_cmd.values.size() == _physical_axes.size()))
     {
-      for (std::size_t i = 0; i < physical_axes.size(); ++i)
+      for (std::size_t i = 0; i < _physical_axes.size(); ++i)
       {
         CallResult result =
-            this->sdk->CommandVelocity(physical_axes[i], _cmd.values[i]);
+            this->sdk->CommandVelocity(_physical_axes[i], _cmd.values[i]);
         if (!result.ok)
         {
           return result;
@@ -1193,7 +1159,7 @@ class ZMotionDriverNode::Impl
       return CallResult::Success();
     }
 
-    if (_cmd.values.size() != physical_axes.size())
+    if (_cmd.values.size() != _physical_axes.size())
     {
       return CallResult::Failure(-204, "command value size mismatch", false);
     }
@@ -1222,11 +1188,11 @@ class ZMotionDriverNode::Impl
 
     if (_cmd.type == PendingType::kMoveAbsolute)
     {
-      return this->sdk->MoveAbsoluteMulti(physical_axes, axis_values);
+      return this->sdk->MoveAbsoluteMulti(_physical_axes, axis_values);
     }
     if (_cmd.type == PendingType::kMoveRelative)
     {
-      return this->sdk->MoveRelativeMulti(physical_axes, axis_values);
+      return this->sdk->MoveRelativeMulti(_physical_axes, axis_values);
     }
 
     return CallResult::Failure(-206, "unknown command type", false);
@@ -1234,7 +1200,7 @@ class ZMotionDriverNode::Impl
 
   void TriggerEmergencyStopLocked(const std::string &_reason)
   {
-    this->pending_commands.clear();
+    const bool was_emergency_stop = this->emergency_stop;
     this->emergency_stop = true;
 
     (void)this->sdk->StopAll();
@@ -1243,58 +1209,14 @@ class ZMotionDriverNode::Impl
       (void)this->sdk->SetAxisEnable(this->axes[i].physical_axis, false);
     }
 
-    this->WriteLogLocked("safety", "emergency_stop:" + _reason);
-    RCLCPP_ERROR(this->logger, "emergency stop triggered: %s", _reason.c_str());
-  }
-
-  void ProcessPendingCommands()
-  {
-    std::lock_guard<std::mutex> lock(this->mutex);
-    if (!this->configured || !this->active || this->emergency_stop)
+    if (was_emergency_stop)
     {
       return;
     }
 
-    std::size_t processed = 0U;
-    while ((!this->pending_commands.empty()) && (processed < 128U))
-    {
-      const PendingCommand command = this->pending_commands.front();
-      CallResult buffer_result = this->CheckHardwareBufferLocked(command);
-      if (!buffer_result.ok)
-      {
-        if (!buffer_result.retriable)
-        {
-          RCLCPP_ERROR(this->logger, "buffer check failed: %s",
-                       buffer_result.message.c_str());
-          this->WriteLogLocked("control_err", buffer_result.message);
-          this->pending_commands.pop_front();
-          continue;
-        }
-        break;
-      }
-
-      CallResult exec_result = this->ExecuteCommandLocked(command);
-      if (exec_result.ok)
-      {
-        this->WriteLogLocked("control_tx", this->DescribeCommand(command));
-        this->pending_commands.pop_front();
-        ++processed;
-        continue;
-      }
-
-      if (exec_result.retriable)
-      {
-        this->WriteLogLocked("control_retry", exec_result.message);
-        break;
-      }
-
-      this->WriteLogLocked("control_err", exec_result.message);
-      RCLCPP_ERROR(this->logger, "execute command failed: %s",
-                   exec_result.message.c_str());
-      this->pending_commands.pop_front();
-    }
+    this->WriteLogLocked("safety", "emergency_stop:" + _reason);
+    RCLCPP_ERROR(this->logger, "emergency stop triggered: %s", _reason.c_str());
   }
-
   void PublishFeedback()
   {
     std::lock_guard<std::mutex> lock(this->mutex);
@@ -1468,31 +1390,11 @@ class ZMotionDriverNode::Impl
                           " prev=" + std::to_string(prev) +
                           " cur=" + std::to_string(current_value));
 
-    // Auto-clear emergency stop when the same IO that triggered it returns low.
-    if (cfg.emergency_stop_on_high && !high && this->emergency_stop &&
-        (this->last_emergency_stop_io == cfg.io_id))
-    {
-      this->emergency_stop = false;
-      if (this->active && this->enable_axis_on_activate)
-      {
-        for (std::size_t i = 0; i < this->axes.size(); ++i)
-        {
-          (void)this->sdk->SetAxisEnable(this->axes[i].physical_axis, true);
-        }
-      }
-      this->WriteLogLocked("safety",
-                           "emergency_cleared_io:" + std::to_string(cfg.io_id));
-      RCLCPP_INFO(this->logger, "emergency stop cleared by io_%d", cfg.io_id);
-      this->last_emergency_stop_io = -1;
-      // continue processing triggers for this IO
-    }
-
     // Maintain compatibility: explicit emergency_stop_on_high still forces an
     // emergency stop
     if (cfg.emergency_stop_on_high && high && !this->emergency_stop)
     {
       this->TriggerEmergencyStopLocked("io_" + std::to_string(cfg.io_id));
-      this->last_emergency_stop_io = cfg.io_id;
       return;
     }
 
@@ -1572,15 +1474,7 @@ class ZMotionDriverNode::Impl
       cmd.type = PendingType::kVelocity;
       cmd.logical_axes = std::vector<int>{logical_axis};
       cmd.values = std::vector<double>{target_vel};
-
-      if (this->pending_commands.size() >= this->queue_size)
-      {
-        this->pending_commands.pop_front();
-        RCLCPP_WARN(this->logger,
-                    "command queue overflow, drop oldest command");
-      }
-      this->pending_commands.push_back(cmd);
-      this->WriteLogLocked("control_rx", this->DescribeCommand(cmd));
+      this->DispatchCommandLocked(cmd);
     }
     else
     {
@@ -1609,7 +1503,7 @@ class ZMotionDriverNode::Impl
     cmd.type = PendingType::kVelocity;
     cmd.logical_axes = this->velocity_logical_axes;
     cmd.values.assign(_msg->data.begin(), _msg->data.end());
-    this->EnqueueCommand(cmd);
+    this->DispatchCommand(cmd);
   }
 
   void OnSingleAxisCommand(const std_msgs::msg::Float64::SharedPtr &_msg)
@@ -1643,7 +1537,7 @@ class ZMotionDriverNode::Impl
       cmd.type = PendingType::kMoveRelative;
     }
 
-    this->EnqueueCommand(cmd);
+    this->DispatchCommand(cmd);
   }
 
   void OnMimicCommand(const int _group,
@@ -1681,7 +1575,7 @@ class ZMotionDriverNode::Impl
       cmd.type = PendingType::kMoveRelative;
     }
 
-    this->EnqueueCommand(cmd);
+    this->DispatchCommand(cmd);
   }
 
   void OnBrakeCommand(const std_msgs::msg::Bool::SharedPtr &_msg)
@@ -1696,7 +1590,6 @@ class ZMotionDriverNode::Impl
     if (_msg->data)
     {
       this->TriggerEmergencyStopLocked("brake_topic");
-      this->last_emergency_stop_io = -1;
       return;
     }
 
@@ -1705,15 +1598,10 @@ class ZMotionDriverNode::Impl
       return;
     }
 
-    this->emergency_stop = false;
-    if (this->active && this->enable_axis_on_activate)
-    {
-      for (std::size_t i = 0; i < this->axes.size(); ++i)
-      {
-        (void)this->sdk->SetAxisEnable(this->axes[i].physical_axis, true);
-      }
-    }
-    this->WriteLogLocked("safety", "brake_release");
+    this->WriteLogLocked("safety", "brake_release_requires_lifecycle_recovery");
+    RCLCPP_WARN(this->logger,
+                "brake released but emergency stop remains latched; lifecycle "
+                "recovery required");
   }
 
   bool ActivateNode()
@@ -1736,7 +1624,6 @@ class ZMotionDriverNode::Impl
           {
             (void)this->sdk->SetAxisEnable(this->axes[j].physical_axis, false);
           }
-          this->pending_commands.clear();
           this->active = false;
           this->WriteLogLocked("lifecycle", "activate_failed");
           return false;
@@ -1790,7 +1677,7 @@ class ZMotionDriverNode::Impl
     std::lock_guard<std::mutex> lock(this->mutex);
 
     this->active = false;
-    this->pending_commands.clear();
+    this->emergency_stop = false;
     this->previous_io_values.clear();
 
     (void)this->sdk->StopAll();
@@ -1841,9 +1728,6 @@ class ZMotionDriverNode::Impl
   bool configured = false;
   bool active = false;
   bool emergency_stop = false;
-  // The IO id that last triggered an emergency stop (or -1 if none/unknown).
-  int last_emergency_stop_io = -1;
-  bool remain_buffer_check_enabled = true;
 
   ZMotionDriverNode *node;
   rclcpp::Logger logger;
@@ -1858,13 +1742,10 @@ class ZMotionDriverNode::Impl
 
   EcatConfig ecat_config;
 
-  int control_period_ms = 5;
   int feedback_period_ms = 20;
   int io_period_ms = 20;
   int min_remain_buffer = 20;
-  std::size_t queue_size = 4096;
   bool enable_axis_on_activate = true;
-  bool disable_buffer_check_on_error = false;
 
   std::string velocity_topic;
   std::string single_axis_topic;
@@ -1882,8 +1763,6 @@ class ZMotionDriverNode::Impl
 
   std::vector<IoInputConfig> io_inputs;
   std::vector<int> previous_io_values;
-
-  std::deque<PendingCommand> pending_commands;
 
   std::ofstream log_stream;
 
@@ -1912,7 +1791,6 @@ class ZMotionDriverNode::Impl
   rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr mimic_group_subs[2];
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr brake_sub;
 
-  rclcpp::TimerBase::SharedPtr control_timer;
   rclcpp::TimerBase::SharedPtr feedback_timer;
   rclcpp::TimerBase::SharedPtr io_timer;
 };

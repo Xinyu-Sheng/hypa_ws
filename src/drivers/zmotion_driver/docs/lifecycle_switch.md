@@ -39,7 +39,13 @@ ros2 lifecycle set /zmotion_driver cleanup
 - deactivate：停止任务，关闭轴使能。
 - cleanup：释放接口并断开控制器。
 
-## 4. 注意事项
+## 4. 故障处理
+
+- 如果硬件 remain buffer 低于阈值或读取失败，驱动会立即进入 emergency_stop，并关闭所有轴使能。
+- 进入 emergency_stop 后，不会自动恢复；`brake` 释放也不会自动重新使能轴。
+- 恢复方式是走生命周期流程，至少执行 `deactivate`，再按需要 `cleanup` -> `configure` -> `activate`。
+
+## 5. 注意事项
 
 - activate 不是纯软件开关，会实际使能轴。
 - deactivate 会执行 StopAll，并关闭轴使能。
