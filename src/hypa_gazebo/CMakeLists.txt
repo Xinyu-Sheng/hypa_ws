@@ -20,15 +20,6 @@ set(GZ_SIM_VER ${gz-sim8_VERSION_MAJOR})
 find_package(gz-gui8 REQUIRED)
 set(GZ_GUI_VER ${gz-gui8_VERSION_MAJOR})
 
-# 查找Qt5 (用于GUI插件)
-find_package(Qt5
-  COMPONENTS
-  Core
-  Quick
-  QuickControls2
-  REQUIRED
-)
-
 # 注释掉不存在的库目标
 # add_library(BasicSystem
 # SHARED
@@ -57,7 +48,7 @@ find_package(Qt5
 
 # Add plugin subdirectories
 add_subdirectory(plugins/rope_visualizer)
-add_subdirectory(plugins/gui/hypa_state_display)
+add_subdirectory(plugins/gui/hypa-dt-gui-plugin)
 
 # 注释掉不存在的库目标的安装
 # install(

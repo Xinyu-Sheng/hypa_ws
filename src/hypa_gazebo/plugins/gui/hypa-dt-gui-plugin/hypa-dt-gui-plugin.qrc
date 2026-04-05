@@ -1,0 +1,8 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+  <qresource prefix="/HypaDtGuiPlugin">
+    <file alias="HypaDtGuiPlugin.qml">qml/HypaDtGuiPlugin.qml</file>
+    <file alias="MetricChartCard.qml">qml/MetricChartCard.qml</file>
+    <!-- Covariance QML removed; covariance displayed inline in MetricChartCard summary -->
+  </qresource>
+</RCC>
