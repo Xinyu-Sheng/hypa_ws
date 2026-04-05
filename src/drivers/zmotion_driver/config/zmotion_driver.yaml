@@ -1,4 +1,4 @@
-zmotion_driver:
+/**/zmotion_driver:
   ros__parameters:
     use_sim_time: false
 
@@ -110,8 +110,8 @@ zmotion_driver:
     io:
       # 按需填写输入口编号与状态 topic；为空时不启用 IO 轮询
       input_ids: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-      state_topics: []
-      emergency_stop_on_high: []
+      # state_topics: []
+      # emergency_stop_on_high: []
       # trigger_modes 与 input_ids 按序对齐：
       # 0=none, 1=level_high, 2=level_low, 3=rising_edge, 4=falling_edge, 5=both_edges
       # 如果未提供，则兼容性回退：emergency_stop_on_high==true -> level_high
@@ -134,11 +134,12 @@ zmotion_driver:
         bus_red_switch: 0 #启不
         red_spare_slot: 0 #不用
 
-        # 可按驱动类型覆盖
-        drive_pdo_mode: []
-        node_io_id: [] #用不到，这参数是给IO从站
-        node_aio_id: [] #用不到，这参数是给IO从站
 
-        # DC 偏移按节点配置
-        dc_offset_flag: [] #默认这样
-        dc_offset_time: [] #默认这样
+        # 可按驱动类型覆盖
+        # drive_pdo_mode: []
+        # node_io_id: [] #用不到，这参数是给IO从站
+        # node_aio_id: [] #用不到，这参数是给IO从站
+
+        # # DC 偏移按节点配置
+        # dc_offset_flag: [] #默认这样
+        # dc_offset_time: [] #默认这样

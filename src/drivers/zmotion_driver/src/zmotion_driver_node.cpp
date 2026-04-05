@@ -658,6 +658,7 @@ class ZMotionDriverNode::Impl
     this->last_known_efforts.assign(this->axes.size(),
                                     std::numeric_limits<double>::quiet_NaN());
 
+    RCLCPP_INFO(this->logger, "======= Parameters loaded successfully =======");
     return true;
   }
 

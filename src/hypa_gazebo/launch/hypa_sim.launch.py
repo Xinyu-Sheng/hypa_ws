@@ -81,7 +81,7 @@ def generate_launch_description():
                 output="screen",
             ),
             gz_sim,
-            wmctrl_fullscreen,
+            # wmctrl_fullscreen,
             bridge,
         ]
     )
