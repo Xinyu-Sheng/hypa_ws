@@ -10,6 +10,10 @@ Rectangle {
   clip: true
   color: Material.backgroundColor
 
+
+  // 添加最小宽度设置
+  Layout.minimumWidth: 1000
+
   Component.onCompleted: {
     // 设置深色主题
     Material.primary = "#2196F3"
