@@ -12,6 +12,14 @@ Rectangle {
   property color panelColor: "#f8fbff"
   property color panelBorderColor: "#d9e4f1"
   property color hintColor: "#54667b"
+  property color cardGradientTop: "#ffffff"
+  property color cardGradientBottom: "#f7fbff"
+  property color panelGradientTop: "#fcfeff"
+  property color panelGradientBottom: "#f2f8ff"
+  property color summaryGradientTop: "#f6faff"
+  property color summaryGradientBottom: "#ecf4ff"
+  property color summaryRowGradientTop: "#ffffff"
+  property color summaryRowGradientBottom: "#f6faff"
 
   property string titleText: ""
   property string chartKind: "imu"
@@ -21,12 +29,18 @@ Rectangle {
   property int dataRevision: 0
   property bool hasVisibleSeries: chartItem ? chartItem.hasData : false
   property var seriesModel: []
+  property bool debugEnabled: false
   // Refresh throttle settings (ms)
-  property int refreshIntervalMs: 200
+  property int refreshIntervalMs: 300
   property bool refreshPending: false
 
   radius: 12
   color: root.cardColor
+  gradient: Gradient {
+    orientation: Gradient.Vertical
+    GradientStop { position: 0.0; color: root.cardGradientTop }
+    GradientStop { position: 1.0; color: root.cardGradientBottom }
+  }
   border.color: root.cardBorderColor
   border.width: 1
   clip: true
@@ -53,12 +67,14 @@ Rectangle {
     }
 
     root.seriesModel = items
-    console.log("MetricChartCard.rebuildSeriesModel: built seriesModel size=", items.length)
+    if (root.debugEnabled)
+      console.log("MetricChartCard.rebuildSeriesModel: built seriesModel size=", items.length)
     Qt.callLater(root.refreshSeries)
   }
 
   function refreshSeries() {
-    console.log("MetricChartCard.refreshSeries: start", "chartKind=", root.chartKind)
+    if (root.debugEnabled)
+      console.log("MetricChartCard.refreshSeries: start", "chartKind=", root.chartKind)
     if (!root.dataProvider || !chartItem)
       return
     chartItem.refreshPlot()
@@ -100,8 +116,7 @@ Rectangle {
     running: false
     onTriggered: {
       if (root.refreshPending) {
-        // rebuild model and refresh series on timer trigger
-        root.rebuildSeriesModel()
+        // only refresh data; series model is rebuilt by selection-change events
         root.dataRevision += 1
         root.refreshSeries()
         root.refreshPending = false
@@ -123,8 +138,10 @@ Rectangle {
   }
 
   function _logSizes() {
-    console.log("MetricChartCard:", titleText, "w=", root.width, "h=", root.height,
-                "implicitW=", root.implicitWidth, "implicitH=", root.implicitHeight)
+    if (root.debugEnabled) {
+      console.log("MetricChartCard:", titleText, "w=", root.width, "h=", root.height,
+                  "implicitW=", root.implicitWidth, "implicitH=", root.implicitHeight)
+    }
   }
 
   onWidthChanged: _logSizes()
@@ -164,6 +181,11 @@ Rectangle {
       Layout.preferredHeight: 110
       radius: 8
       color: root.panelColor
+      gradient: Gradient {
+        orientation: Gradient.Vertical
+        GradientStop { position: 0.0; color: root.panelGradientTop }
+        GradientStop { position: 1.0; color: root.panelGradientBottom }
+      }
       border.color: root.panelBorderColor
       border.width: 1
       clip: true
@@ -195,6 +217,11 @@ Rectangle {
       implicitHeight: Math.min(summaryContent.implicitHeight + 4, summaryMaxHeight)
       radius: 8
       color: "#f2f7fd"
+      gradient: Gradient {
+        orientation: Gradient.Vertical
+        GradientStop { position: 0.0; color: root.summaryGradientTop }
+        GradientStop { position: 1.0; color: root.summaryGradientBottom }
+      }
       border.color: root.panelBorderColor
       border.width: 1
       clip: true
@@ -218,6 +245,11 @@ Rectangle {
               height: 22
               radius: 6
               color: "#fbfdff"
+              gradient: Gradient {
+                orientation: Gradient.Vertical
+                GradientStop { position: 0.0; color: root.summaryRowGradientTop }
+                GradientStop { position: 1.0; color: root.summaryRowGradientBottom }
+              }
               border.color: "#d4dfec"
               border.width: 1
 

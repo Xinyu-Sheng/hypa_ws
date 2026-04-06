@@ -69,23 +69,7 @@ void HypaQCustomPlotItem::setDataProvider(QObject *_dataProvider)
   if (this->data_provider_ == _dataProvider)
     return;
 
-  if (this->data_provider_)
-  {
-    disconnect(this->data_provider_, SIGNAL(imuDataUpdated()), this,
-               SLOT(onBackendUpdated()));
-    disconnect(this->data_provider_, SIGNAL(jointDataUpdated()), this,
-               SLOT(onBackendUpdated()));
-  }
-
   this->data_provider_ = _dataProvider;
-
-  if (this->data_provider_)
-  {
-    connect(this->data_provider_, SIGNAL(imuDataUpdated()), this,
-            SLOT(onBackendUpdated()), Qt::QueuedConnection);
-    connect(this->data_provider_, SIGNAL(jointDataUpdated()), this,
-            SLOT(onBackendUpdated()), Qt::QueuedConnection);
-  }
 
   emit dataProviderChanged();
 }
