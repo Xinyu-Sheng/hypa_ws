@@ -295,6 +295,9 @@ class ZMotionDriverNode::Impl
                    "axis.mimic_position_topics must contain exactly 2 topics");
       return false;
     }
+    // 将验证过的 mimic topic 名称保存到类成员，供后续创建 group-level publishers 使用
+    this->mimic_position_topics[0] = mimic_position_topics[0];
+    this->mimic_position_topics[1] = mimic_position_topics[1];
 
     std::vector<std::string> position_topics;
     (void)this->node->get_parameter("axis.position_topics", position_topics);
