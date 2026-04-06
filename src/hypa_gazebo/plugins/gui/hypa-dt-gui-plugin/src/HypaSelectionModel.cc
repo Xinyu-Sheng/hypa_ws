@@ -1,6 +1,7 @@
 #include "hypa-dt-gui-plugin/HypaSelectionModel.hh"
 
 #include <algorithm>
+#include <QDebug>
 
 namespace hypa_dt_gui_plugin
 {
@@ -144,6 +145,7 @@ void SelectionModel::setSelected(const QString &_name, bool _selected)
   entry.selected = _selected;
   const QModelIndex model_index = this->index(index, 0);
   emit dataChanged(model_index, model_index, {SelectedRole});
+  qDebug() << "[SelectionModel] setSelected:" << _name << _selected;
   emit entriesChanged();
 }
 
@@ -195,7 +197,10 @@ void SelectionModel::syncNames(const QStringList &_names, bool _defaultSelected)
   endResetModel();
 
   if (changed)
+  {
+    qDebug() << "[SelectionModel] syncNames: entries count=" << this->entries_.size();
     emit entriesChanged();
+  }
 }
 
 void SelectionModel::updateLatestText(const QString &_name,
@@ -212,6 +217,7 @@ void SelectionModel::updateLatestText(const QString &_name,
   entry.latestText = _latestText;
   const QModelIndex model_index = this->index(index, 0);
   emit dataChanged(model_index, model_index, {LatestTextRole});
+  qDebug() << "[SelectionModel] updateLatestText:" << _name << _latestText.left(120);
 }
 
 int SelectionModel::indexOf(const QString &_name) const

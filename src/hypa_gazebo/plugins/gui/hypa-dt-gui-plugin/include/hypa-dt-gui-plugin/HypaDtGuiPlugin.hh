@@ -16,8 +16,10 @@ namespace hypa_dt_gui_plugin
 class HypaDtGuiPlugin : public gz::gui::Plugin
 {
   Q_OBJECT
-  Q_PROPERTY(QObject *imuSelectionModel READ imuSelectionModel CONSTANT)
-  Q_PROPERTY(QObject *jointSelectionModel READ jointSelectionModel CONSTANT)
+  Q_PROPERTY(
+      QObject *imuSelectionModel READ imuSelectionModel NOTIFY imuDataUpdated)
+  Q_PROPERTY(QObject *jointSelectionModel READ jointSelectionModel NOTIFY
+                 jointDataUpdated)
 
   public:
   HypaDtGuiPlugin();
@@ -28,6 +30,19 @@ class HypaDtGuiPlugin : public gz::gui::Plugin
 
   QObject *imuSelectionModel() const;
   QObject *jointSelectionModel() const;
+
+  Q_INVOKABLE QStringList getImuSourceNames() const;
+  Q_INVOKABLE QStringList getJointNames() const;
+  Q_INVOKABLE QString formatSourceSummary(const QString &_kind,
+                                          const QString &_source) const;
+  Q_INVOKABLE QString formatSeriesSummary(const QString &_kind,
+                                          const QString &_source,
+                                          const QVariantList &_metrics) const;
+  Q_INVOKABLE QVariantList getSeriesPoints(const QString &_kind,
+                                           const QString &_source,
+                                           const QString &_metric) const;
+  Q_INVOKABLE QVariantList getImuCovariance(
+      const QString &_source, const QString &_covarianceName) const;
 
   Q_SIGNALS:
   void imuDataUpdated();

@@ -25,7 +25,7 @@ def generate_launch_description():
         launch_arguments={
             "gz_args": [
                 os.path.join(pkg_project_gazebo, "worlds", "hypa.sdf"),
-                " -v 2 ",
+                " -v 4 ",
                 " -r --gui-config ",
                 os.path.join(pkg_project_gazebo, "config", "hypa.config"),
             ]

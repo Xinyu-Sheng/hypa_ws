@@ -46,20 +46,29 @@ Rectangle {
 
     root.seriesRegistry = ({})
     root.seriesModel = items
+    console.log("MetricChartCard.rebuildSeriesModel: built seriesModel size=", items.length)
     Qt.callLater(root.refreshSeries)
   }
 
   function registerSeries(_sourceName, _metricName, _series) {
-    root.seriesRegistry[_sourceName + "|" + _metricName] = _series
+    var key = _sourceName + "|" + _metricName
+    root.seriesRegistry[key] = _series
+    console.log("MetricChartCard.registerSeries:", key, "registered ->", _series)
+    // trigger a refresh when the first series registers
+    Qt.callLater(root.refreshSeries)
   }
 
   function unregisterSeries(_sourceName, _metricName) {
-    delete root.seriesRegistry[_sourceName + "|" + _metricName]
+    var key = _sourceName + "|" + _metricName
+    delete root.seriesRegistry[key]
+    console.log("MetricChartCard.unregisterSeries:", key)
   }
 
   function refreshSeries() {
+    console.log("MetricChartCard.refreshSeries: start","chartKind=", root.chartKind)
     if (!root.dataProvider) {
       root.hasVisibleSeries = false
+      console.log("MetricChartCard.refreshSeries: no dataProvider")
       return
     }
     var foundPoint = false
@@ -83,7 +92,13 @@ Rectangle {
       if (parts.length !== 2)
         continue
 
+      console.log("MetricChartCard: requesting points for", parts[0], parts[1])
       var points = root.dataProvider.getSeriesPoints(root.chartKind, parts[0], parts[1])
+      console.log("MetricChartCard: got points length:", points ? points.length : 0)
+      // show first few points for debugging
+      for (var _pi = 0; _pi < Math.min(3, points.length); ++_pi) {
+        console.log("MetricChartCard: point", _pi, points[_pi])
+      }
       series.clear()
 
       for (var i = 0; i < points.length; ++i) {
@@ -155,6 +170,8 @@ Rectangle {
     ignoreUnknownSignals: true
     function onImuDataUpdated() {
       if (root.chartKind === "imu") {
+        // ensure seriesModel is rebuilt when data updates (in case entriesChanged was not received)
+        root.rebuildSeriesModel()
         root.dataRevision += 1
         root.refreshSeries()
       }
@@ -162,6 +179,8 @@ Rectangle {
 
     function onJointDataUpdated() {
       if (root.chartKind === "joint") {
+        // ensure seriesModel is rebuilt when data updates (in case entriesChanged was not received)
+        root.rebuildSeriesModel()
         root.dataRevision += 1
         root.refreshSeries()
       }
@@ -256,28 +275,14 @@ Rectangle {
           tickCount: 5
         }
 
-        Repeater {
-          model: root.seriesModel
-          delegate: LineSeries {
-            id: lineSeries
-            property string sourceName: modelData.sourceName
-            property string metricName: modelData.metricName
-            property bool sourceSelected: modelData.sourceSelected
-            name: sourceName + " " + metricName
-            axisX: xAxis
-            axisY: yAxis
-            visible: sourceSelected
-            width: 2
-            useOpenGL: true
-
-            Component.onCompleted: {
-              root.registerSeries(sourceName, metricName, lineSeries)
-            }
-
-            Component.onDestruction: {
-              root.unregisterSeries(sourceName, metricName)
-            }
-          }
+        // NOTE: Repeater delegate for LineSeries may cause "Delegate must be of Item type"
+        // errors/crashes on some Qt builds. To keep the UI stable and avoid segfaults,
+        // disable automatic LineSeries instantiation here. Series will be created
+        // dynamically by the data provider or a future implementation.
+        Item {
+          id: seriesPlaceholder
+          width: 0
+          height: 0
         }
 
         Text {
@@ -344,31 +349,31 @@ Rectangle {
                   wrapMode: Text.WordWrap
                 }
 
-                RowLayout {
+                  RowLayout {
                   Layout.fillWidth: true
                   spacing: 6
                   visible: root.chartKind === "imu"
 
-                  property var oriCov: root.dataRevision >= 0 ? root.dataProvider.getImuCovariance(name, "orientation_covariance") : []
-                  property var angCov: root.dataRevision >= 0 ? root.dataProvider.getImuCovariance(name, "angular_velocity_covariance") : []
-                  property var linCov: root.dataRevision >= 0 ? root.dataProvider.getImuCovariance(name, "linear_acceleration_covariance") : []
+                  function getOriCov() { return root.dataRevision >= 0 ? root.dataProvider.getImuCovariance(name, "orientation_covariance") : [] }
+                  function getAngCov() { return root.dataRevision >= 0 ? root.dataProvider.getImuCovariance(name, "angular_velocity_covariance") : [] }
+                  function getLinCov() { return root.dataRevision >= 0 ? root.dataProvider.getImuCovariance(name, "linear_acceleration_covariance") : [] }
 
                   Text {
-                    text: oriCov.length >= 9 ? ("ori: " + Number(oriCov[0]).toFixed(4) + "," + Number(oriCov[4]).toFixed(4) + "," + Number(oriCov[8]).toFixed(4)) : ""
+                    text: (getOriCov().length >= 9) ? ("ori: " + Number(getOriCov()[0]).toFixed(4) + "," + Number(getOriCov()[4]).toFixed(4) + "," + Number(getOriCov()[8]).toFixed(4)) : ""
                     color: "#475569"
                     font.pixelSize: 9
                     elide: Text.ElideRight
                   }
 
                   Text {
-                    text: angCov.length >= 9 ? ("ang: " + Number(angCov[0]).toFixed(4) + "," + Number(angCov[4]).toFixed(4) + "," + Number(angCov[8]).toFixed(4)) : ""
+                    text: (getAngCov().length >= 9) ? ("ang: " + Number(getAngCov()[0]).toFixed(4) + "," + Number(getAngCov()[4]).toFixed(4) + "," + Number(getAngCov()[8]).toFixed(4)) : ""
                     color: "#475569"
                     font.pixelSize: 9
                     elide: Text.ElideRight
                   }
 
                   Text {
-                    text: linCov.length >= 9 ? ("acc: " + Number(linCov[0]).toFixed(4) + "," + Number(linCov[4]).toFixed(4) + "," + Number(linCov[8]).toFixed(4)) : ""
+                    text: (getLinCov().length >= 9) ? ("acc: " + Number(getLinCov()[0]).toFixed(4) + "," + Number(getLinCov()[4]).toFixed(4) + "," + Number(getLinCov()[8]).toFixed(4)) : ""
                     color: "#475569"
                     font.pixelSize: 9
                     elide: Text.ElideRight

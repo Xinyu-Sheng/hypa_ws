@@ -99,6 +99,7 @@ QStringList HypaDataManager::getImuSourceNames() const
 {
   std::lock_guard<std::mutex> lock(this->mutex_);
   QStringList result;
+  qDebug() << "[HypaDataManager] getImuSourceNames called";
   for (const auto &name : this->imu_source_order_)
   {
     result.push_back(QString::fromStdString(name));
@@ -110,6 +111,7 @@ QStringList HypaDataManager::getJointNames() const
 {
   std::lock_guard<std::mutex> lock(this->mutex_);
   QStringList result;
+  qDebug() << "[HypaDataManager] getJointNames called";
   for (const auto &name : this->joint_name_order_)
   {
     result.push_back(QString::fromStdString(name));
@@ -151,6 +153,8 @@ QString HypaDataManager::formatSeriesSummary(const QString &_kind,
                                              const QString &_source,
                                              const QVariantList &_metrics) const
 {
+  qDebug() << "[HypaDataManager] formatSeriesSummary called:" << _kind
+           << _source;
   QStringList parts;
 
   for (const auto &metric_variant : _metrics)
@@ -185,7 +189,11 @@ QVariantList HypaDataManager::getSeriesPoints(const QString &_kind,
                                               const QString &_source,
                                               const QString &_metric) const
 {
+  qDebug() << "[HypaDataManager] getSeriesPoints called:" << _kind << _source
+           << _metric;
   std::lock_guard<std::mutex> lock(this->mutex_);
+
+  QVariantList points;
 
   if (_kind == "imu")
   {
@@ -193,24 +201,46 @@ QVariantList HypaDataManager::getSeriesPoints(const QString &_kind,
     if (cache_it == this->imu_caches_.end())
       return QVariantList();
 
-    return this->samplesToPoints(cache_it->second.samples, _metric);
+    points = this->samplesToPoints(cache_it->second.samples, _metric);
   }
-
-  if (_kind == "joint")
+  else if (_kind == "joint")
   {
     const auto cache_it = this->joint_caches_.find(_source.toStdString());
     if (cache_it == this->joint_caches_.end())
       return QVariantList();
 
-    return this->samplesToPoints(cache_it->second.samples, _metric);
+    points = this->samplesToPoints(cache_it->second.samples, _metric);
+  }
+  else
+  {
+    return QVariantList();
   }
 
-  return QVariantList();
+  // Print a short summary of returned points for debugging
+  qDebug() << "[HypaDataManager] getSeriesPoints result size:" << points.size();
+  const int to_show = std::min(5, points.size());
+  for (int i = 0; i < to_show; ++i)
+  {
+    const QVariant &v = points.at(i);
+    if (v.canConvert<QVariantMap>())
+    {
+      const QVariantMap m = v.toMap();
+      qDebug() << "[HypaDataManager] point" << i << ":" << m;
+    }
+    else
+    {
+      qDebug() << "[HypaDataManager] point" << i << "type" << v.typeName() << v;
+    }
+  }
+
+  return points;
 }
 
 QVariantList HypaDataManager::getImuCovariance(
     const QString &_source, const QString &_covarianceName) const
 {
+  qDebug() << "[HypaDataManager] getImuCovariance called:" << _source
+           << _covarianceName;
   std::lock_guard<std::mutex> lock(this->mutex_);
 
   const auto cache_it = this->imu_caches_.find(_source.toStdString());
@@ -243,7 +273,14 @@ void HypaDataManager::handleImuMessage(
     const sensor_msgs::msg::Imu::ConstSharedPtr &_msg)
 {
   if (!_msg)
+  {
+    qDebug() << "[HypaDataManager] handleImuMessage: null message";
     return;
+  }
+
+  qDebug() << "[HypaDataManager] handleImuMessage received:"
+           << QString::fromStdString(_msg->header.frame_id)
+           << "stamp:" << _msg->header.stamp.sec << _msg->header.stamp.nanosec;
 
   const ImuSample sample = this->createImuSample(_msg);
   const std::string source = _msg->header.frame_id.empty()
@@ -272,7 +309,13 @@ void HypaDataManager::handleJointStateMessage(
     const sensor_msgs::msg::JointState::ConstSharedPtr &_msg)
 {
   if (!_msg)
+  {
+    qDebug() << "[HypaDataManager] handleJointStateMessage: null message";
     return;
+  }
+
+  qDebug() << "[HypaDataManager] handleJointStateMessage received: names="
+           << static_cast<int>(_msg->name.size());
 
   {
     std::lock_guard<std::mutex> lock(this->mutex_);
