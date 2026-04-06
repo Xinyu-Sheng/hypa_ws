@@ -1,10 +1,30 @@
 #include "hypa-dt-gui-plugin/HypaSelectionModel.hh"
 
 #include <QDebug>
-#include <algorithm>
 
 namespace hypa_dt_gui_plugin
 {
+namespace
+{
+static bool is_debug_enabled()
+{
+  static const bool enabled = []()
+  {
+    bool ok = false;
+    const int value = qEnvironmentVariableIntValue("HYPA_DT_GUI_DEBUG", &ok);
+    return ok && value != 0;
+  }();
+  return enabled;
+}
+
+#define HYPA_DT_DEBUG_LOG() \
+  if (!is_debug_enabled())  \
+  {                         \
+  }                         \
+  else                      \
+    qDebug()
+}  // namespace
+
 SelectionModel::SelectionModel(QObject *_parent) : QAbstractListModel(_parent)
 {
 }
@@ -145,7 +165,7 @@ void SelectionModel::setSelected(const QString &_name, bool _selected)
   entry.selected = _selected;
   const QModelIndex model_index = this->index(index, 0);
   emit dataChanged(model_index, model_index, {SelectedRole});
-  qDebug() << "[SelectionModel] setSelected:" << _name << _selected;
+  HYPA_DT_DEBUG_LOG() << "[SelectionModel] setSelected:" << _name << _selected;
   emit entriesChanged();
 }
 
@@ -194,8 +214,9 @@ void SelectionModel::syncNames(const QStringList &_names, bool _defaultSelected)
         this->entries_.push_back(entry);
       }
       endInsertRows();
-      qDebug() << "[SelectionModel] syncNames: appended entries count="
-               << this->entries_.size();
+      HYPA_DT_DEBUG_LOG()
+          << "[SelectionModel] syncNames: appended entries count="
+          << this->entries_.size();
       emit entriesChanged();
       return;
     }
@@ -221,8 +242,9 @@ void SelectionModel::syncNames(const QStringList &_names, bool _defaultSelected)
       beginRemoveRows(QModelIndex(), newN, oldN - 1);
       this->entries_.erase(this->entries_.begin() + newN, this->entries_.end());
       endRemoveRows();
-      qDebug() << "[SelectionModel] syncNames: removed trailing entries, count="
-               << this->entries_.size();
+      HYPA_DT_DEBUG_LOG()
+          << "[SelectionModel] syncNames: removed trailing entries, count="
+          << this->entries_.size();
       emit entriesChanged();
       return;
     }
@@ -251,8 +273,8 @@ void SelectionModel::syncNames(const QStringList &_names, bool _defaultSelected)
   beginResetModel();
   this->entries_ = std::move(next_entries);
   endResetModel();
-  qDebug() << "[SelectionModel] syncNames: entries count="
-           << this->entries_.size();
+  HYPA_DT_DEBUG_LOG() << "[SelectionModel] syncNames: entries count="
+                      << this->entries_.size();
   emit entriesChanged();
 }
 
@@ -270,8 +292,8 @@ void SelectionModel::updateLatestText(const QString &_name,
   entry.latestText = _latestText;
   const QModelIndex model_index = this->index(index, 0);
   emit dataChanged(model_index, model_index, {LatestTextRole});
-  qDebug() << "[SelectionModel] updateLatestText:" << _name
-           << _latestText.left(120);
+  HYPA_DT_DEBUG_LOG() << "[SelectionModel] updateLatestText:" << _name
+                      << _latestText.left(120);
 }
 
 int SelectionModel::indexOf(const QString &_name) const
@@ -286,3 +308,5 @@ int SelectionModel::indexOf(const QString &_name) const
 }
 
 }  // namespace hypa_dt_gui_plugin
+
+#undef HYPA_DT_DEBUG_LOG

@@ -17,6 +17,24 @@ namespace
 constexpr const char *kFallbackImuSource = "imu";
 constexpr size_t kMetricsLogInterval = 250;
 
+static bool is_debug_enabled()
+{
+  static const bool enabled = []()
+  {
+    bool ok = false;
+    const int value = qEnvironmentVariableIntValue("HYPA_DT_GUI_DEBUG", &ok);
+    return ok && value != 0;
+  }();
+  return enabled;
+}
+
+#define HYPA_DT_DEBUG_LOG() \
+  if (!is_debug_enabled())  \
+  {                         \
+  }                         \
+  else                      \
+    qDebug()
+
 // Append a single-line metrics record to the metrics log file.
 // Open the file once and reuse the handle to reduce open/close overhead.
 static void append_metrics_log(const std::string &_line)
@@ -27,7 +45,6 @@ static void append_metrics_log(const std::string &_line)
   if (!ofs)
     return;
   ofs << _line << std::endl;
-  ofs.flush();
 }
 
 static std::string make_timestamp()
@@ -137,7 +154,7 @@ QStringList HypaDataManager::getImuSourceNames() const
 {
   std::lock_guard<std::mutex> lock(this->mutex_);
   QStringList result;
-  qDebug() << "[HypaDataManager] getImuSourceNames called";
+  HYPA_DT_DEBUG_LOG() << "[HypaDataManager] getImuSourceNames called";
   for (const auto &name : this->imu_source_order_)
   {
     result.push_back(QString::fromStdString(name));
@@ -149,7 +166,7 @@ QStringList HypaDataManager::getJointNames() const
 {
   std::lock_guard<std::mutex> lock(this->mutex_);
   QStringList result;
-  qDebug() << "[HypaDataManager] getJointNames called";
+  HYPA_DT_DEBUG_LOG() << "[HypaDataManager] getJointNames called";
   for (const auto &name : this->joint_name_order_)
   {
     result.push_back(QString::fromStdString(name));
@@ -191,8 +208,8 @@ QString HypaDataManager::formatSeriesSummary(const QString &_kind,
                                              const QString &_source,
                                              const QVariantList &_metrics) const
 {
-  qDebug() << "[HypaDataManager] formatSeriesSummary called:" << _kind
-           << _source;
+  HYPA_DT_DEBUG_LOG() << "[HypaDataManager] formatSeriesSummary called:"
+                      << _kind << _source;
   QStringList parts;
 
   for (const auto &metric_variant : _metrics)
@@ -227,8 +244,8 @@ QVariantList HypaDataManager::getSeriesPoints(const QString &_kind,
                                               const QString &_metric) const
 {
   using namespace std::chrono;
-  qDebug() << "[HypaDataManager] getSeriesPoints called:" << _kind << _source
-           << _metric;
+  HYPA_DT_DEBUG_LOG() << "[HypaDataManager] getSeriesPoints called:" << _kind
+                      << _source << _metric;
 
   const auto t_total_start = steady_clock::now();
   steady_clock::time_point t_lock_start;
@@ -262,14 +279,13 @@ QVariantList HypaDataManager::getSeriesPoints(const QString &_kind,
         this->get_series_lock_ns_.fetch_add(lock_ns, std::memory_order_relaxed);
         if ((c % kMetricsLogInterval) == 0)
         {
-          qDebug() << "[HypaDataManager] getSeriesPoints avg total ms:"
-                   << (this->get_series_total_ns_.load() /
-                       static_cast<double>(c)) /
-                          1e6
-                   << "avg lock ms:"
-                   << (this->get_series_lock_ns_.load() /
-                       static_cast<double>(c)) /
-                          1e6;
+          HYPA_DT_DEBUG_LOG()
+              << "[HypaDataManager] getSeriesPoints avg total ms:"
+              << (this->get_series_total_ns_.load() / static_cast<double>(c)) /
+                     1e6
+              << "avg lock ms:"
+              << (this->get_series_lock_ns_.load() / static_cast<double>(c)) /
+                     1e6;
           std::ostringstream oss;
           oss << make_timestamp() << " type=get_series"
               << " avg_total_ms="
@@ -304,14 +320,13 @@ QVariantList HypaDataManager::getSeriesPoints(const QString &_kind,
         this->get_series_lock_ns_.fetch_add(lock_ns, std::memory_order_relaxed);
         if ((c % kMetricsLogInterval) == 0)
         {
-          qDebug() << "[HypaDataManager] getSeriesPoints avg total ms:"
-                   << (this->get_series_total_ns_.load() /
-                       static_cast<double>(c)) /
-                          1e6
-                   << "avg lock ms:"
-                   << (this->get_series_lock_ns_.load() /
-                       static_cast<double>(c)) /
-                          1e6;
+          HYPA_DT_DEBUG_LOG()
+              << "[HypaDataManager] getSeriesPoints avg total ms:"
+              << (this->get_series_total_ns_.load() / static_cast<double>(c)) /
+                     1e6
+              << "avg lock ms:"
+              << (this->get_series_lock_ns_.load() / static_cast<double>(c)) /
+                     1e6;
         }
         return QVariantList();
       }
@@ -332,14 +347,13 @@ QVariantList HypaDataManager::getSeriesPoints(const QString &_kind,
       this->get_series_lock_ns_.fetch_add(lock_ns, std::memory_order_relaxed);
       if ((c % kMetricsLogInterval) == 0)
       {
-        qDebug() << "[HypaDataManager] getSeriesPoints avg total ms:"
-                 << (this->get_series_total_ns_.load() /
-                     static_cast<double>(c)) /
-                        1e6
-                 << "avg lock ms:"
-                 << (this->get_series_lock_ns_.load() /
-                     static_cast<double>(c)) /
-                        1e6;
+        HYPA_DT_DEBUG_LOG()
+            << "[HypaDataManager] getSeriesPoints avg total ms:"
+            << (this->get_series_total_ns_.load() / static_cast<double>(c)) /
+                   1e6
+            << "avg lock ms:"
+            << (this->get_series_lock_ns_.load() / static_cast<double>(c)) /
+                   1e6;
       }
       return QVariantList();
     }
@@ -364,16 +378,16 @@ QVariantList HypaDataManager::getSeriesPoints(const QString &_kind,
   this->get_series_lock_ns_.fetch_add(lock_ns, std::memory_order_relaxed);
   if ((c % kMetricsLogInterval) == 0)
   {
-    qDebug() << "[HypaDataManager] getSeriesPoints avg total ms:"
-             << (this->get_series_total_ns_.load() / static_cast<double>(c)) /
-                    1e6
-             << "avg lock ms:"
-             << (this->get_series_lock_ns_.load() / static_cast<double>(c)) /
-                    1e6;
+    HYPA_DT_DEBUG_LOG()
+        << "[HypaDataManager] getSeriesPoints avg total ms:"
+        << (this->get_series_total_ns_.load() / static_cast<double>(c)) / 1e6
+        << "avg lock ms:"
+        << (this->get_series_lock_ns_.load() / static_cast<double>(c)) / 1e6;
   }
 
   // Print a short summary of returned points for debugging
-  qDebug() << "[HypaDataManager] getSeriesPoints result size:" << points.size();
+  HYPA_DT_DEBUG_LOG() << "[HypaDataManager] getSeriesPoints result size:"
+                      << points.size();
   const int to_show = std::min(5, points.size());
   for (int i = 0; i < to_show; ++i)
   {
@@ -381,11 +395,12 @@ QVariantList HypaDataManager::getSeriesPoints(const QString &_kind,
     if (v.canConvert<QVariantMap>())
     {
       const QVariantMap m = v.toMap();
-      qDebug() << "[HypaDataManager] point" << i << ":" << m;
+      HYPA_DT_DEBUG_LOG() << "[HypaDataManager] point" << i << ":" << m;
     }
     else
     {
-      qDebug() << "[HypaDataManager] point" << i << "type" << v.typeName() << v;
+      HYPA_DT_DEBUG_LOG() << "[HypaDataManager] point" << i << "type"
+                          << v.typeName() << v;
     }
   }
 
@@ -533,8 +548,8 @@ bool HypaDataManager::getSeriesDataDelta(
 QVariantList HypaDataManager::getImuCovariance(
     const QString &_source, const QString &_covarianceName) const
 {
-  qDebug() << "[HypaDataManager] getImuCovariance called:" << _source
-           << _covarianceName;
+  HYPA_DT_DEBUG_LOG() << "[HypaDataManager] getImuCovariance called:" << _source
+                      << _covarianceName;
   std::lock_guard<std::mutex> lock(this->mutex_);
 
   const auto cache_it = this->imu_caches_.find(_source.toStdString());
@@ -568,14 +583,15 @@ void HypaDataManager::handleImuMessage(
 {
   if (!_msg)
   {
-    qDebug() << "[HypaDataManager] handleImuMessage: null message";
+    HYPA_DT_DEBUG_LOG() << "[HypaDataManager] handleImuMessage: null message";
     return;
   }
 
   using namespace std::chrono;
-  qDebug() << "[HypaDataManager] handleImuMessage received:"
-           << QString::fromStdString(_msg->header.frame_id)
-           << "stamp:" << _msg->header.stamp.sec << _msg->header.stamp.nanosec;
+  HYPA_DT_DEBUG_LOG() << "[HypaDataManager] handleImuMessage received:"
+                      << QString::fromStdString(_msg->header.frame_id)
+                      << "stamp:" << _msg->header.stamp.sec
+                      << _msg->header.stamp.nanosec;
 
   const auto t_total_start = steady_clock::now();
   const ImuSample sample = this->createImuSample(_msg);
@@ -632,10 +648,11 @@ void HypaDataManager::handleImuMessage(
   this->imu_msg_lock_ns_.fetch_add(lock_ns, std::memory_order_relaxed);
   if ((c % kMetricsLogInterval) == 0)
   {
-    qDebug() << "[HypaDataManager] imu msg avg total ms:"
-             << (this->imu_msg_total_ns_.load() / static_cast<double>(c)) / 1e6
-             << "avg lock ms:"
-             << (this->imu_msg_lock_ns_.load() / static_cast<double>(c)) / 1e6;
+    HYPA_DT_DEBUG_LOG()
+        << "[HypaDataManager] imu msg avg total ms:"
+        << (this->imu_msg_total_ns_.load() / static_cast<double>(c)) / 1e6
+        << "avg lock ms:"
+        << (this->imu_msg_lock_ns_.load() / static_cast<double>(c)) / 1e6;
     std::ostringstream oss;
     oss << make_timestamp() << " type=imu_msg"
         << " avg_total_ms="
@@ -652,13 +669,15 @@ void HypaDataManager::handleJointStateMessage(
 {
   if (!_msg)
   {
-    qDebug() << "[HypaDataManager] handleJointStateMessage: null message";
+    HYPA_DT_DEBUG_LOG()
+        << "[HypaDataManager] handleJointStateMessage: null message";
     return;
   }
 
   using namespace std::chrono;
-  qDebug() << "[HypaDataManager] handleJointStateMessage received: names="
-           << static_cast<int>(_msg->name.size());
+  HYPA_DT_DEBUG_LOG()
+      << "[HypaDataManager] handleJointStateMessage received: names="
+      << static_cast<int>(_msg->name.size());
 
   const auto t_total_start = steady_clock::now();
   steady_clock::time_point t_lock_start;
@@ -706,12 +725,11 @@ void HypaDataManager::handleJointStateMessage(
   this->joint_msg_lock_ns_.fetch_add(lock_ns, std::memory_order_relaxed);
   if ((c % kMetricsLogInterval) == 0)
   {
-    qDebug() << "[HypaDataManager] joint msg avg total ms:"
-             << (this->joint_msg_total_ns_.load() / static_cast<double>(c)) /
-                    1e6
-             << "avg lock ms:"
-             << (this->joint_msg_lock_ns_.load() / static_cast<double>(c)) /
-                    1e6;
+    HYPA_DT_DEBUG_LOG()
+        << "[HypaDataManager] joint msg avg total ms:"
+        << (this->joint_msg_total_ns_.load() / static_cast<double>(c)) / 1e6
+        << "avg lock ms:"
+        << (this->joint_msg_lock_ns_.load() / static_cast<double>(c)) / 1e6;
     std::ostringstream oss;
     oss << make_timestamp() << " type=joint_msg"
         << " avg_total_ms="
@@ -752,6 +770,7 @@ bool HypaDataManager::getLatestImuValue(const QString &_source,
                                         const QString &_metric,
                                         double &_value) const
 {
+  std::lock_guard<std::mutex> lock(this->mutex_);
   const auto cache_it = this->imu_caches_.find(_source.toStdString());
   if (cache_it == this->imu_caches_.end() || cache_it->second.samples.empty())
     return false;
@@ -788,6 +807,7 @@ bool HypaDataManager::getLatestJointValue(const QString &_source,
                                           const QString &_metric,
                                           double &_value) const
 {
+  std::lock_guard<std::mutex> lock(this->mutex_);
   const auto cache_it = this->joint_caches_.find(_source.toStdString());
   if (cache_it == this->joint_caches_.end() || cache_it->second.samples.empty())
     return false;
@@ -933,3 +953,5 @@ JointSample HypaDataManager::createJointSample(
 }
 
 }  // namespace hypa_dt_gui_plugin
+
+#undef HYPA_DT_DEBUG_LOG

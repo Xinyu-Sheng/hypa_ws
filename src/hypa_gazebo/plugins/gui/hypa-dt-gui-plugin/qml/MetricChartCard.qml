@@ -32,6 +32,9 @@ Rectangle {
   property bool debugEnabled: false
   // Refresh throttle settings (ms)
   property int refreshIntervalMs: 300
+  // 每个图表在同一刷新周期内错峰，避免同一时刻批量重绘造成卡顿
+  property int refreshSpreadMs: Math.max(1, Math.floor(root.refreshIntervalMs / 2))
+  property int refreshPhaseMs: root._phaseForCard()
   property bool refreshPending: false
 
   radius: 12
@@ -49,6 +52,28 @@ Rectangle {
   Layout.preferredHeight: contentLayout.implicitHeight + 16
   Layout.minimumWidth: 0
   implicitHeight: contentLayout.implicitHeight + 16
+
+  function _hashString(text) {
+    var h = 0
+    for (var i = 0; i < text.length; ++i)
+      h = ((h * 31) + text.charCodeAt(i)) & 0x7fffffff
+    return h
+  }
+
+  function _phaseForCard() {
+    var key = root.titleText + "|" + root.chartKind
+    return root._hashString(key) % root.refreshSpreadMs
+  }
+
+  function _delayToNextPhaseMs() {
+    var interval = Math.max(1, root.refreshIntervalMs)
+    var phase = root.refreshPhaseMs % interval
+    var nowMod = Date.now() % interval
+    var delay = phase - nowMod
+    if (delay < 0)
+      delay += interval
+    return delay
+  }
 
   function rebuildSeriesModel() {
     var items = []
@@ -69,7 +94,16 @@ Rectangle {
     root.seriesModel = items
     if (root.debugEnabled)
       console.log("MetricChartCard.rebuildSeriesModel: built seriesModel size=", items.length)
-    Qt.callLater(root.refreshSeries)
+    root.requestRefresh()
+  }
+
+  function requestRefresh() {
+    // Unified refresh gate: all chart updates must pass through this timer.
+    root.refreshPending = true
+    if (!refreshTimer.running) {
+      refreshTimer.interval = root._delayToNextPhaseMs()
+      refreshTimer.start()
+    }
   }
 
   function refreshSeries() {
@@ -94,17 +128,13 @@ Rectangle {
     ignoreUnknownSignals: true
     function onImuDataUpdated() {
       if (root.chartKind === "imu") {
-        // throttle UI refresh: mark dirty and start timer if needed
-        root.refreshPending = true
-        if (!refreshTimer.running) refreshTimer.start()
+        root.requestRefresh()
       }
     }
 
     function onJointDataUpdated() {
       if (root.chartKind === "joint") {
-        // throttle UI refresh: mark dirty and start timer if needed
-        root.refreshPending = true
-        if (!refreshTimer.running) refreshTimer.start()
+        root.requestRefresh()
       }
     }
   }
@@ -117,9 +147,9 @@ Rectangle {
     onTriggered: {
       if (root.refreshPending) {
         // only refresh data; series model is rebuilt by selection-change events
+        root.refreshPending = false
         root.dataRevision += 1
         root.refreshSeries()
-        root.refreshPending = false
       }
     }
   }
@@ -134,7 +164,7 @@ Rectangle {
   }
 
   onDataProviderChanged: {
-    root.refreshSeries()
+    root.requestRefresh()
   }
 
   function _logSizes() {

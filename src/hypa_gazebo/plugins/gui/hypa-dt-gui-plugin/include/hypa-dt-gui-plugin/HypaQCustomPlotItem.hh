@@ -2,8 +2,10 @@
 #define HYPA_DT_GUI_PLUGIN_HYPA_QCUSTOM_PLOT_ITEM_HH_
 
 #include <QHash>
+#include <QImage>
 #include <QQuickPaintedItem>
 #include <QSet>
+#include <QSize>
 #include <QVariantList>
 #include <memory>
 
@@ -78,6 +80,10 @@ class HypaQCustomPlotItem : public QQuickPaintedItem
 
   std::unique_ptr<QCustomPlot> plot_;
   QHash<QString, SeriesState> series_states_;
+  QImage cached_image_;
+  QSize cached_image_size_;
+  double cached_dpr_ = 0.0;
+  bool plot_dirty_ = true;
 };
 }  // namespace hypa_dt_gui_plugin
 

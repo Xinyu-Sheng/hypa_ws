@@ -9,6 +9,7 @@
 #include <QPen>
 #include <QVariantMap>
 #include <algorithm>
+#include <cmath>
 
 #include "hypa-dt-gui-plugin/HypaDtGuiPlugin.hh"
 
@@ -45,6 +46,7 @@ void HypaQCustomPlotItem::setChartKind(const QString &_chartKind)
   {
     this->plot_->clearGraphs();
   }
+  this->plot_dirty_ = true;
   emit chartKindChanged();
 }
 
@@ -56,6 +58,7 @@ QVariantList HypaQCustomPlotItem::seriesModel() const
 void HypaQCustomPlotItem::setSeriesModel(const QVariantList &_seriesModel)
 {
   this->series_model_ = _seriesModel;
+  this->plot_dirty_ = true;
   emit seriesModelChanged();
 }
 
@@ -154,6 +157,7 @@ void HypaQCustomPlotItem::refreshPlot()
   this->removeInactiveGraphs(active_keys);
   this->updateAxesFromRanges();
   this->plot_->replot(QCustomPlot::rpQueuedReplot);
+  this->plot_dirty_ = true;
   this->setHasData(any_data);
   this->update();
 }
@@ -169,15 +173,31 @@ void HypaQCustomPlotItem::paint(QPainter *_painter)
   if (image_size.width() <= 0 || image_size.height() <= 0)
     return;
 
-  QImage image(image_size, QImage::Format_ARGB32_Premultiplied);
-  image.setDevicePixelRatio(dpr);
-  image.fill(Qt::transparent);
+  if (this->cached_image_size_ != image_size ||
+      std::abs(this->cached_dpr_ - dpr) > 1e-6)
+  {
+    this->cached_image_ =
+        QImage(image_size, QImage::Format_ARGB32_Premultiplied);
+    this->cached_image_.setDevicePixelRatio(dpr);
+    this->cached_image_size_ = image_size;
+    this->cached_dpr_ = dpr;
+    this->plot_dirty_ = true;
+  }
 
-  this->plot_->setViewport(QRect(0, 0, static_cast<int>(this->width()),
-                                 static_cast<int>(this->height())));
-  QCPPainter qcp_painter(&image);
-  this->plot_->toPainter(&qcp_painter, this->width(), this->height());
-  _painter->drawImage(QPoint(0, 0), image);
+  if (this->cached_image_.isNull())
+    return;
+
+  if (this->plot_dirty_)
+  {
+    this->cached_image_.fill(Qt::transparent);
+    this->plot_->setViewport(QRect(0, 0, static_cast<int>(this->width()),
+                                   static_cast<int>(this->height())));
+    QCPPainter qcp_painter(&this->cached_image_);
+    this->plot_->toPainter(&qcp_painter, this->width(), this->height());
+    this->plot_dirty_ = false;
+  }
+
+  _painter->drawImage(QPoint(0, 0), this->cached_image_);
 }
 
 void HypaQCustomPlotItem::onBackendUpdated()
@@ -208,6 +228,7 @@ void HypaQCustomPlotItem::ensurePlot()
   this->plot_->yAxis->grid()->setPen(QPen(QColor("#e6edf3")));
   this->plot_->xAxis->setRange(0.0, 1.0);
   this->plot_->yAxis->setRange(-1.0, 1.0);
+  this->plot_dirty_ = true;
 }
 
 QCPGraph *HypaQCustomPlotItem::ensureGraph(const QString &_seriesKey,
