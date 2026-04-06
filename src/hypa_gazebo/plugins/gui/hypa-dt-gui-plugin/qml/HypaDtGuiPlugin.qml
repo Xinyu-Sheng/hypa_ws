@@ -8,6 +8,13 @@ import "qrc:/HypaDtGuiPlugin"
 Rectangle {
   id: root
 
+  property color pageBackground: "#eef3f9"
+  property color sectionCardColor: "#fbfdff"
+  property color sectionBorderColor: "#d5e0ec"
+  property color selectorBgColor: "#f3f8fe"
+  property color selectorBorderColor: "#cedbea"
+  property color titleColor: "#16202b"
+
   anchors.fill: parent
   clip: true
 
@@ -17,15 +24,15 @@ Rectangle {
   // Keep a practical minimum width for multi-column charts
   Layout.minimumWidth: 1100
 
-  color: "#ffffff"
+  color: root.pageBackground
 
   property var imuModel: Backend.imuSelectionModel
   property var jointModel: Backend.jointSelectionModel
 
   Component.onCompleted: {
     Material.theme = Material.Light
-    Material.primary = "#0288d1"
-    Material.accent = "#fb8c00"
+    Material.primary = "#1668c7"
+    Material.accent = "#e99b2f"
   }
 
   ScrollView {
@@ -41,8 +48,8 @@ Rectangle {
       Rectangle {
         Layout.fillWidth: true
         radius: 18
-        color: "#ffffff"
-        border.color: "#e6edf3"
+        color: root.sectionCardColor
+        border.color: root.sectionBorderColor
         border.width: 1
         clip: true
 
@@ -64,7 +71,7 @@ Rectangle {
 
               Text {
                 text: "IMU Data"
-                color: Material.foreground
+                color: root.titleColor
                 font.pixelSize: 18
                 font.bold: true
               }
@@ -83,8 +90,8 @@ Rectangle {
               Layout.maximumHeight: 30
               Layout.minimumWidth: 260
               radius: 10
-              color: "#f6f8fa"
-              border.color: "#e6edf3"
+              color: root.selectorBgColor
+              border.color: root.selectorBorderColor
               border.width: 1
               clip: true
 
@@ -249,8 +256,8 @@ Rectangle {
       Rectangle {
         Layout.fillWidth: true
         radius: 18
-        color: "#ffffff"
-        border.color: "#e6edf3"
+        color: root.sectionCardColor
+        border.color: root.sectionBorderColor
         border.width: 1
         clip: true
 
@@ -272,7 +279,7 @@ Rectangle {
 
               Text {
                 text: "Joint Data"
-                color: Material.foreground
+                color: root.titleColor
                 font.pixelSize: 18
                 font.bold: true
               }
@@ -290,8 +297,8 @@ Rectangle {
               Layout.maximumHeight: 30
               Layout.minimumWidth: 260
               radius: 10
-              color: "#f6f8fa"
-              border.color: "#e6edf3"
+              color: root.selectorBgColor
+              border.color: root.selectorBorderColor
               border.width: 1
               clip: true
 

@@ -7,6 +7,12 @@ import HypaDtGuiPluginBackend 1.0
 Rectangle {
   id: root
 
+  property color cardColor: "#ffffff"
+  property color cardBorderColor: "#d5e0ec"
+  property color panelColor: "#f8fbff"
+  property color panelBorderColor: "#d9e4f1"
+  property color hintColor: "#54667b"
+
   property string titleText: ""
   property string chartKind: "imu"
   property var selectionModel
@@ -20,8 +26,8 @@ Rectangle {
   property bool refreshPending: false
 
   radius: 12
-  color: "#ffffff"
-  border.color: "#e6edf3"
+  color: root.cardColor
+  border.color: root.cardBorderColor
   border.width: 1
   clip: true
 
@@ -136,7 +142,7 @@ Rectangle {
 
       Text {
         text: root.titleText
-        color: Material.foreground
+        color: "#1b2633"
         font.pixelSize: 14
         font.bold: true
         elide: Text.ElideRight
@@ -148,7 +154,7 @@ Rectangle {
 
       Text {
         text: root.chartKind === "imu" ? "IMU" : "Motor"
-        color: "#6b7280"
+        color: "#67788c"
         font.pixelSize: 10
       }
     }
@@ -157,8 +163,8 @@ Rectangle {
       Layout.fillWidth: true
       Layout.preferredHeight: 110
       radius: 8
-      color: "#ffffff"
-      border.color: "#e6edf3"
+      color: root.panelColor
+      border.color: root.panelBorderColor
       border.width: 1
       clip: true
 
@@ -174,7 +180,7 @@ Rectangle {
           anchors.centerIn: parent
           visible: !chartItem.hasData
           text: "Waiting for data or selection"
-          color: "#475569"
+          color: root.hintColor
           font.pixelSize: 12
         }
       }
@@ -188,8 +194,8 @@ Rectangle {
       Layout.preferredHeight: Math.min(summaryContent.implicitHeight + 4, summaryMaxHeight)
       implicitHeight: Math.min(summaryContent.implicitHeight + 4, summaryMaxHeight)
       radius: 8
-      color: "#f6f8fa"
-      border.color: "#e6edf3"
+      color: "#f2f7fd"
+      border.color: root.panelBorderColor
       border.width: 1
       clip: true
 
@@ -211,8 +217,8 @@ Rectangle {
               Layout.fillWidth: true
               height: 22
               radius: 6
-              color: "#ffffff"
-              border.color: "#e6edf3"
+              color: "#fbfdff"
+              border.color: "#d4dfec"
               border.width: 1
 
               RowLayout {
