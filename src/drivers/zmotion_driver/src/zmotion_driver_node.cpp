@@ -295,7 +295,8 @@ class ZMotionDriverNode::Impl
                    "axis.mimic_position_topics must contain exactly 2 topics");
       return false;
     }
-    // 将验证过的 mimic topic 名称保存到类成员，供后续创建 group-level publishers 使用
+    // 将验证过的 mimic topic 名称保存到类成员，供后续创建 group-level
+    // publishers 使用
     this->mimic_position_topics[0] = mimic_position_topics[0];
     this->mimic_position_topics[1] = mimic_position_topics[1];
 
@@ -740,7 +741,12 @@ class ZMotionDriverNode::Impl
       return;
     }
 
-    const auto stamp = rclcpp::Clock(RCL_SYSTEM_TIME).now();
+    // 优先使用 ROS 时间（可被 /clock 覆盖），若未提供则回退到系统时间
+    auto stamp = this->node->now();
+    // if (stamp.nanoseconds() == 0)
+    // {
+    // stamp = rclcpp::Clock(RCL_SYSTEM_TIME).now();
+    // }
     const std::string names = JoinStrings(_js.name);
     const std::string positions = JoinDoubles(_js.position);
     const std::string velocities = JoinDoubles(_js.velocity);
