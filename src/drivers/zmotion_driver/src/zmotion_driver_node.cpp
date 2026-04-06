@@ -1196,13 +1196,15 @@ class ZMotionDriverNode::Impl
 
       double mpos = 0.0;
       double mspeed = 0.0;
+      double effort = std::numeric_limits<double>::quiet_NaN();
       CallResult mpos_result = this->sdk->GetMpos(axis.physical_axis, &mpos);
       CallResult speed_result =
           this->sdk->GetMspeed(axis.physical_axis, &mspeed);
+      CallResult effort_result =
+          this->sdk->GetDriveTorque(axis.physical_axis, &effort);
 
       double logical_position = std::numeric_limits<double>::quiet_NaN();
       double logical_velocity = std::numeric_limits<double>::quiet_NaN();
-      double effort = std::numeric_limits<double>::quiet_NaN();
 
       if (mpos_result.ok && speed_result.ok)
       {
@@ -1217,8 +1219,15 @@ class ZMotionDriverNode::Impl
         {
           this->last_known_velocities[i] = logical_velocity;
         }
-        // effort not read here; preserve last_known_efforts if any
-        if (i < this->last_known_efforts.size())
+
+        if (effort_result.ok)
+        {
+          if (i < this->last_known_efforts.size())
+          {
+            this->last_known_efforts[i] = effort;
+          }
+        }
+        else if (i < this->last_known_efforts.size())
         {
           effort = this->last_known_efforts[i];
         }

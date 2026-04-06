@@ -948,6 +948,27 @@ CallResult ZMotionSdkWrapper::GetMspeed(const int _axis, double *_value) const
   return CallResult::Success();
 }
 
+CallResult ZMotionSdkWrapper::GetDriveTorque(const int _axis,
+                                             double *_value) const
+{
+  if (_value == nullptr)
+  {
+    return CallResult::Failure(-136, "GetDriveTorque output pointer is null",
+                               false);
+  }
+
+  int32 value = 0;
+  const int32 code =
+      ZAux_BusCmd_GetDriveTorque(this->pimpl_->handle, _axis, &value);
+  if (code != kErrOk)
+  {
+    return WrapCode(code, "ZAux_BusCmd_GetDriveTorque failed");
+  }
+
+  *_value = static_cast<double>(value);
+  return CallResult::Success();
+}
+
 CallResult ZMotionSdkWrapper::GetAxisStatus(const int _axis, int *_value) const
 {
   if (_value == nullptr)

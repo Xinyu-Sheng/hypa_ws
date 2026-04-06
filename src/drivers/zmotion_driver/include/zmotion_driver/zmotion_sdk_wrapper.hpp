@@ -54,6 +54,7 @@ class ZMotionSdkWrapper
   CallResult GetMpos(int _axis, double *_value) const;
   CallResult GetDpos(int _axis, double *_value) const;
   CallResult GetMspeed(int _axis, double *_value) const;
+  CallResult GetDriveTorque(int _axis, double *_value) const;
   CallResult GetAxisStatus(int _axis, int *_value) const;
   CallResult GetInput(int _io_id, int *_value) const;
   CallResult GetRemainBuffer(int _axis, int *_value) const;
