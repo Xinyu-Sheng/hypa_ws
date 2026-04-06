@@ -6,8 +6,10 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <limits>
 #include <memory>
@@ -181,7 +183,8 @@ class ZMotionDriverNode::Impl
     const auto stamp = this->node->now();
     this->log_stream << stamp.nanoseconds() << "," << SanitizeCsv(_tag) << ","
                      << SanitizeCsv(_message) << "\n";
-    this->log_stream.flush();
+    // Note: do not flush on every line to reduce syscall overhead; flush on
+    // close.
   }
 
   void PrintAllParameters()
@@ -255,6 +258,15 @@ class ZMotionDriverNode::Impl
 
     this->record_rosbag_joints_file =
         this->node->get_parameter("feedback.record_rosbag_joints_file")
+            .as_string();
+
+    // Command CSV for research: whether to record and file path
+    this->record_commands_csv_enabled =
+        this->node->get_parameter("feedback.record_commands_csv_enabled")
+            .as_bool();
+
+    this->record_commands_csv_file =
+        this->node->get_parameter("feedback.record_commands_csv_file")
             .as_string();
 
     std::vector<int64_t> logical_indices;
@@ -669,6 +681,20 @@ class ZMotionDriverNode::Impl
 
   bool OpenLogFile()
   {
+    try
+    {
+      const std::filesystem::path p =
+          std::filesystem::path(this->log_file_path).parent_path();
+      if (!p.empty())
+      {
+        std::filesystem::create_directories(p);
+      }
+    }
+    catch (const std::exception &e)
+    {
+      RCLCPP_WARN(this->logger, "failed to create log directory: %s", e.what());
+    }
+
     this->log_stream.open(this->log_file_path, std::ios::out | std::ios::app);
     if (!this->log_stream.is_open())
     {
@@ -700,6 +726,21 @@ class ZMotionDriverNode::Impl
     if (!this->record_joints_csv_enabled)
     {
       return true;
+    }
+
+    try
+    {
+      const std::filesystem::path p =
+          std::filesystem::path(this->record_joints_csv_file).parent_path();
+      if (!p.empty())
+      {
+        std::filesystem::create_directories(p);
+      }
+    }
+    catch (const std::exception &e)
+    {
+      RCLCPP_WARN(this->logger,
+                  "failed to create joint_state log directory: %s", e.what());
     }
 
     this->joint_state_stream.open(this->record_joints_csv_file,
@@ -757,7 +798,102 @@ class ZMotionDriverNode::Impl
                              << "," << SanitizeCsv(positions) << ","
                              << SanitizeCsv(velocities) << ","
                              << SanitizeCsv(efforts) << "\n";
-    this->joint_state_stream.flush();
+    // Note: avoid per-line flush to reduce I/O overhead; CloseJointStateFile
+    // will flush on close.
+  }
+
+  bool OpenCommandFile()
+  {
+    if (!this->record_commands_csv_enabled)
+    {
+      return true;
+    }
+
+    try
+    {
+      const std::filesystem::path p =
+          std::filesystem::path(this->record_commands_csv_file).parent_path();
+      if (!p.empty())
+      {
+        std::filesystem::create_directories(p);
+      }
+    }
+    catch (const std::exception &e)
+    {
+      RCLCPP_WARN(this->logger, "failed to create command log directory: %s",
+                  e.what());
+    }
+
+    std::lock_guard<std::mutex> lock(this->command_stream_mutex);
+    this->command_stream.open(this->record_commands_csv_file,
+                              std::ios::out | std::ios::app);
+    if (!this->command_stream.is_open())
+    {
+      RCLCPP_ERROR(this->logger, "failed to open command log file: %s",
+                   this->record_commands_csv_file.c_str());
+      return false;
+    }
+
+    if (this->command_stream.tellp() == std::streampos(0))
+    {
+      this->command_stream << "stamp_ns,cmd_seq,stage,cmd_type,logical_axes,"
+                              "values,result_code,message\n";
+    }
+    return true;
+  }
+
+  void CloseCommandFile()
+  {
+    std::lock_guard<std::mutex> lock(this->command_stream_mutex);
+    if (this->command_stream.is_open())
+    {
+      this->command_stream.flush();
+      this->command_stream.close();
+    }
+  }
+
+  void WriteCommandCsv(const std::string &_stage, const PendingCommand &_cmd,
+                       int _result_code = 0, const std::string &_message = "")
+  {
+    if (!this->record_commands_csv_enabled)
+    {
+      return;
+    }
+
+    std::lock_guard<std::mutex> lock(this->command_stream_mutex);
+    if (!this->command_stream.is_open())
+    {
+      return;
+    }
+
+    const auto stamp = this->node->now();
+    const uint64_t seq = ++this->cmd_seq;
+
+    // cmd_type
+    std::string type_str;
+    switch (_cmd.type)
+    {
+      case PendingType::kVelocity:
+        type_str = "velocity";
+        break;
+      case PendingType::kMoveAbsolute:
+        type_str = "move_abs";
+        break;
+      case PendingType::kMoveRelative:
+        type_str = "move_rel";
+        break;
+      default:
+        type_str = "unknown";
+        break;
+    }
+
+    const std::string axes = JoinInts(_cmd.logical_axes);
+    const std::string values = JoinDoubles(_cmd.values);
+
+    this->command_stream << stamp.nanoseconds() << "," << seq << "," << _stage
+                         << "," << type_str << "," << SanitizeCsv(axes) << ","
+                         << SanitizeCsv(values) << "," << _result_code << ","
+                         << SanitizeCsv(_message) << "\n";
   }
 
   bool StartRosbagRecorder()
@@ -983,6 +1119,7 @@ class ZMotionDriverNode::Impl
 
     this->ResetInterfaces();
     this->CloseLogFile();
+    this->CloseCommandFile();
     this->StopRosbagRecorder();
     this->CloseJointStateFile();
   }
@@ -1024,11 +1161,13 @@ class ZMotionDriverNode::Impl
     }
 
     this->WriteLogLocked("control_rx", this->DescribeCommand(_cmd));
+    this->WriteCommandCsv("rx", _cmd);
 
     std::vector<int> physical_axes;
     if (!this->MapLogicalAxesToPhysical(_cmd.logical_axes, &physical_axes))
     {
       this->WriteLogLocked("control_err", "logical axis map failed");
+      this->WriteCommandCsv("err", _cmd, -1, "logical axis map failed");
       RCLCPP_ERROR(this->logger, "logical axis map failed: %s",
                    this->DescribeCommand(_cmd).c_str());
       return;
@@ -1039,6 +1178,7 @@ class ZMotionDriverNode::Impl
         (_cmd.type != PendingType::kMoveRelative))
     {
       this->WriteLogLocked("control_err", "unknown command type");
+      this->WriteCommandCsv("err", _cmd, -1, "unknown command type");
       RCLCPP_ERROR(this->logger, "unknown command type: %s",
                    this->DescribeCommand(_cmd).c_str());
       return;
@@ -1047,6 +1187,7 @@ class ZMotionDriverNode::Impl
     if (_cmd.values.size() != physical_axes.size())
     {
       this->WriteLogLocked("control_err", "command value size mismatch");
+      this->WriteCommandCsv("err", _cmd, -1, "command value size mismatch");
       RCLCPP_ERROR(this->logger, "command value size mismatch: %s",
                    this->DescribeCommand(_cmd).c_str());
       return;
@@ -1056,6 +1197,7 @@ class ZMotionDriverNode::Impl
     if (!buffer_result.ok)
     {
       this->WriteLogLocked("control_err", buffer_result.message);
+      this->WriteCommandCsv("err", _cmd, -1, buffer_result.message);
       RCLCPP_ERROR(this->logger, "hardware remain buffer check failed: %s",
                    buffer_result.message.c_str());
       this->TriggerEmergencyStopLocked(buffer_result.message);
@@ -1066,13 +1208,16 @@ class ZMotionDriverNode::Impl
     if (!exec_result.ok)
     {
       this->WriteLogLocked("control_err", exec_result.message);
+      this->WriteCommandCsv("err", _cmd, -1, exec_result.message);
       RCLCPP_ERROR(this->logger, "execute command failed: %s",
                    exec_result.message.c_str());
       this->TriggerEmergencyStopLocked(exec_result.message);
       return;
     }
 
+    // Record successful transmit
     this->WriteLogLocked("control_tx", this->DescribeCommand(_cmd));
+    this->WriteCommandCsv("tx", _cmd, 0, "OK");
   }
 
   bool MapLogicalAxesToPhysical(const std::vector<int> &_logical_axes,
@@ -1331,11 +1476,8 @@ class ZMotionDriverNode::Impl
       this->mimic_position_pubs[group]->publish(position_msg);
     }
 
-    this->WriteLogLocked(
-        "feedback",
-        "joint_state_size=" + std::to_string(joint_state.name.size()) +
-            " positions=" + JoinDoubles(logical_positions) +
-            " velocities=" + JoinDoubles(logical_velocities));
+    // Note: feedback state is recorded in joint_state CSV; avoid duplicating
+    // it in the controller event log to reduce log size and redundancy.
   }
 
   void PollIoInputs()
@@ -1798,6 +1940,13 @@ class ZMotionDriverNode::Impl
 
   std::ofstream log_stream;
 
+  // Command CSV logging (for control research)
+  std::atomic<uint64_t> cmd_seq{0};
+  std::ofstream command_stream;
+  std::mutex command_stream_mutex;
+  bool record_commands_csv_enabled = false;
+  std::string record_commands_csv_file;
+
   std::ofstream joint_state_stream;
   std::mutex joint_state_stream_mutex;
   bool record_joints_csv_enabled = false;
@@ -1852,6 +2001,13 @@ ZMotionDriverNode::on_configure(const rclcpp_lifecycle::State &_state)
 
   // 打开joint的log文件。函数每次执行，都是在文件末尾续写。
   if (!this->pimpl_->OpenJointStateFile())
+  {
+    this->pimpl_->TearDown();
+    return CallbackReturn::FAILURE;
+  }
+
+  // 打开 command log 文件（用于控制命令研究）
+  if (!this->pimpl_->OpenCommandFile())
   {
     this->pimpl_->TearDown();
     return CallbackReturn::FAILURE;
