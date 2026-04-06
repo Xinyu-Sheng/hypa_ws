@@ -128,7 +128,7 @@ Rectangle {
     id: contentLayout
     anchors.fill: parent
     anchors.margins: 4
-    spacing: 2
+    spacing: 1
 
     RowLayout {
       Layout.fillWidth: true
@@ -155,7 +155,7 @@ Rectangle {
 
     Rectangle {
       Layout.fillWidth: true
-      Layout.preferredHeight: 100
+      Layout.preferredHeight: 110
       radius: 8
       color: "#ffffff"
       border.color: "#e6edf3"
@@ -173,9 +173,9 @@ Rectangle {
         Text {
           anchors.centerIn: parent
           visible: !chartItem.hasData
-          text: "等待数据或选择对象"
+          text: "Waiting for data or selection"
           color: "#475569"
-          font.pixelSize: 16
+          font.pixelSize: 12
         }
       }
     }
@@ -184,9 +184,9 @@ Rectangle {
       id: summaryRect
       Layout.fillWidth: true
       // let content define height, but cap to avoid excessive growth
-      property int summaryMaxHeight: 88
-      Layout.preferredHeight: Math.min(summaryContent.implicitHeight + 6, summaryMaxHeight)
-      implicitHeight: Math.min(summaryContent.implicitHeight + 6, summaryMaxHeight)
+      property int summaryMaxHeight: 92
+      Layout.preferredHeight: Math.min(summaryContent.implicitHeight + 4, summaryMaxHeight)
+      implicitHeight: Math.min(summaryContent.implicitHeight + 4, summaryMaxHeight)
       radius: 8
       color: "#f6f8fa"
       border.color: "#e6edf3"
@@ -196,20 +196,20 @@ Rectangle {
       ScrollView {
         id: summaryScroll
         anchors.fill: parent
-        anchors.margins: 2
+        anchors.margins: 1
         clip: true
 
         ColumnLayout {
           id: summaryContent
           width: parent.width
-          spacing: 2
+          spacing: 1
 
           Repeater {
             model: root.selectionModel
             delegate: Rectangle {
               visible: selected
               Layout.fillWidth: true
-              height: 26
+              height: 22
               radius: 6
               color: "#ffffff"
               border.color: "#e6edf3"
@@ -217,13 +217,13 @@ Rectangle {
 
               RowLayout {
                 anchors.fill: parent
-                anchors.margins: 3
-                spacing: 6
+                anchors.margins: 2
+                spacing: 4
 
                 Text {
                   text: name
                   color: Material.primary
-                  font.pixelSize: 14
+                  font.pixelSize: 12
                   font.bold: true
                   elide: Text.ElideRight
                 }
@@ -236,7 +236,7 @@ Rectangle {
                         ? root.dataProvider.formatSeriesSummary(root.chartKind, name, root.metrics)
                         : ""
                   color: Material.foreground
-                  font.pixelSize: 14
+                  font.pixelSize: 12
                   font.bold: true
                   elide: Text.ElideRight
                 }

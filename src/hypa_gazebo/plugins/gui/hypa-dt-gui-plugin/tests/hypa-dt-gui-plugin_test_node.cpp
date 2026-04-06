@@ -122,7 +122,7 @@ class HypaDtGuiPluginTestNode : public rclcpp::Node
         std::chrono::milliseconds(20),
         std::bind(&HypaDtGuiPluginTestNode::onTimer, this));
 
-    qInfo() << "[hypa-dt-gui-plugin-test-node] 已启动测试数据发布";
+    qInfo() << "[hypa-dt-gui-plugin-test-node] test publishers started";
   }
 
   private:

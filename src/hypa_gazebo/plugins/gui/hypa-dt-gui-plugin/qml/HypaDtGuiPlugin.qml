@@ -14,7 +14,7 @@ Rectangle {
   implicitWidth: 1280
   implicitHeight: 600
   
-  // 添加最小宽度设置
+  // Keep a practical minimum width for multi-column charts
   Layout.minimumWidth: 1100
 
   color: "#ffffff"
@@ -49,19 +49,21 @@ Rectangle {
         ColumnLayout {
           id: imuCardContent
           Layout.fillWidth: true
-          spacing: 8
+          spacing: 6
 
           RowLayout {
             Layout.fillWidth: true
             Layout.leftMargin: 12
             Layout.rightMargin: 12
-            spacing: 6
+            Layout.topMargin: 6
+            Layout.bottomMargin: 2
+            spacing: 4
 
             ColumnLayout {
               spacing: 2
 
               Text {
-                text: "IMU 数据"
+                text: "IMU Data"
                 color: Material.foreground
                 font.pixelSize: 18
                 font.bold: true
@@ -71,49 +73,42 @@ Rectangle {
             }
 
             Item {
+              Layout.preferredWidth: 14
+              Layout.minimumWidth: 14
+            }
+
+            Rectangle {
               Layout.fillWidth: true
-            }
-
-            Text {
-              text: "/hypa/imu/data"
-              color: "#6b7280"
-              font.pixelSize: 11
-            }
-          }
-
-          Rectangle {
-            Layout.fillWidth: true
-            Layout.leftMargin: 12
-            Layout.rightMargin: 12
-            radius: 12
-            color: "#f6f8fa"
-            border.color: "#e6edf3"
-            border.width: 1
-            implicitHeight: 32
-            clip: true
-
-            Item {
-              anchors.fill: parent
-              anchors.margins: 2
+              Layout.preferredHeight: 30
+              Layout.maximumHeight: 30
+              Layout.minimumWidth: 260
+              radius: 10
+              color: "#f6f8fa"
+              border.color: "#e6edf3"
+              border.width: 1
               clip: true
 
               Flow {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                height: parent.height
-                spacing: 8
+                anchors.leftMargin: 8
+                anchors.rightMargin: 8
+                spacing: 6
 
                 Repeater {
                   model: root.imuModel
                   delegate: CheckBox {
                     text: name
                     checked: selected
-                    font.pixelSize: 12
+                    font.pixelSize: 11
                     hoverEnabled: true
                     ToolTip.visible: hovered
                     ToolTip.text: latestText
-                    height: parent.height
+                    topPadding: 0
+                    bottomPadding: 0
+                    indicator.height: 14
+                    indicator.width: 14
                     onClicked: root.imuModel.setSelected(name, checked)
                   }
                 }
@@ -135,7 +130,7 @@ Rectangle {
 
               MetricChartCard {
                 Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
-                titleText: "加速度 X"
+                titleText: "Accel X"
                 chartKind: "imu"
                 selectionModel: root.imuModel
                 dataProvider: Backend
@@ -144,7 +139,7 @@ Rectangle {
 
               MetricChartCard {
                 Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
-                titleText: "加速度 Y"
+                titleText: "Accel Y"
                 chartKind: "imu"
                 selectionModel: root.imuModel
                 dataProvider: Backend
@@ -153,7 +148,7 @@ Rectangle {
 
               MetricChartCard {
                 Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
-                titleText: "加速度 Z"
+                titleText: "Accel Z"
                 chartKind: "imu"
                 selectionModel: root.imuModel
                 dataProvider: Backend
@@ -172,7 +167,7 @@ Rectangle {
 
               MetricChartCard {
                 Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
-                titleText: "角速度 X"
+                titleText: "Gyro X"
                 chartKind: "imu"
                 selectionModel: root.imuModel
                 dataProvider: Backend
@@ -181,7 +176,7 @@ Rectangle {
 
               MetricChartCard {
                 Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
-                titleText: "角速度 Y"
+                titleText: "Gyro Y"
                 chartKind: "imu"
                 selectionModel: root.imuModel
                 dataProvider: Backend
@@ -190,7 +185,7 @@ Rectangle {
 
               MetricChartCard {
                 Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
-                titleText: "角速度 Z"
+                titleText: "Gyro Z"
                 chartKind: "imu"
                 selectionModel: root.imuModel
                 dataProvider: Backend
@@ -209,7 +204,7 @@ Rectangle {
 
               MetricChartCard {
                 Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
-                titleText: "四元数 w"
+                titleText: "Quat w"
                 chartKind: "imu"
                 selectionModel: root.imuModel
                 dataProvider: Backend
@@ -218,7 +213,7 @@ Rectangle {
 
               MetricChartCard {
                 Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
-                titleText: "四元数 x"
+                titleText: "Quat x"
                 chartKind: "imu"
                 selectionModel: root.imuModel
                 dataProvider: Backend
@@ -227,7 +222,7 @@ Rectangle {
 
               MetricChartCard {
                 Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
-                titleText: "四元数 y"
+                titleText: "Quat y"
                 chartKind: "imu"
                 selectionModel: root.imuModel
                 dataProvider: Backend
@@ -236,7 +231,7 @@ Rectangle {
 
               MetricChartCard {
                 Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
-                titleText: "四元数 z"
+                titleText: "Quat z"
                 chartKind: "imu"
                 selectionModel: root.imuModel
                 dataProvider: Backend
@@ -262,19 +257,21 @@ Rectangle {
         ColumnLayout {
           id: jointCardContent
           Layout.fillWidth: true
-          spacing: 8
+          spacing: 6
 
           RowLayout {
             Layout.fillWidth: true
             Layout.leftMargin: 12
             Layout.rightMargin: 12
-            spacing: 6
+            Layout.topMargin: 6
+            Layout.bottomMargin: 2
+            spacing: 4
 
             ColumnLayout {
               spacing: 2
 
               Text {
-                text: "电机关节数据"
+                text: "Joint Data"
                 color: Material.foreground
                 font.pixelSize: 18
                 font.bold: true
@@ -283,49 +280,42 @@ Rectangle {
             }
 
             Item {
+              Layout.preferredWidth: 14
+              Layout.minimumWidth: 14
+            }
+
+            Rectangle {
               Layout.fillWidth: true
-            }
-
-            Text {
-              text: "/hypa/joint_states"
-              color: "#6b7280"
-              font.pixelSize: 11
-            }
-          }
-
-          Rectangle {
-            Layout.fillWidth: true
-            Layout.leftMargin: 12
-            Layout.rightMargin: 12
-            radius: 12
-            color: "#f6f8fa"
-            border.color: "#e6edf3"
-            border.width: 1
-            implicitHeight: 32
-            clip: true
-
-            Item {
-              anchors.fill: parent
-              anchors.margins: 2
+              Layout.preferredHeight: 30
+              Layout.maximumHeight: 30
+              Layout.minimumWidth: 260
+              radius: 10
+              color: "#f6f8fa"
+              border.color: "#e6edf3"
+              border.width: 1
               clip: true
 
               Flow {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                height: parent.height
-                spacing: 8
+                anchors.leftMargin: 8
+                anchors.rightMargin: 8
+                spacing: 6
 
                 Repeater {
                   model: root.jointModel
                   delegate: CheckBox {
                     text: name
                     checked: selected
-                    font.pixelSize: 12
+                    font.pixelSize: 11
                     hoverEnabled: true
                     ToolTip.visible: hovered
                     ToolTip.text: latestText
-                    height: parent.height
+                    topPadding: 0
+                    bottomPadding: 0
+                    indicator.height: 14
+                    indicator.width: 14
                     onClicked: root.jointModel.setSelected(name, checked)
                   }
                 }
@@ -343,7 +333,7 @@ Rectangle {
 
             MetricChartCard {
               Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
-              titleText: "电机位置"
+              titleText: "Joint Position"
               chartKind: "joint"
               selectionModel: root.jointModel
               dataProvider: Backend
@@ -352,7 +342,7 @@ Rectangle {
 
             MetricChartCard {
               Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
-              titleText: "电机速度"
+              titleText: "Joint Velocity"
               chartKind: "joint"
               selectionModel: root.jointModel
               dataProvider: Backend
@@ -361,7 +351,7 @@ Rectangle {
 
             MetricChartCard {
               Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
-              titleText: "电机力矩"
+              titleText: "Joint Effort"
               chartKind: "joint"
               selectionModel: root.jointModel
               dataProvider: Backend

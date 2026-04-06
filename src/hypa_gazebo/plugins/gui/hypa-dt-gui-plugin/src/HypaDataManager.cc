@@ -57,6 +57,7 @@ HypaDataManager::~HypaDataManager()
     this->executor_thread_.join();
 
   this->imu_subscription_.reset();
+  this->imu_subscription_1_.reset();
   this->joint_state_subscription_.reset();
   this->executor_.reset();
   this->node_.reset();
@@ -94,7 +95,13 @@ bool HypaDataManager::initialize()
         this->node_->create_subscription<sensor_msgs::msg::Imu>(
             IMU_TOPIC, rclcpp::SensorDataQoS(),
             [this](const sensor_msgs::msg::Imu::ConstSharedPtr _msg)
-            { this->handleImuMessage(_msg); });
+            { this->handleImuMessage(_msg, IMU_TOPIC); });
+
+    this->imu_subscription_1_ =
+        this->node_->create_subscription<sensor_msgs::msg::Imu>(
+            IMU_TOPIC_1, rclcpp::SensorDataQoS(),
+            [this](const sensor_msgs::msg::Imu::ConstSharedPtr _msg)
+            { this->handleImuMessage(_msg, IMU_TOPIC_1); });
 
     this->joint_state_subscription_ =
         this->node_->create_subscription<sensor_msgs::msg::JointState>(
@@ -114,12 +121,14 @@ bool HypaDataManager::initialize()
             this->executor_->spin();
         });
 
-    qDebug() << "[HypaDataManager] 已订阅" << IMU_TOPIC << "和" << JOINT_TOPIC;
+    qDebug() << "[HypaDataManager] subscribed to" << IMU_TOPIC << ","
+             << IMU_TOPIC_1 << "and" << JOINT_TOPIC;
     return true;
   }
   catch (const std::exception &exception)
   {
-    qCritical() << "[HypaDataManager] 初始化失败:" << exception.what();
+    qCritical() << "[HypaDataManager] initialization failed:"
+                << exception.what();
     return false;
   }
 }
@@ -175,7 +184,7 @@ QString HypaDataManager::formatSourceSummary(const QString &_kind,
     return this->formatSeriesSummary(_kind, _source, metrics);
   }
 
-  return QStringLiteral("无数据");
+  return QStringLiteral("No data");
 }
 
 QString HypaDataManager::formatSeriesSummary(const QString &_kind,
@@ -208,7 +217,7 @@ QString HypaDataManager::formatSeriesSummary(const QString &_kind,
   }
 
   if (parts.isEmpty())
-    return QStringLiteral("无数据");
+    return QStringLiteral("No data");
 
   return parts.join(QStringLiteral("  "));
 }
@@ -555,7 +564,7 @@ QVariantList HypaDataManager::getImuCovariance(
 }
 
 void HypaDataManager::handleImuMessage(
-    const sensor_msgs::msg::Imu::ConstSharedPtr &_msg)
+    const sensor_msgs::msg::Imu::ConstSharedPtr &_msg, const char *_topicSource)
 {
   if (!_msg)
   {
@@ -570,9 +579,19 @@ void HypaDataManager::handleImuMessage(
 
   const auto t_total_start = steady_clock::now();
   const ImuSample sample = this->createImuSample(_msg);
-  const std::string source = _msg->header.frame_id.empty()
-                                 ? std::string(kFallbackImuSource)
-                                 : _msg->header.frame_id;
+  std::string source;
+  if (!_msg->header.frame_id.empty())
+  {
+    source = _msg->header.frame_id;
+  }
+  else if (_topicSource != nullptr && _topicSource[0] != '\0')
+  {
+    source = _topicSource;
+  }
+  else
+  {
+    source = std::string(kFallbackImuSource);
+  }
 
   steady_clock::time_point t_lock_start;
   steady_clock::time_point t_lock_end;

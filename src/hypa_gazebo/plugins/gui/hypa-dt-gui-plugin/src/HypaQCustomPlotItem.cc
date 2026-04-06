@@ -214,6 +214,10 @@ void HypaQCustomPlotItem::ensurePlot()
 
   this->plot_->xAxis->setVisible(true);
   this->plot_->yAxis->setVisible(true);
+  QFont tick_font = this->plot_->xAxis->tickLabelFont();
+  tick_font.setPointSize(8);
+  this->plot_->xAxis->setTickLabelFont(tick_font);
+  this->plot_->yAxis->setTickLabelFont(tick_font);
   this->plot_->xAxis->setTickLabelColor(QColor("#6b7280"));
   this->plot_->yAxis->setTickLabelColor(QColor("#6b7280"));
   this->plot_->xAxis->grid()->setPen(QPen(QColor("#e6edf3")));

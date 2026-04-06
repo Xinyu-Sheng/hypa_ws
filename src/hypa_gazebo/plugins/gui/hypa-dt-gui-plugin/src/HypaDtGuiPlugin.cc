@@ -18,7 +18,7 @@ HypaDtGuiPlugin::HypaDtGuiPlugin()
   qmlRegisterSingletonInstance("HypaDtGuiPluginBackend", 1, 0, "Backend", this);
   qmlRegisterType<HypaQCustomPlotItem>("HypaDtGuiPluginBackend", 1, 0,
                                        "HypaQCustomPlotItem");
-  qDebug() << "[hypa-dt-gui-plugin] 插件初始化";
+  qDebug() << "[hypa-dt-gui-plugin] plugin initialized";
 }
 
 HypaDtGuiPlugin::~HypaDtGuiPlugin() = default;
@@ -44,7 +44,7 @@ void HypaDtGuiPlugin::LoadConfig(const tinyxml2::XMLElement *_pluginElem)
 
   if (!this->data_manager_->initialize())
   {
-    qCritical() << "[hypa-dt-gui-plugin] ROS 2 后端初始化失败";
+    qCritical() << "[hypa-dt-gui-plugin] ROS 2 backend initialization failed";
     return;
   }
 

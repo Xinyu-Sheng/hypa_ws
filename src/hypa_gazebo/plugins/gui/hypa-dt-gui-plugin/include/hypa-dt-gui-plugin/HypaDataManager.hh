@@ -94,7 +94,8 @@ class HypaDataManager : public QObject
     uint64_t total_samples = 0;
   };
 
-  void handleImuMessage(const sensor_msgs::msg::Imu::ConstSharedPtr &_msg);
+  void handleImuMessage(const sensor_msgs::msg::Imu::ConstSharedPtr &_msg,
+                        const char *_topicSource);
   void handleJointStateMessage(
       const sensor_msgs::msg::JointState::ConstSharedPtr &_msg);
 
@@ -127,6 +128,7 @@ class HypaDataManager : public QObject
   static constexpr size_t MAX_SAMPLES = 10000;
   static constexpr double HISTORY_WINDOW_SEC = 30.0;
   static constexpr const char *IMU_TOPIC = "/hypa/imu/data";
+  static constexpr const char *IMU_TOPIC_1 = "/hypa/imu/data1";
   static constexpr const char *JOINT_TOPIC = "/hypa/joint_states";
 
   std::unordered_map<std::string, ImuCache> imu_caches_;
@@ -135,6 +137,7 @@ class HypaDataManager : public QObject
   std::vector<std::string> joint_name_order_;
 
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscription_;
+  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscription_1_;
   rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr
       joint_state_subscription_;
 
