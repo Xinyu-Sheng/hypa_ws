@@ -263,9 +263,9 @@ class RopeVisualizer : public System,
     {
       this->dataPtr->startPoint = newStart;
       this->dataPtr->endPoint = newEnd;
-      gzdbg << "RopeVisualizer: Drawing line from (" << newStart.X() << ", "
-            << newStart.Y() << ", " << newStart.Z() << ") to (" << newEnd.X()
-            << ", " << newEnd.Y() << ", " << newEnd.Z() << ")\n";
+      // gzdbg << "RopeVisualizer: Drawing line from (" << newStart.X() << ", "
+      //       << newStart.Y() << ", " << newStart.Z() << ") to (" << newEnd.X()
+      //       << ", " << newEnd.Y() << ", " << newEnd.Z() << ")\n";
       this->UpdateVisualization();
     }
   }
