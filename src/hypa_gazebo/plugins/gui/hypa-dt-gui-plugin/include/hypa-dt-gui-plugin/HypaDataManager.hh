@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QStringList>
 #include <QVariantList>
+#include <QVector>
 #include <array>
 #include <atomic>
 #include <deque>
@@ -68,6 +69,11 @@ class HypaDataManager : public QObject
   Q_INVOKABLE QVariantList getSeriesPoints(const QString &_kind,
                                            const QString &_source,
                                            const QString &_metric) const;
+  bool getSeriesDataDelta(const QString &_kind, const QString &_source,
+                          const QString &_metric, uint64_t _lastSequence,
+                          QVector<double> &_xValues, QVector<double> &_yValues,
+                          uint64_t &_latestSequence,
+                          bool &_resetRequired) const;
   Q_INVOKABLE QVariantList getImuCovariance(
       const QString &_source, const QString &_covarianceName) const;
 
@@ -79,11 +85,13 @@ class HypaDataManager : public QObject
   struct ImuCache
   {
     std::deque<ImuSample> samples;
+    uint64_t total_samples = 0;
   };
 
   struct JointCache
   {
     std::deque<JointSample> samples;
+    uint64_t total_samples = 0;
   };
 
   void handleImuMessage(const sensor_msgs::msg::Imu::ConstSharedPtr &_msg);
@@ -116,7 +124,8 @@ class HypaDataManager : public QObject
   bool ros_initialized_here_ = false;
   bool running_ = false;
 
-  static constexpr size_t MAX_SAMPLES = 240;
+  static constexpr size_t MAX_SAMPLES = 10000;
+  static constexpr double HISTORY_WINDOW_SEC = 30.0;
   static constexpr const char *IMU_TOPIC = "/hypa/imu/data";
   static constexpr const char *JOINT_TOPIC = "/hypa/joint_states";
 

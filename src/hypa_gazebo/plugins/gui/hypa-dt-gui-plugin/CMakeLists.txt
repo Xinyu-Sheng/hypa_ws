@@ -7,19 +7,28 @@ endif()
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Charts)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Charts)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
+
+find_path(QCUSTOMPLOT_INCLUDE_DIR NAMES qcustomplot.h)
+find_library(QCUSTOMPLOT_LIBRARY NAMES qcustomplot qcustomplot2)
+
+if(NOT QCUSTOMPLOT_INCLUDE_DIR OR NOT QCUSTOMPLOT_LIBRARY)
+    message(FATAL_ERROR "QCustomPlot not found. Please install qcustomplot development package.")
+endif()
 
 set(HYPA_DT_GUI_PLUGIN_TARGET HypaDtGuiPlugin)
 
 add_library(${HYPA_DT_GUI_PLUGIN_TARGET} SHARED
     src/HypaDtGuiPlugin.cc
     src/HypaDataManager.cc
+    src/HypaQCustomPlotItem.cc
     src/HypaSelectionModel.cc
     include/hypa-dt-gui-plugin/HypaDtGuiPlugin.hh
     include/hypa-dt-gui-plugin/HypaDataManager.hh
+    include/hypa-dt-gui-plugin/HypaQCustomPlotItem.hh
     include/hypa-dt-gui-plugin/HypaSelectionModel.hh
     hypa-dt-gui-plugin.qrc
 )
@@ -27,6 +36,8 @@ add_library(${HYPA_DT_GUI_PLUGIN_TARGET} SHARED
 target_include_directories(${HYPA_DT_GUI_PLUGIN_TARGET}
     PUBLIC
     include
+    PRIVATE
+    ${QCUSTOMPLOT_INCLUDE_DIR}
 )
 
 ament_target_dependencies(${HYPA_DT_GUI_PLUGIN_TARGET}
@@ -40,7 +51,7 @@ target_link_libraries(${HYPA_DT_GUI_PLUGIN_TARGET}
     Qt${QT_VERSION_MAJOR}::Qml
     Qt${QT_VERSION_MAJOR}::Quick
     Qt${QT_VERSION_MAJOR}::QuickControls2
-    Qt${QT_VERSION_MAJOR}::Charts
+    ${QCUSTOMPLOT_LIBRARY}
     gz-gui${GZ_GUI_VER}::gz-gui${GZ_GUI_VER}
 )
 

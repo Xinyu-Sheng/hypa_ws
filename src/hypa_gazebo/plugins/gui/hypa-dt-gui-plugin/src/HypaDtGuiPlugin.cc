@@ -9,11 +9,15 @@
 
 #include <gz/plugin/Register.hh>
 
+#include "hypa-dt-gui-plugin/HypaQCustomPlotItem.hh"
+
 namespace hypa_dt_gui_plugin
 {
 HypaDtGuiPlugin::HypaDtGuiPlugin()
 {
   qmlRegisterSingletonInstance("HypaDtGuiPluginBackend", 1, 0, "Backend", this);
+  qmlRegisterType<HypaQCustomPlotItem>("HypaDtGuiPluginBackend", 1, 0,
+                                       "HypaQCustomPlotItem");
   qDebug() << "[hypa-dt-gui-plugin] 插件初始化";
 }
 
@@ -169,6 +173,20 @@ QVariantList HypaDtGuiPlugin::getSeriesPoints(const QString &_kind,
   }
 
   return points;
+}
+
+bool HypaDtGuiPlugin::getSeriesDataDelta(
+    const QString &_kind, const QString &_source, const QString &_metric,
+    uint64_t _lastSequence, QVector<double> &_xValues,
+    QVector<double> &_yValues, uint64_t &_latestSequence,
+    bool &_resetRequired) const
+{
+  if (!this->data_manager_)
+    return false;
+
+  return this->data_manager_->getSeriesDataDelta(
+      _kind, _source, _metric, _lastSequence, _xValues, _yValues,
+      _latestSequence, _resetRequired);
 }
 
 QVariantList HypaDtGuiPlugin::getImuCovariance(

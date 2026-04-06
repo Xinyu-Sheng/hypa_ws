@@ -15,7 +15,7 @@ Rectangle {
   implicitHeight: 600
   
   // 添加最小宽度设置
-  Layout.minimumWidth: 1000
+  Layout.minimumWidth: 1100
 
   color: "#ffffff"
 

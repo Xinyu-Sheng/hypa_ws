@@ -2,7 +2,7 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Controls.Material 2.15
 import QtQuick.Layouts 1.15
-import QtCharts 2.15
+import HypaDtGuiPluginBackend 1.0
 
 Rectangle {
   id: root
@@ -13,8 +13,7 @@ Rectangle {
   property var dataProvider
   property var metrics: []
   property int dataRevision: 0
-  property bool hasVisibleSeries: false
-  property var seriesRegistry: ({})
+  property bool hasVisibleSeries: chartItem ? chartItem.hasData : false
   property var seriesModel: []
   // Refresh throttle settings (ms)
   property int refreshIntervalMs: 200
@@ -47,117 +46,17 @@ Rectangle {
       }
     }
 
-    root.seriesRegistry = ({})
     root.seriesModel = items
     console.log("MetricChartCard.rebuildSeriesModel: built seriesModel size=", items.length)
     Qt.callLater(root.refreshSeries)
   }
 
-  function registerSeries(_sourceName, _metricName, _series) {
-    var key = _sourceName + "|" + _metricName
-    root.seriesRegistry[key] = _series
-    console.log("MetricChartCard.registerSeries:", key, "registered ->", _series)
-    // trigger a refresh when the first series registers
-    Qt.callLater(root.refreshSeries)
-  }
-
-  function unregisterSeries(_sourceName, _metricName) {
-    var key = _sourceName + "|" + _metricName
-    delete root.seriesRegistry[key]
-    console.log("MetricChartCard.unregisterSeries:", key)
-  }
-
   function refreshSeries() {
-    console.log("MetricChartCard.refreshSeries: start","chartKind=", root.chartKind)
-    if (!root.dataProvider) {
-      root.hasVisibleSeries = false
-      console.log("MetricChartCard.refreshSeries: no dataProvider")
+    console.log("MetricChartCard.refreshSeries: start", "chartKind=", root.chartKind)
+    if (!root.dataProvider || !chartItem)
       return
-    }
-    var foundPoint = false
-    var minX = 0.0
-    var maxX = 1.0
-    var minY = -1.0
-    var maxY = 1.0
-    var initialized = false
-
-    for (var key in root.seriesRegistry) {
-      var series = root.seriesRegistry[key]
-      if (!series)
-        continue
-
-      if (!series.visible) {
-        series.clear()
-        continue
-      }
-
-      var parts = key.split("|")
-      if (parts.length !== 2)
-        continue
-
-      console.log("MetricChartCard: requesting points for", parts[0], parts[1])
-      var points = root.dataProvider.getSeriesPoints(root.chartKind, parts[0], parts[1])
-      console.log("MetricChartCard: got points length:", points ? points.length : 0)
-      // show first few points for debugging
-      for (var _pi = 0; _pi < Math.min(3, points.length); ++_pi) {
-        console.log("MetricChartCard: point", _pi, points[_pi])
-      }
-      series.clear()
-
-      for (var i = 0; i < points.length; ++i) {
-        var point = points[i]
-        series.append(point.x, point.y)
-
-        if (!initialized) {
-          minX = point.x
-          maxX = point.x
-          minY = point.y
-          maxY = point.y
-          initialized = true
-        } else {
-          if (point.x < minX)
-            minX = point.x
-          if (point.x > maxX)
-            maxX = point.x
-          if (point.y < minY)
-            minY = point.y
-          if (point.y > maxY)
-            maxY = point.y
-        }
-      }
-
-      if (points.length > 0)
-        foundPoint = true
-    }
-
-    root.hasVisibleSeries = foundPoint
-
-    if (initialized) {
-      if (minX === maxX) {
-        minX -= 1.0
-        maxX += 1.0
-      }
-
-      var ySpan = maxY - minY
-      if (ySpan < 0.0001) {
-        minY -= 1.0
-        maxY += 1.0
-      } else {
-        var padding = ySpan * 0.12
-        minY -= padding
-        maxY += padding
-      }
-
-      xAxis.min = minX
-      xAxis.max = maxX
-      yAxis.min = minY
-      yAxis.max = maxY
-    } else {
-      xAxis.min = 0.0
-      xAxis.max = 1.0
-      yAxis.min = -1.0
-      yAxis.max = 1.0
-    }
+    chartItem.refreshPlot()
+    root.hasVisibleSeries = chartItem.hasData
   }
 
   Connections {
@@ -263,49 +162,17 @@ Rectangle {
       border.width: 1
       clip: true
 
-      ChartView {
-        id: chartView
+      HypaQCustomPlotItem {
+        id: chartItem
         anchors.fill: parent
         anchors.margins: 1
-        backgroundColor: "transparent"
-        legend.visible: false
-        animationOptions: ChartView.NoAnimation
-        antialiasing: false
-        dropShadowEnabled: false
-
-        ValueAxis {
-          id: xAxis
-          min: 0.0
-          max: 1.0
-          labelsColor: "#6b7280"
-          gridLineColor: "#e6edf3"
-          lineVisible: false
-          tickCount: 5
-        }
-
-        ValueAxis {
-          id: yAxis
-          min: -1.0
-          max: 1.0
-          labelsColor: "#6b7280"
-          gridLineColor: "#e6edf3"
-          lineVisible: false
-          tickCount: 5
-        }
-
-        // NOTE: Repeater delegate for LineSeries may cause "Delegate must be of Item type"
-        // errors/crashes on some Qt builds. To keep the UI stable and avoid segfaults,
-        // disable automatic LineSeries instantiation here. Series will be created
-        // dynamically by the data provider or a future implementation.
-        Item {
-          id: seriesPlaceholder
-          width: 0
-          height: 0
-        }
+        chartKind: root.chartKind
+        seriesModel: root.seriesModel
+        dataProvider: root.dataProvider
 
         Text {
           anchors.centerIn: parent
-          visible: !root.hasVisibleSeries
+          visible: !chartItem.hasData
           text: "等待数据或选择对象"
           color: "#475569"
           font.pixelSize: 16

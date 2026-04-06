@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QVector>
 #include <memory>
 #include <string>
 
@@ -41,6 +42,11 @@ class HypaDtGuiPlugin : public gz::gui::Plugin
   Q_INVOKABLE QVariantList getSeriesPoints(const QString &_kind,
                                            const QString &_source,
                                            const QString &_metric) const;
+  bool getSeriesDataDelta(const QString &_kind, const QString &_source,
+                          const QString &_metric, uint64_t _lastSequence,
+                          QVector<double> &_xValues, QVector<double> &_yValues,
+                          uint64_t &_latestSequence,
+                          bool &_resetRequired) const;
   Q_INVOKABLE QVariantList getImuCovariance(
       const QString &_source, const QString &_covarianceName) const;
 

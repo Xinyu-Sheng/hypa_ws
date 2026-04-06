@@ -383,6 +383,144 @@ QVariantList HypaDataManager::getSeriesPoints(const QString &_kind,
   return points;
 }
 
+bool HypaDataManager::getSeriesDataDelta(
+    const QString &_kind, const QString &_source, const QString &_metric,
+    uint64_t _lastSequence, QVector<double> &_xValues,
+    QVector<double> &_yValues, uint64_t &_latestSequence,
+    bool &_resetRequired) const
+{
+  _xValues.clear();
+  _yValues.clear();
+  _latestSequence = 0;
+  _resetRequired = false;
+
+  std::lock_guard<std::mutex> lock(this->mutex_);
+
+  if (_kind == "imu")
+  {
+    const auto cache_it = this->imu_caches_.find(_source.toStdString());
+    if (cache_it == this->imu_caches_.end())
+      return false;
+
+    const auto &samples = cache_it->second.samples;
+    const uint64_t total = cache_it->second.total_samples;
+    const uint64_t available = static_cast<uint64_t>(samples.size());
+    const uint64_t earliest = (total > available) ? (total - available) : 0;
+
+    _latestSequence = total;
+    if (available == 0)
+      return true;
+
+    uint64_t begin_sequence = _lastSequence;
+    if (begin_sequence < earliest)
+    {
+      begin_sequence = earliest;
+      _resetRequired = true;
+    }
+
+    if (begin_sequence > total)
+      begin_sequence = total;
+
+    const uint64_t begin_index_u64 = begin_sequence - earliest;
+    const size_t begin_index = static_cast<size_t>(begin_index_u64);
+    if (begin_index >= samples.size())
+      return true;
+
+    const size_t append_count = samples.size() - begin_index;
+    _xValues.reserve(static_cast<int>(append_count));
+    _yValues.reserve(static_cast<int>(append_count));
+
+    for (size_t i = begin_index; i < samples.size(); ++i)
+    {
+      const auto &sample = samples[i];
+      double value = 0.0;
+      if (_metric == "orientation_w")
+        value = sample.orientation_w;
+      else if (_metric == "orientation_x")
+        value = sample.orientation_x;
+      else if (_metric == "orientation_y")
+        value = sample.orientation_y;
+      else if (_metric == "orientation_z")
+        value = sample.orientation_z;
+      else if (_metric == "angular_velocity_x")
+        value = sample.angular_velocity_x;
+      else if (_metric == "angular_velocity_y")
+        value = sample.angular_velocity_y;
+      else if (_metric == "angular_velocity_z")
+        value = sample.angular_velocity_z;
+      else if (_metric == "linear_acceleration_x")
+        value = sample.linear_acceleration_x;
+      else if (_metric == "linear_acceleration_y")
+        value = sample.linear_acceleration_y;
+      else if (_metric == "linear_acceleration_z")
+        value = sample.linear_acceleration_z;
+      else
+        return false;
+
+      _xValues.push_back(sample.stamp_sec);
+      _yValues.push_back(value);
+    }
+
+    return true;
+  }
+
+  if (_kind == "joint")
+  {
+    const auto cache_it = this->joint_caches_.find(_source.toStdString());
+    if (cache_it == this->joint_caches_.end())
+      return false;
+
+    const auto &samples = cache_it->second.samples;
+    const uint64_t total = cache_it->second.total_samples;
+    const uint64_t available = static_cast<uint64_t>(samples.size());
+    const uint64_t earliest = (total > available) ? (total - available) : 0;
+
+    _latestSequence = total;
+    if (available == 0)
+      return true;
+
+    uint64_t begin_sequence = _lastSequence;
+    if (begin_sequence < earliest)
+    {
+      begin_sequence = earliest;
+      _resetRequired = true;
+    }
+
+    if (begin_sequence > total)
+      begin_sequence = total;
+
+    const uint64_t begin_index_u64 = begin_sequence - earliest;
+    const size_t begin_index = static_cast<size_t>(begin_index_u64);
+    if (begin_index >= samples.size())
+      return true;
+
+    const size_t append_count = samples.size() - begin_index;
+    _xValues.reserve(static_cast<int>(append_count));
+    _yValues.reserve(static_cast<int>(append_count));
+
+    for (size_t i = begin_index; i < samples.size(); ++i)
+    {
+      const auto &sample = samples[i];
+      double value = 0.0;
+      if (_metric == "position")
+        value = sample.position;
+      else if (_metric == "velocity")
+        value = sample.velocity;
+      else if (_metric == "effort")
+        value = sample.effort;
+      else
+        return false;
+
+      _xValues.push_back(sample.stamp_sec);
+      _yValues.push_back(value);
+    }
+
+    return true;
+  }
+
+  return false;
+}
+
 QVariantList HypaDataManager::getImuCovariance(
     const QString &_source, const QString &_covarianceName) const
 {
@@ -450,6 +588,13 @@ void HypaDataManager::handleImuMessage(
     }
 
     cache.samples.push_back(sample);
+    cache.total_samples += 1;
+    const double window_start_sec = sample.stamp_sec - HISTORY_WINDOW_SEC;
+    while (cache.samples.size() > 1 &&
+           cache.samples.front().stamp_sec < window_start_sec)
+    {
+      cache.samples.pop_front();
+    }
     if (cache.samples.size() > MAX_SAMPLES)
       cache.samples.pop_front();
     t_lock_end = steady_clock::now();
@@ -514,7 +659,15 @@ void HypaDataManager::handleJointStateMessage(
         this->joint_name_order_.push_back(name);
       }
 
-      cache.samples.push_back(this->createJointSample(_msg, i));
+      const JointSample sample = this->createJointSample(_msg, i);
+      cache.samples.push_back(sample);
+      cache.total_samples += 1;
+      const double window_start_sec = sample.stamp_sec - HISTORY_WINDOW_SEC;
+      while (cache.samples.size() > 1 &&
+             cache.samples.front().stamp_sec < window_start_sec)
+      {
+        cache.samples.pop_front();
+      }
       if (cache.samples.size() > MAX_SAMPLES)
         cache.samples.pop_front();
     }
