@@ -5,6 +5,7 @@
 #include <QStringList>
 #include <QVariantList>
 #include <array>
+#include <atomic>
 #include <deque>
 #include <memory>
 #include <mutex>
@@ -127,6 +128,19 @@ class HypaDataManager : public QObject
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscription_;
   rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr
       joint_state_subscription_;
+
+  // Lightweight runtime metrics (probes)
+  mutable std::atomic<uint64_t> imu_msg_count_{0};
+  mutable std::atomic<uint64_t> imu_msg_total_ns_{0};
+  mutable std::atomic<uint64_t> imu_msg_lock_ns_{0};
+
+  mutable std::atomic<uint64_t> joint_msg_count_{0};
+  mutable std::atomic<uint64_t> joint_msg_total_ns_{0};
+  mutable std::atomic<uint64_t> joint_msg_lock_ns_{0};
+
+  mutable std::atomic<uint64_t> get_series_count_{0};
+  mutable std::atomic<uint64_t> get_series_total_ns_{0};
+  mutable std::atomic<uint64_t> get_series_lock_ns_{0};
 };
 }  // namespace hypa_dt_gui_plugin
 

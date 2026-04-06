@@ -16,17 +16,20 @@ Rectangle {
   property bool hasVisibleSeries: false
   property var seriesRegistry: ({})
   property var seriesModel: []
+  // Refresh throttle settings (ms)
+  property int refreshIntervalMs: 200
+  property bool refreshPending: false
 
-  radius: 16
+  radius: 12
   color: "#ffffff"
   border.color: "#e6edf3"
   border.width: 1
   clip: true
 
   Layout.fillWidth: true
-  Layout.preferredHeight: 200
+  Layout.preferredHeight: contentLayout.implicitHeight + 16
   Layout.minimumWidth: 0
-  implicitHeight: 200
+  implicitHeight: contentLayout.implicitHeight + 16
 
   function rebuildSeriesModel() {
     var items = []
@@ -170,19 +173,33 @@ Rectangle {
     ignoreUnknownSignals: true
     function onImuDataUpdated() {
       if (root.chartKind === "imu") {
-        // ensure seriesModel is rebuilt when data updates (in case entriesChanged was not received)
-        root.rebuildSeriesModel()
-        root.dataRevision += 1
-        root.refreshSeries()
+        // throttle UI refresh: mark dirty and start timer if needed
+        root.refreshPending = true
+        if (!refreshTimer.running) refreshTimer.start()
       }
     }
 
     function onJointDataUpdated() {
       if (root.chartKind === "joint") {
-        // ensure seriesModel is rebuilt when data updates (in case entriesChanged was not received)
+        // throttle UI refresh: mark dirty and start timer if needed
+        root.refreshPending = true
+        if (!refreshTimer.running) refreshTimer.start()
+      }
+    }
+  }
+
+  Timer {
+    id: refreshTimer
+    interval: root.refreshIntervalMs
+    repeat: false
+    running: false
+    onTriggered: {
+      if (root.refreshPending) {
+        // rebuild model and refresh series on timer trigger
         root.rebuildSeriesModel()
         root.dataRevision += 1
         root.refreshSeries()
+        root.refreshPending = false
       }
     }
   }
@@ -209,9 +226,10 @@ Rectangle {
   onHeightChanged: _logSizes()
 
   ColumnLayout {
+    id: contentLayout
     anchors.fill: parent
-    anchors.margins: 8
-    spacing: 6
+    anchors.margins: 4
+    spacing: 2
 
     RowLayout {
       Layout.fillWidth: true
@@ -238,8 +256,8 @@ Rectangle {
 
     Rectangle {
       Layout.fillWidth: true
-      Layout.preferredHeight: 150
-      radius: 12
+      Layout.preferredHeight: 100
+      radius: 8
       color: "#ffffff"
       border.color: "#e6edf3"
       border.width: 1
@@ -248,7 +266,7 @@ Rectangle {
       ChartView {
         id: chartView
         anchors.fill: parent
-        anchors.margins: 4
+        anchors.margins: 1
         backgroundColor: "transparent"
         legend.visible: false
         animationOptions: ChartView.NoAnimation
@@ -290,15 +308,19 @@ Rectangle {
           visible: !root.hasVisibleSeries
           text: "等待数据或选择对象"
           color: "#475569"
-          font.pixelSize: 12
+          font.pixelSize: 16
         }
       }
     }
 
     Rectangle {
+      id: summaryRect
       Layout.fillWidth: true
-      Layout.preferredHeight: 70
-      radius: 12
+      // let content define height, but cap to avoid excessive growth
+      property int summaryMaxHeight: 88
+      Layout.preferredHeight: Math.min(summaryContent.implicitHeight + 6, summaryMaxHeight)
+      implicitHeight: Math.min(summaryContent.implicitHeight + 6, summaryMaxHeight)
+      radius: 8
       color: "#f6f8fa"
       border.color: "#e6edf3"
       border.width: 1
@@ -307,77 +329,49 @@ Rectangle {
       ScrollView {
         id: summaryScroll
         anchors.fill: parent
-        anchors.margins: 4
+        anchors.margins: 2
         clip: true
 
-        Flow {
-          spacing: 8
+        ColumnLayout {
+          id: summaryContent
+          width: parent.width
+          spacing: 2
 
           Repeater {
             model: root.selectionModel
             delegate: Rectangle {
               visible: selected
-              width: 140
-              height: 86
-              radius: 8
+              Layout.fillWidth: true
+              height: 26
+              radius: 6
               color: "#ffffff"
               border.color: "#e6edf3"
               border.width: 1
 
-              ColumnLayout {
+              RowLayout {
                 anchors.fill: parent
-                anchors.margins: 6
-                spacing: 4
+                anchors.margins: 3
+                spacing: 6
 
                 Text {
-                  Layout.fillWidth: true
                   text: name
                   color: Material.primary
-                  font.pixelSize: 11
+                  font.pixelSize: 14
                   font.bold: true
                   elide: Text.ElideRight
                 }
 
+                Item { Layout.fillWidth: true }
+
                 Text {
                   id: summaryText
-                  Layout.fillWidth: true
                   text: root.dataRevision >= 0
                         ? root.dataProvider.formatSeriesSummary(root.chartKind, name, root.metrics)
                         : ""
                   color: Material.foreground
-                  font.pixelSize: 10
-                  wrapMode: Text.WordWrap
-                }
-
-                  RowLayout {
-                  Layout.fillWidth: true
-                  spacing: 6
-                  visible: root.chartKind === "imu"
-
-                  function getOriCov() { return root.dataRevision >= 0 ? root.dataProvider.getImuCovariance(name, "orientation_covariance") : [] }
-                  function getAngCov() { return root.dataRevision >= 0 ? root.dataProvider.getImuCovariance(name, "angular_velocity_covariance") : [] }
-                  function getLinCov() { return root.dataRevision >= 0 ? root.dataProvider.getImuCovariance(name, "linear_acceleration_covariance") : [] }
-
-                  Text {
-                    text: (getOriCov().length >= 9) ? ("ori: " + Number(getOriCov()[0]).toFixed(4) + "," + Number(getOriCov()[4]).toFixed(4) + "," + Number(getOriCov()[8]).toFixed(4)) : ""
-                    color: "#475569"
-                    font.pixelSize: 9
-                    elide: Text.ElideRight
-                  }
-
-                  Text {
-                    text: (getAngCov().length >= 9) ? ("ang: " + Number(getAngCov()[0]).toFixed(4) + "," + Number(getAngCov()[4]).toFixed(4) + "," + Number(getAngCov()[8]).toFixed(4)) : ""
-                    color: "#475569"
-                    font.pixelSize: 9
-                    elide: Text.ElideRight
-                  }
-
-                  Text {
-                    text: (getLinCov().length >= 9) ? ("acc: " + Number(getLinCov()[0]).toFixed(4) + "," + Number(getLinCov()[4]).toFixed(4) + "," + Number(getLinCov()[8]).toFixed(4)) : ""
-                    color: "#475569"
-                    font.pixelSize: 9
-                    elide: Text.ElideRight
-                  }
+                  font.pixelSize: 14
+                  font.bold: true
+                  elide: Text.ElideRight
                 }
               }
             }

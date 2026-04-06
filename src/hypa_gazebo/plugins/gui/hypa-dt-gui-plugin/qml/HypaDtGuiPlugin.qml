@@ -30,10 +30,11 @@ Rectangle {
 
   ScrollView {
     anchors.fill: parent
+    anchors.topMargin: 8
     clip: true
 
     ColumnLayout {
-      width: parent.width - 32
+      width: parent.width - 10
       anchors.horizontalCenter: parent.horizontalCenter
       spacing: 8
 
@@ -66,11 +67,7 @@ Rectangle {
                 font.bold: true
               }
 
-              Text {
-                text: "/hypa/imu/data"
-                color: "#6b7280"
-                font.pixelSize: 11
-              }
+   
             }
 
             Item {
@@ -78,7 +75,7 @@ Rectangle {
             }
 
             Text {
-              text: "三图水平排布，竖屏整体布局"
+              text: "/hypa/imu/data"
               color: "#6b7280"
               font.pixelSize: 11
             }
@@ -92,16 +89,19 @@ Rectangle {
             color: "#f6f8fa"
             border.color: "#e6edf3"
             border.width: 1
-            implicitHeight: 48
+            implicitHeight: 32
             clip: true
 
-            ScrollView {
+            Item {
               anchors.fill: parent
-              anchors.margins: 6
+              anchors.margins: 2
               clip: true
 
               Flow {
-                width: parent.width
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                height: parent.height
                 spacing: 8
 
                 Repeater {
@@ -109,10 +109,11 @@ Rectangle {
                   delegate: CheckBox {
                     text: name
                     checked: selected
-                    font.pixelSize: 11
+                    font.pixelSize: 12
                     hoverEnabled: true
                     ToolTip.visible: hovered
                     ToolTip.text: latestText
+                    height: parent.height
                     onClicked: root.imuModel.setSelected(name, checked)
                   }
                 }
@@ -120,49 +121,134 @@ Rectangle {
             }
           }
 
-          GridLayout {
+          ColumnLayout {
             Layout.fillWidth: true
-            Layout.leftMargin: 12
-            Layout.rightMargin: 12
-            columns: root.width < 700 ? 1 : 3
-            columnSpacing: 8
-            rowSpacing: 8
 
-            MetricChartCard {
-              Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
-              Layout.preferredHeight: 200
-              titleText: "三轴加速度"
-              chartKind: "imu"
-              selectionModel: root.imuModel
-              dataProvider: Backend
-              metrics: ["linear_acceleration_x", "linear_acceleration_y", "linear_acceleration_z"]
+            // Row 1: Acceleration (3 columns)
+            GridLayout {
+              Layout.fillWidth: true
+              Layout.leftMargin: 12
+              Layout.rightMargin: 12
+              columns: root.width < 700 ? 1 : 3
+              columnSpacing: 8
+              rowSpacing: 8
+
+              MetricChartCard {
+                Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
+                titleText: "加速度 X"
+                chartKind: "imu"
+                selectionModel: root.imuModel
+                dataProvider: Backend
+                metrics: ["linear_acceleration_x"]
+              }
+
+              MetricChartCard {
+                Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
+                titleText: "加速度 Y"
+                chartKind: "imu"
+                selectionModel: root.imuModel
+                dataProvider: Backend
+                metrics: ["linear_acceleration_y"]
+              }
+
+              MetricChartCard {
+                Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
+                titleText: "加速度 Z"
+                chartKind: "imu"
+                selectionModel: root.imuModel
+                dataProvider: Backend
+                metrics: ["linear_acceleration_z"]
+              }
             }
 
-            MetricChartCard {
-              Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
-              Layout.preferredHeight: 200
-              titleText: "三轴角速度"
-              chartKind: "imu"
-              selectionModel: root.imuModel
-              dataProvider: Backend
-              metrics: ["angular_velocity_x", "angular_velocity_y", "angular_velocity_z"]
+            // Row 2: Angular velocity (3 columns)
+            GridLayout {
+              Layout.fillWidth: true
+              Layout.leftMargin: 12
+              Layout.rightMargin: 12
+              columns: root.width < 700 ? 1 : 3
+              columnSpacing: 8
+              rowSpacing: 8
+
+              MetricChartCard {
+                Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
+                titleText: "角速度 X"
+                chartKind: "imu"
+                selectionModel: root.imuModel
+                dataProvider: Backend
+                metrics: ["angular_velocity_x"]
+              }
+
+              MetricChartCard {
+                Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
+                titleText: "角速度 Y"
+                chartKind: "imu"
+                selectionModel: root.imuModel
+                dataProvider: Backend
+                metrics: ["angular_velocity_y"]
+              }
+
+              MetricChartCard {
+                Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
+                titleText: "角速度 Z"
+                chartKind: "imu"
+                selectionModel: root.imuModel
+                dataProvider: Backend
+                metrics: ["angular_velocity_z"]
+              }
             }
 
-            MetricChartCard {
-              Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
-              Layout.preferredHeight: 200
-              titleText: "四元数 (w/x/y/z)"
-              chartKind: "imu"
-              selectionModel: root.imuModel
-              dataProvider: Backend
-              metrics: ["orientation_w", "orientation_x", "orientation_y", "orientation_z"]
+            // Row 3: Orientation (quaternion) — force 4 columns so w/x/y/z are on one row
+            GridLayout {
+              Layout.fillWidth: true
+              Layout.leftMargin: 12
+              Layout.rightMargin: 12
+              columns: root.width < 900 ? 1 : 4
+              columnSpacing: 8
+              rowSpacing: 8
+
+              MetricChartCard {
+                Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
+                titleText: "四元数 w"
+                chartKind: "imu"
+                selectionModel: root.imuModel
+                dataProvider: Backend
+                metrics: ["orientation_w"]
+              }
+
+              MetricChartCard {
+                Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
+                titleText: "四元数 x"
+                chartKind: "imu"
+                selectionModel: root.imuModel
+                dataProvider: Backend
+                metrics: ["orientation_x"]
+              }
+
+              MetricChartCard {
+                Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
+                titleText: "四元数 y"
+                chartKind: "imu"
+                selectionModel: root.imuModel
+                dataProvider: Backend
+                metrics: ["orientation_y"]
+              }
+
+              MetricChartCard {
+                Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
+                titleText: "四元数 z"
+                chartKind: "imu"
+                selectionModel: root.imuModel
+                dataProvider: Backend
+                metrics: ["orientation_z"]
+              }
             }
           }
 
           // CovariancePanel removed; covariance values now shown inline in each MetricChartCard summary
         }
 
-        implicitHeight: imuCardContent.implicitHeight + 28
+        implicitHeight: imuCardContent.implicitHeight + 10
       }
 
       Rectangle {
@@ -193,12 +279,7 @@ Rectangle {
                 font.pixelSize: 18
                 font.bold: true
               }
-
-              Text {
-                text: "/hypa/joint_states"
-                color: "#6b7280"
-                font.pixelSize: 11
-              }
+    
             }
 
             Item {
@@ -206,7 +287,7 @@ Rectangle {
             }
 
             Text {
-              text: "自动识别电机数量与名称"
+              text: "/hypa/joint_states"
               color: "#6b7280"
               font.pixelSize: 11
             }
@@ -220,16 +301,19 @@ Rectangle {
             color: "#f6f8fa"
             border.color: "#e6edf3"
             border.width: 1
-            implicitHeight: 48
+            implicitHeight: 32
             clip: true
 
-            ScrollView {
+            Item {
               anchors.fill: parent
-              anchors.margins: 6
+              anchors.margins: 2
               clip: true
 
               Flow {
-                width: parent.width
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                height: parent.height
                 spacing: 8
 
                 Repeater {
@@ -237,10 +321,11 @@ Rectangle {
                   delegate: CheckBox {
                     text: name
                     checked: selected
-                    font.pixelSize: 11
+                    font.pixelSize: 12
                     hoverEnabled: true
                     ToolTip.visible: hovered
                     ToolTip.text: latestText
+                    height: parent.height
                     onClicked: root.jointModel.setSelected(name, checked)
                   }
                 }
@@ -258,7 +343,6 @@ Rectangle {
 
             MetricChartCard {
               Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
-              Layout.preferredHeight: 200
               titleText: "电机位置"
               chartKind: "joint"
               selectionModel: root.jointModel
@@ -268,7 +352,6 @@ Rectangle {
 
             MetricChartCard {
               Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
-              Layout.preferredHeight: 200
               titleText: "电机速度"
               chartKind: "joint"
               selectionModel: root.jointModel
@@ -278,7 +361,6 @@ Rectangle {
 
             MetricChartCard {
               Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
-              Layout.preferredHeight: 200
               titleText: "电机力矩"
               chartKind: "joint"
               selectionModel: root.jointModel
@@ -288,7 +370,7 @@ Rectangle {
           }
         }
 
-        implicitHeight: jointCardContent.implicitHeight + 28
+        implicitHeight: jointCardContent.implicitHeight + 10
       }
     }
   }

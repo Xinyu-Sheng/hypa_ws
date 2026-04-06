@@ -2,7 +2,11 @@
 
 #include <QDebug>
 #include <algorithm>
+#include <chrono>
 #include <cmath>
+#include <ctime>
+#include <fstream>
+#include <sstream>
 
 // lifecycle transitions are not used after switching to plain rclcpp::Node
 
@@ -11,7 +15,32 @@ namespace hypa_dt_gui_plugin
 namespace
 {
 constexpr const char *kFallbackImuSource = "imu";
+constexpr size_t kMetricsLogInterval = 250;
+
+// Append a single-line metrics record to the metrics log file.
+// Open the file once and reuse the handle to reduce open/close overhead.
+static void append_metrics_log(const std::string &_line)
+{
+  static std::mutex metrics_file_mutex;
+  std::lock_guard<std::mutex> lock(metrics_file_mutex);
+  static std::ofstream ofs("/tmp/hypa_dt_metrics.log", std::ios::app);
+  if (!ofs)
+    return;
+  ofs << _line << std::endl;
+  ofs.flush();
 }
+
+static std::string make_timestamp()
+{
+  using namespace std::chrono;
+  const auto now = system_clock::now();
+  const std::time_t now_c = system_clock::to_time_t(now);
+  char buf[64] = {};
+  if (std::strftime(buf, sizeof(buf), "%F %T", std::localtime(&now_c)))
+    return std::string(buf);
+  return std::string();
+}
+}  // namespace
 
 HypaDataManager::HypaDataManager(QObject *_parent) : QObject(_parent)
 {
@@ -174,8 +203,7 @@ QString HypaDataManager::formatSeriesSummary(const QString &_kind,
 
     if (found)
     {
-      parts.push_back(QString("%1=%2").arg(this->metricLabel(metric),
-                                           this->formatValue(value)));
+      parts.push_back(this->formatValue(value));
     }
   }
 
@@ -189,31 +217,150 @@ QVariantList HypaDataManager::getSeriesPoints(const QString &_kind,
                                               const QString &_source,
                                               const QString &_metric) const
 {
+  using namespace std::chrono;
   qDebug() << "[HypaDataManager] getSeriesPoints called:" << _kind << _source
            << _metric;
-  std::lock_guard<std::mutex> lock(this->mutex_);
+
+  const auto t_total_start = steady_clock::now();
+  steady_clock::time_point t_lock_start;
+  steady_clock::time_point t_lock_end;
 
   QVariantList points;
 
+  // Snapshot data while holding the lock, convert to QVariantList after.
+  std::deque<ImuSample> imu_samples_copy;
+  std::deque<JointSample> joint_samples_copy;
+
+  {
+    t_lock_start = steady_clock::now();
+    std::lock_guard<std::mutex> lock(this->mutex_);
+
+    if (_kind == "imu")
+    {
+      const auto cache_it = this->imu_caches_.find(_source.toStdString());
+      if (cache_it == this->imu_caches_.end())
+      {
+        t_lock_end = steady_clock::now();
+        const auto t_total_end = steady_clock::now();
+        const uint64_t total_ns =
+            duration_cast<nanoseconds>(t_total_end - t_total_start).count();
+        const uint64_t lock_ns =
+            duration_cast<nanoseconds>(t_lock_end - t_lock_start).count();
+        const uint64_t c =
+            this->get_series_count_.fetch_add(1, std::memory_order_relaxed) + 1;
+        this->get_series_total_ns_.fetch_add(total_ns,
+                                             std::memory_order_relaxed);
+        this->get_series_lock_ns_.fetch_add(lock_ns, std::memory_order_relaxed);
+        if ((c % kMetricsLogInterval) == 0)
+        {
+          qDebug() << "[HypaDataManager] getSeriesPoints avg total ms:"
+                   << (this->get_series_total_ns_.load() /
+                       static_cast<double>(c)) /
+                          1e6
+                   << "avg lock ms:"
+                   << (this->get_series_lock_ns_.load() /
+                       static_cast<double>(c)) /
+                          1e6;
+          std::ostringstream oss;
+          oss << make_timestamp() << " type=get_series"
+              << " avg_total_ms="
+              << (this->get_series_total_ns_.load() / static_cast<double>(c)) /
+                     1e6
+              << " avg_lock_ms="
+              << (this->get_series_lock_ns_.load() / static_cast<double>(c)) /
+                     1e6
+              << " count=" << c;
+          append_metrics_log(oss.str());
+        }
+        return QVariantList();
+      }
+
+      imu_samples_copy = cache_it->second.samples;
+    }
+    else if (_kind == "joint")
+    {
+      const auto cache_it = this->joint_caches_.find(_source.toStdString());
+      if (cache_it == this->joint_caches_.end())
+      {
+        t_lock_end = steady_clock::now();
+        const auto t_total_end = steady_clock::now();
+        const uint64_t total_ns =
+            duration_cast<nanoseconds>(t_total_end - t_total_start).count();
+        const uint64_t lock_ns =
+            duration_cast<nanoseconds>(t_lock_end - t_lock_start).count();
+        const uint64_t c =
+            this->get_series_count_.fetch_add(1, std::memory_order_relaxed) + 1;
+        this->get_series_total_ns_.fetch_add(total_ns,
+                                             std::memory_order_relaxed);
+        this->get_series_lock_ns_.fetch_add(lock_ns, std::memory_order_relaxed);
+        if ((c % kMetricsLogInterval) == 0)
+        {
+          qDebug() << "[HypaDataManager] getSeriesPoints avg total ms:"
+                   << (this->get_series_total_ns_.load() /
+                       static_cast<double>(c)) /
+                          1e6
+                   << "avg lock ms:"
+                   << (this->get_series_lock_ns_.load() /
+                       static_cast<double>(c)) /
+                          1e6;
+        }
+        return QVariantList();
+      }
+
+      joint_samples_copy = cache_it->second.samples;
+    }
+    else
+    {
+      t_lock_end = steady_clock::now();
+      const auto t_total_end = steady_clock::now();
+      const uint64_t total_ns =
+          duration_cast<nanoseconds>(t_total_end - t_total_start).count();
+      const uint64_t lock_ns =
+          duration_cast<nanoseconds>(t_lock_end - t_lock_start).count();
+      const uint64_t c =
+          this->get_series_count_.fetch_add(1, std::memory_order_relaxed) + 1;
+      this->get_series_total_ns_.fetch_add(total_ns, std::memory_order_relaxed);
+      this->get_series_lock_ns_.fetch_add(lock_ns, std::memory_order_relaxed);
+      if ((c % kMetricsLogInterval) == 0)
+      {
+        qDebug() << "[HypaDataManager] getSeriesPoints avg total ms:"
+                 << (this->get_series_total_ns_.load() /
+                     static_cast<double>(c)) /
+                        1e6
+                 << "avg lock ms:"
+                 << (this->get_series_lock_ns_.load() /
+                     static_cast<double>(c)) /
+                        1e6;
+      }
+      return QVariantList();
+    }
+
+    t_lock_end = steady_clock::now();
+  }
+
+  // Convert snapshot to QVariantList outside lock
   if (_kind == "imu")
-  {
-    const auto cache_it = this->imu_caches_.find(_source.toStdString());
-    if (cache_it == this->imu_caches_.end())
-      return QVariantList();
-
-    points = this->samplesToPoints(cache_it->second.samples, _metric);
-  }
+    points = this->samplesToPoints(imu_samples_copy, _metric);
   else if (_kind == "joint")
-  {
-    const auto cache_it = this->joint_caches_.find(_source.toStdString());
-    if (cache_it == this->joint_caches_.end())
-      return QVariantList();
+    points = this->samplesToPoints(joint_samples_copy, _metric);
 
-    points = this->samplesToPoints(cache_it->second.samples, _metric);
-  }
-  else
+  const auto t_total_end = steady_clock::now();
+  const uint64_t total_ns =
+      duration_cast<nanoseconds>(t_total_end - t_total_start).count();
+  const uint64_t lock_ns =
+      duration_cast<nanoseconds>(t_lock_end - t_lock_start).count();
+  const uint64_t c =
+      this->get_series_count_.fetch_add(1, std::memory_order_relaxed) + 1;
+  this->get_series_total_ns_.fetch_add(total_ns, std::memory_order_relaxed);
+  this->get_series_lock_ns_.fetch_add(lock_ns, std::memory_order_relaxed);
+  if ((c % kMetricsLogInterval) == 0)
   {
-    return QVariantList();
+    qDebug() << "[HypaDataManager] getSeriesPoints avg total ms:"
+             << (this->get_series_total_ns_.load() / static_cast<double>(c)) /
+                    1e6
+             << "avg lock ms:"
+             << (this->get_series_lock_ns_.load() / static_cast<double>(c)) /
+                    1e6;
   }
 
   // Print a short summary of returned points for debugging
@@ -278,16 +425,21 @@ void HypaDataManager::handleImuMessage(
     return;
   }
 
+  using namespace std::chrono;
   qDebug() << "[HypaDataManager] handleImuMessage received:"
            << QString::fromStdString(_msg->header.frame_id)
            << "stamp:" << _msg->header.stamp.sec << _msg->header.stamp.nanosec;
 
+  const auto t_total_start = steady_clock::now();
   const ImuSample sample = this->createImuSample(_msg);
   const std::string source = _msg->header.frame_id.empty()
                                  ? std::string(kFallbackImuSource)
                                  : _msg->header.frame_id;
 
+  steady_clock::time_point t_lock_start;
+  steady_clock::time_point t_lock_end;
   {
+    t_lock_start = steady_clock::now();
     std::lock_guard<std::mutex> lock(this->mutex_);
     auto &cache = this->imu_caches_[source];
     if (std::find(this->imu_source_order_.begin(),
@@ -300,9 +452,35 @@ void HypaDataManager::handleImuMessage(
     cache.samples.push_back(sample);
     if (cache.samples.size() > MAX_SAMPLES)
       cache.samples.pop_front();
+    t_lock_end = steady_clock::now();
   }
 
   emit imuDataUpdated();
+
+  const auto t_total_end = steady_clock::now();
+  const uint64_t total_ns =
+      duration_cast<nanoseconds>(t_total_end - t_total_start).count();
+  const uint64_t lock_ns =
+      duration_cast<nanoseconds>(t_lock_end - t_lock_start).count();
+  const uint64_t c =
+      this->imu_msg_count_.fetch_add(1, std::memory_order_relaxed) + 1;
+  this->imu_msg_total_ns_.fetch_add(total_ns, std::memory_order_relaxed);
+  this->imu_msg_lock_ns_.fetch_add(lock_ns, std::memory_order_relaxed);
+  if ((c % kMetricsLogInterval) == 0)
+  {
+    qDebug() << "[HypaDataManager] imu msg avg total ms:"
+             << (this->imu_msg_total_ns_.load() / static_cast<double>(c)) / 1e6
+             << "avg lock ms:"
+             << (this->imu_msg_lock_ns_.load() / static_cast<double>(c)) / 1e6;
+    std::ostringstream oss;
+    oss << make_timestamp() << " type=imu_msg"
+        << " avg_total_ms="
+        << (this->imu_msg_total_ns_.load() / static_cast<double>(c)) / 1e6
+        << " avg_lock_ms="
+        << (this->imu_msg_lock_ns_.load() / static_cast<double>(c)) / 1e6
+        << " count=" << c;
+    append_metrics_log(oss.str());
+  }
 }
 
 void HypaDataManager::handleJointStateMessage(
@@ -314,10 +492,15 @@ void HypaDataManager::handleJointStateMessage(
     return;
   }
 
+  using namespace std::chrono;
   qDebug() << "[HypaDataManager] handleJointStateMessage received: names="
            << static_cast<int>(_msg->name.size());
 
+  const auto t_total_start = steady_clock::now();
+  steady_clock::time_point t_lock_start;
+  steady_clock::time_point t_lock_end;
   {
+    t_lock_start = steady_clock::now();
     std::lock_guard<std::mutex> lock(this->mutex_);
 
     for (size_t i = 0; i < _msg->name.size(); ++i)
@@ -335,9 +518,37 @@ void HypaDataManager::handleJointStateMessage(
       if (cache.samples.size() > MAX_SAMPLES)
         cache.samples.pop_front();
     }
+    t_lock_end = steady_clock::now();
   }
 
   emit jointDataUpdated();
+
+  const auto t_total_end = steady_clock::now();
+  const uint64_t total_ns =
+      duration_cast<nanoseconds>(t_total_end - t_total_start).count();
+  const uint64_t lock_ns =
+      duration_cast<nanoseconds>(t_lock_end - t_lock_start).count();
+  const uint64_t c =
+      this->joint_msg_count_.fetch_add(1, std::memory_order_relaxed) + 1;
+  this->joint_msg_total_ns_.fetch_add(total_ns, std::memory_order_relaxed);
+  this->joint_msg_lock_ns_.fetch_add(lock_ns, std::memory_order_relaxed);
+  if ((c % kMetricsLogInterval) == 0)
+  {
+    qDebug() << "[HypaDataManager] joint msg avg total ms:"
+             << (this->joint_msg_total_ns_.load() / static_cast<double>(c)) /
+                    1e6
+             << "avg lock ms:"
+             << (this->joint_msg_lock_ns_.load() / static_cast<double>(c)) /
+                    1e6;
+    std::ostringstream oss;
+    oss << make_timestamp() << " type=joint_msg"
+        << " avg_total_ms="
+        << (this->joint_msg_total_ns_.load() / static_cast<double>(c)) / 1e6
+        << " avg_lock_ms="
+        << (this->joint_msg_lock_ns_.load() / static_cast<double>(c)) / 1e6
+        << " count=" << c;
+    append_metrics_log(oss.str());
+  }
 }
 
 double HypaDataManager::messageStampToSec(

@@ -1,7 +1,7 @@
 #include "hypa-dt-gui-plugin/HypaSelectionModel.hh"
 
-#include <algorithm>
 #include <QDebug>
+#include <algorithm>
 
 namespace hypa_dt_gui_plugin
 {
@@ -151,28 +151,84 @@ void SelectionModel::setSelected(const QString &_name, bool _selected)
 
 void SelectionModel::syncNames(const QStringList &_names, bool _defaultSelected)
 {
-  bool changed = false;
-
+  // Fast-path: exact same size and same names in same order -> nothing to do
   if (_names.size() == static_cast<int>(this->entries_.size()))
   {
-    changed = false;
+    bool same = true;
     for (int i = 0; i < _names.size(); ++i)
     {
       if (this->entries_[static_cast<size_t>(i)].name != _names[i])
       {
-        changed = true;
+        same = false;
         break;
       }
     }
 
-    if (!changed)
+    if (same)
       return;
   }
-  else
+
+  // Optimize simple prefix add (new items appended at end)
+  if (_names.size() > static_cast<int>(this->entries_.size()))
   {
-    changed = true;
+    bool prefix = true;
+    for (size_t i = 0; i < this->entries_.size(); ++i)
+    {
+      if (this->entries_[i].name != _names[static_cast<int>(i)])
+      {
+        prefix = false;
+        break;
+      }
+    }
+
+    if (prefix)
+    {
+      const int oldN = static_cast<int>(this->entries_.size());
+      const int newN = _names.size();
+      beginInsertRows(QModelIndex(), oldN, newN - 1);
+      for (int i = oldN; i < newN; ++i)
+      {
+        Entry entry;
+        entry.name = _names[i];
+        entry.selected = _defaultSelected;
+        this->entries_.push_back(entry);
+      }
+      endInsertRows();
+      qDebug() << "[SelectionModel] syncNames: appended entries count="
+               << this->entries_.size();
+      emit entriesChanged();
+      return;
+    }
   }
 
+  // Optimize simple prefix remove (trailing items removed)
+  if (_names.size() < static_cast<int>(this->entries_.size()))
+  {
+    bool prefix = true;
+    for (int i = 0; i < _names.size(); ++i)
+    {
+      if (this->entries_[static_cast<size_t>(i)].name != _names[i])
+      {
+        prefix = false;
+        break;
+      }
+    }
+
+    if (prefix)
+    {
+      const int oldN = static_cast<int>(this->entries_.size());
+      const int newN = _names.size();
+      beginRemoveRows(QModelIndex(), newN, oldN - 1);
+      this->entries_.erase(this->entries_.begin() + newN, this->entries_.end());
+      endRemoveRows();
+      qDebug() << "[SelectionModel] syncNames: removed trailing entries, count="
+               << this->entries_.size();
+      emit entriesChanged();
+      return;
+    }
+  }
+
+  // Fallback: rebuild model (names changed significantly)
   std::vector<Entry> next_entries;
   next_entries.reserve(static_cast<size_t>(_names.size()));
 
@@ -195,12 +251,9 @@ void SelectionModel::syncNames(const QStringList &_names, bool _defaultSelected)
   beginResetModel();
   this->entries_ = std::move(next_entries);
   endResetModel();
-
-  if (changed)
-  {
-    qDebug() << "[SelectionModel] syncNames: entries count=" << this->entries_.size();
-    emit entriesChanged();
-  }
+  qDebug() << "[SelectionModel] syncNames: entries count="
+           << this->entries_.size();
+  emit entriesChanged();
 }
 
 void SelectionModel::updateLatestText(const QString &_name,
@@ -217,7 +270,8 @@ void SelectionModel::updateLatestText(const QString &_name,
   entry.latestText = _latestText;
   const QModelIndex model_index = this->index(index, 0);
   emit dataChanged(model_index, model_index, {LatestTextRole});
-  qDebug() << "[SelectionModel] updateLatestText:" << _name << _latestText.left(120);
+  qDebug() << "[SelectionModel] updateLatestText:" << _name
+           << _latestText.left(120);
 }
 
 int SelectionModel::indexOf(const QString &_name) const
