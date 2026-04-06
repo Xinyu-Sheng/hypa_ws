@@ -15,6 +15,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -797,12 +798,31 @@ class ZMotionDriverNode::Impl
     {
       return;
     }
-    (void)kill(this->rosbag_pid, SIGINT);
-    int status = 0;
-    (void)waitpid(this->rosbag_pid, &status, 0);
-    RCLCPP_INFO(this->logger, "stopped rosbag record pid=%d",
-                static_cast<int>(this->rosbag_pid));
-    this->rosbag_pid = -1;
+
+    // Capture pid locally to avoid races with concurrent callers.
+    const pid_t pid = this->rosbag_pid;
+
+    // Send SIGINT to the child process to request shutdown.
+    (void)kill(pid, SIGINT);
+
+    // Reap the child in a detached background thread to avoid blocking
+    // callers (StopRosbagRecorder may be invoked in lifecycle paths).
+    std::thread(
+        [this, pid]()
+        {
+          int status = 0;
+          (void)waitpid(pid, &status, 0);
+          {
+            std::lock_guard<std::mutex> lock(this->mutex);
+            if (this->rosbag_pid == pid)
+            {
+              this->rosbag_pid = -1;
+            }
+          }
+          RCLCPP_INFO(this->logger, "stopped rosbag record pid=%d",
+                      static_cast<int>(pid));
+        })
+        .detach();
   }
 
   bool ConfigureHardware()
