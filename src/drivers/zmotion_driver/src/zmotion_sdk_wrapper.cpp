@@ -843,10 +843,45 @@ CallResult ZMotionSdkWrapper::MoveAbsoluteMulti(
     pos_buffer.push_back(static_cast<float>(_positions[i]));
   }
 
+#if defined(ZMOTION_USE_MOVEMODIFY_FOR_MULTIAXIS)
+  // 尝试对每个轴使用单轴的 MoveModify
+  std::ostringstream modify_err;
+  for (std::size_t i = 0; i < axis_buffer.size(); ++i)
+  {
+    const int axis = axis_buffer[i];
+    const float pos = pos_buffer[i];
+    const int32 code = ZAux_Direct_MoveModify(this->pimpl_->handle, axis, pos);
+    if (code != kErrOk)
+    {
+      modify_err << "ZAux_Direct_MoveModify failed axis=" << axis
+                 << " code=" << code << "; ";
+
+      // 回退到原始的多轴绝对移动接口，确保动作能够下发
+      const int32 fallback_code = ZAux_Direct_MoveAbs(
+          this->pimpl_->handle, static_cast<int>(axis_buffer.size()),
+          axis_buffer.data(), pos_buffer.data());
+      if (fallback_code != kErrOk)
+      {
+        return CallResult::Failure(
+            fallback_code,
+            "ZAux_Direct_MoveAbs fallback failed after MoveModify error: " +
+                modify_err.str(),
+            IsRetriableCode(fallback_code));
+      }
+
+      // 回退成功
+      return CallResult::Success();
+    }
+  }
+
+  // 所有 MoveModify 均成功
+  return CallResult::Success();
+#else
   const int32 code =
       ZAux_Direct_MoveAbs(this->pimpl_->handle, static_cast<int>(_axes.size()),
                           axis_buffer.data(), pos_buffer.data());
   return WrapCode(code, "ZAux_Direct_MoveAbs failed");
+#endif
 }
 
 CallResult ZMotionSdkWrapper::MoveRelativeMulti(

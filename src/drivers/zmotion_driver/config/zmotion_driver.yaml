@@ -52,7 +52,7 @@
         - "joint_7"
         - "joint_8"
 
-      # 前 4 轴默认速度模式，第 5 轴和 mimic 组默认位置模式
+      # 前 4 轴默认速度模式，第 5 轴不确定， mimic 组默认位置模式
       control_modes:
         - "velocity"
         - "velocity"

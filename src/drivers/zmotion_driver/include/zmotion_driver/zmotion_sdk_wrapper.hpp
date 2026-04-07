@@ -7,6 +7,16 @@
 
 #include "zmotion_driver/zmotion_types.hpp"
 
+// 若要在多轴绝对移动时使用逐轴的 MOVEMODIFY（`ZAux_Direct_MoveModify`），
+// 可在此处启用宏 `ZMOTION_USE_MOVEMODIFY_FOR_MULTIAXIS`。
+//
+// 注意：`MOVEMODIFY` 是单轴修改接口，且通常用于修改正在执行的运动的目标位置；
+// 在没有已有运动上下文时调用可能失败。因此默认保持禁用（注释），
+// 仅在明确理解其时序语义并需要按轴修改的场景下启用。
+//
+// 启用示例（取消下面一行的注释）：
+#define ZMOTION_USE_MOVEMODIFY_FOR_MULTIAXIS
+
 namespace zmotion_driver
 {
 
