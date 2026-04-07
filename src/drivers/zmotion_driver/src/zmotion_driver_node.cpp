@@ -902,10 +902,13 @@ class ZMotionDriverNode::Impl
     {
       return true;
     }
-    if (this->rosbag_pid > 0)
     {
-      // already running
-      return true;
+      std::lock_guard<std::mutex> lock(this->mutex);
+      if (this->rosbag_pid > 0)
+      {
+        // already running
+        return true;
+      }
     }
 
     pid_t pid = fork();
@@ -922,7 +925,11 @@ class ZMotionDriverNode::Impl
              this->joint_state_topic.c_str(), (char *)NULL);
       _exit(127);
     }
-    this->rosbag_pid = pid;
+
+    {
+      std::lock_guard<std::mutex> lock(this->mutex);
+      this->rosbag_pid = pid;
+    }
     RCLCPP_INFO(this->logger, "started rosbag record pid=%d",
                 static_cast<int>(pid));
     return true;
@@ -930,20 +937,31 @@ class ZMotionDriverNode::Impl
 
   void StopRosbagRecorder()
   {
-    if (this->rosbag_pid <= 0)
+    // Read pid under lock to avoid races with concurrent callers.
+    pid_t pid = -1;
+    {
+      std::lock_guard<std::mutex> lock(this->mutex);
+      pid = this->rosbag_pid;
+    }
+
+    if (pid <= 0)
     {
       return;
     }
 
-    // Capture pid locally to avoid races with concurrent callers.
-    const pid_t pid = this->rosbag_pid;
-
     // Send SIGINT to the child process to request shutdown.
     (void)kill(pid, SIGINT);
 
-    // Reap the child in a detached background thread to avoid blocking
-    // callers (StopRosbagRecorder may be invoked in lifecycle paths).
-    std::thread(
+    // If a waiter thread is already active, do not spawn another.
+    if (this->rosbag_wait_thread.joinable())
+    {
+      return;
+    }
+
+    // Spawn a background waiter thread that will reap the child and update
+    // the rosbag_pid state. The thread is stored as a member so it can be
+    // joined later to avoid use-after-free.
+    this->rosbag_wait_thread = std::thread(
         [this, pid]()
         {
           int status = 0;
@@ -957,8 +975,7 @@ class ZMotionDriverNode::Impl
           }
           RCLCPP_INFO(this->logger, "stopped rosbag record pid=%d",
                       static_cast<int>(pid));
-        })
-        .detach();
+        });
   }
 
   bool ConfigureHardware()
@@ -1121,6 +1138,23 @@ class ZMotionDriverNode::Impl
     this->CloseLogFile();
     this->CloseCommandFile();
     this->StopRosbagRecorder();
+
+    // Join the rosbag waiter thread if it was created to ensure no background
+    // thread will access this object after TearDown/destruction.
+    if (this->rosbag_wait_thread.joinable())
+    {
+      try
+      {
+        this->rosbag_wait_thread.join();
+      }
+      catch (const std::exception &e)
+      {
+        RCLCPP_WARN(this->logger,
+                    "exception while joining rosbag waiter thread: %s",
+                    e.what());
+      }
+    }
+
     this->CloseJointStateFile();
   }
 
@@ -1954,6 +1988,7 @@ class ZMotionDriverNode::Impl
   bool record_rosbag_joints_enabled = false;
   std::string record_rosbag_joints_file;
   pid_t rosbag_pid = -1;
+  std::thread rosbag_wait_thread;
 
   rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::JointState>::SharedPtr
       joint_state_pub;
