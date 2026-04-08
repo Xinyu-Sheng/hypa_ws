@@ -14,7 +14,9 @@ find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
 find_path(QCUSTOMPLOT_INCLUDE_DIR NAMES qcustomplot.h)
-find_library(QCUSTOMPLOT_LIBRARY NAMES qcustomplot qcustomplot2)
+
+# find_library(QCUSTOMPLOT_LIBRARY NAMES qcustomplot qcustomplot2)
+find_library(QCUSTOMPLOT_LIBRARY NAMES QCustomPlot qcustomplot qcustomplot2)
 
 if(NOT QCUSTOMPLOT_INCLUDE_DIR OR NOT QCUSTOMPLOT_LIBRARY)
     message(FATAL_ERROR "QCustomPlot not found. Please install qcustomplot development package.")
