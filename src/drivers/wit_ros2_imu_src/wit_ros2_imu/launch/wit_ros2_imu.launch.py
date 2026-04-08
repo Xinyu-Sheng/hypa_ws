@@ -14,7 +14,7 @@ def generate_launch_description():
 
     namespace_arg = DeclareLaunchArgument(
         "namespace",
-        default_value="hypa",
+        default_value="",
         description="WIT IMU 节点命名空间",
     )
 
