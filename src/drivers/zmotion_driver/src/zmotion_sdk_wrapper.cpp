@@ -26,11 +26,13 @@ constexpr int kWrongAxisNum = -2;
 constexpr int kNotScanNode = -3;
 constexpr int kEcatStartFailed = -4;
 
+// 判断是否是可属于“可重试”的错误。
 bool IsRetriableCode(const int _code)
 {
   return (_code == kErrNoAck) || (_code == 20003) || (_code == 3402);
 }
 
+// 去除字符串两端的空白字符。
 std::string TrimString(const std::string &_input)
 {
   if (_input.empty())
@@ -59,6 +61,7 @@ std::string TrimString(const std::string &_input)
   return _input.substr(start, end - start);
 }
 
+// 把 SDK 返回码封装成 CallResult
 CallResult WrapCode(const int _code, const std::string &_context)
 {
   if (_code == kErrOk)
@@ -101,6 +104,8 @@ class ZMotionSdkWrapper::Impl
   bool connected = false;
   std::unordered_set<int> moving_axes;
 
+  // 运动控制那部分并不靠 Execute()；Execute() 只是内部对 ZAux_Execute()
+  // 的统一封装，用于普通命令/查询、获取响应并做错误封装。
   CallResult Execute(const std::string &_command, std::string *_response) const
   {
     if (!this->connected || (this->handle == nullptr))
@@ -125,6 +130,7 @@ class ZMotionSdkWrapper::Impl
     return CallResult::Success();
   }
 
+  // 封装 ZAux_DirectCommand，比 ZAux_Execute 更直接、更快、但更受限的命令路径
   CallResult DirectCommand(const std::string &_command,
                            std::string *_response) const
   {
@@ -150,6 +156,7 @@ class ZMotionSdkWrapper::Impl
     return CallResult::Success();
   }
 
+  // 等待控制器返回特定槽位命令的“完成响应”。
   CallResult WaitSlotResponse(const std::string &_expected,
                               const int _timeout_ms) const
   {
@@ -197,6 +204,7 @@ class ZMotionSdkWrapper::Impl
                                true);
   }
 
+  // 扫描 EtherCAT 槽位
   CallResult SlotScan(const int _slot_id, const int _timeout_ms,
                       const int _bus_red_switch,
                       const int _red_spare_slot) const
@@ -235,6 +243,7 @@ class ZMotionSdkWrapper::Impl
     return this->WaitSlotResponse("-1", _timeout_ms);
   }
 
+  // 把槽位从 PRE-OP/SAFE-OP 启动到 OP
   CallResult StartSlotOp(const int _slot_id, const int _timeout_ms) const
   {
     const CallResult safe_op_result = this->Execute(
@@ -262,6 +271,7 @@ class ZMotionSdkWrapper::Impl
     return this->WaitSlotResponse("-1", _timeout_ms);
   }
 
+  // 查询指定槽位的 EtherCAT 节点数
   CallResult QueryNodeCount(const int _slot_id, int *_node_count) const
   {
     if (_node_count == nullptr)
@@ -289,6 +299,7 @@ class ZMotionSdkWrapper::Impl
     return CallResult::Success();
   }
 
+  // 查询指定节点的轴数
   CallResult QueryNodeAxisCount(const int _slot_id, const int _node_id,
                                 int *_axis_count) const
   {
@@ -318,6 +329,7 @@ class ZMotionSdkWrapper::Impl
     return CallResult::Success();
   }
 
+  // 查询节点特定信息项
   CallResult QueryNodeInfo(const int _slot_id, const int _node_id,
                            const int _selector, int *_value) const
   {
