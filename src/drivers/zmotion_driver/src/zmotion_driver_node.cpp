@@ -31,6 +31,8 @@
 #include "zmotion_driver/zmotion_sdk_wrapper.hpp"
 #include "zmotion_driver/zmotion_types.hpp"
 
+extern "C" char **environ;
+
 namespace zmotion_driver
 {
 namespace
@@ -914,7 +916,7 @@ class ZMotionDriverNode::Impl
     }
 
     // Use posix_spawnp instead of fork+execlp to avoid fork-in-multithreaded
-    // deadlock risks. Use current environment via extern environ.
+    // deadlock risks. Inherit parent environment via global ::environ.
     pid_t pid = -1;
     char *const argv[] = {
         const_cast<char *>("ros2"),
@@ -925,8 +927,8 @@ class ZMotionDriverNode::Impl
         const_cast<char *>(this->joint_state_topic.c_str()),
         nullptr,
     };
-    extern char **environ;
-    int spawn_err = posix_spawnp(&pid, "ros2", nullptr, nullptr, argv, environ);
+    int spawn_err =
+        posix_spawnp(&pid, "ros2", nullptr, nullptr, argv, ::environ);
     if (spawn_err != 0)
     {
       RCLCPP_ERROR(this->logger, "posix_spawnp failed: %s",
