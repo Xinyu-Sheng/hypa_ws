@@ -29,11 +29,11 @@
     feedback:
       # 记录相关参数
       record_commands_csv_enabled: true
-      record_commands_csv_file: "/var/log/hypa/zmotion_commands.csv"
+      record_commands_csv_file: "/tmp/zmotion_commands.csv"
       record_joints_csv_enabled: true
-      record_joints_csv_file: "/var/log/hypa/zmotion_joint_states.csv"
+      record_joints_csv_file: "/tmp/zmotion_joint_states.csv"
       record_rosbag_joints_enabled: true
-      record_rosbag_joints_file: "/var/log/hypa/zmotion_joint_states_bag"
+      record_rosbag_joints_file: "/tmp/zmotion_joint_states_bag"
 
     axis:
       # 数组中填写数字表示 EtherCAT / 硬件接线的下标/顺序，值表示对应的逻辑轴编号
@@ -126,7 +126,7 @@
         local_axis_id: 0 #用不到，本地脉冲轴
         local_axis_num: 0 #用不到，本地脉冲轴
         drive_axis_start: 0
-        drive_axis_num: 9
+        drive_axis_num: -1
         drive_io_start: 256 #用不到，这参数是给驱动器上IO
         drive_io_space: 16 #用不到，这参数是给驱动器上IO
         drive_enable: 0 #不在Ethercat启动阶段启用轴
