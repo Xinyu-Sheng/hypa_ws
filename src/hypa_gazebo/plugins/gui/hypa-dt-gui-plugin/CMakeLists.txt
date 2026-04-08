@@ -7,8 +7,9 @@ endif()
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2)
+# Force Qt5 only
+find_package(Qt5 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2)
+set(QT_VERSION_MAJOR 5)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
@@ -46,11 +47,11 @@ ament_target_dependencies(${HYPA_DT_GUI_PLUGIN_TARGET}
 )
 
 target_link_libraries(${HYPA_DT_GUI_PLUGIN_TARGET}
-    Qt${QT_VERSION_MAJOR}::Core
-    Qt${QT_VERSION_MAJOR}::Gui
-    Qt${QT_VERSION_MAJOR}::Qml
-    Qt${QT_VERSION_MAJOR}::Quick
-    Qt${QT_VERSION_MAJOR}::QuickControls2
+    Qt5::Core
+    Qt5::Gui
+    Qt5::Qml
+    Qt5::Quick
+    Qt5::QuickControls2
     ${QCUSTOMPLOT_LIBRARY}
     gz-gui${GZ_GUI_VER}::gz-gui${GZ_GUI_VER}
 )
@@ -89,7 +90,7 @@ ament_target_dependencies(hypa-dt-gui-plugin-test-node
 )
 
 target_link_libraries(hypa-dt-gui-plugin-test-node
-    Qt${QT_VERSION_MAJOR}::Core
+    Qt5::Core
 )
 
 install(TARGETS hypa-dt-gui-plugin-test-node

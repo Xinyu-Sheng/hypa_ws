@@ -9,6 +9,15 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
+  <!-- Qt5 system dependencies required by GUI plugin -->
+  <build_depend>qtbase5-dev</build_depend>
+  <build_depend>qtdeclarative5-dev</build_depend>
+  <build_depend>libqcustomplot-dev</build_depend>
+
+  <exec_depend>qtbase5-dev</exec_depend>
+  <exec_depend>qtdeclarative5-dev</exec_depend>
+  <exec_depend>libqcustomplot-dev</exec_depend>
+
   <depend>launch</depend>
   <depend>launch_ros</depend>
   <depend>ros_gz_bridge</depend>
