@@ -1,6 +1,7 @@
 #include "zmotion_driver/zmotion_driver_node.hpp"
 
 #include <signal.h>
+#include <spawn.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -9,6 +10,7 @@
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <limits>
@@ -911,19 +913,25 @@ class ZMotionDriverNode::Impl
       }
     }
 
-    pid_t pid = fork();
-    if (pid < 0)
+    // Use posix_spawnp instead of fork+execlp to avoid fork-in-multithreaded
+    // deadlock risks. Use current environment via extern environ.
+    pid_t pid = -1;
+    char *const argv[] = {
+        const_cast<char *>("ros2"),
+        const_cast<char *>("bag"),
+        const_cast<char *>("record"),
+        const_cast<char *>("-o"),
+        const_cast<char *>(this->record_rosbag_joints_file.c_str()),
+        const_cast<char *>(this->joint_state_topic.c_str()),
+        nullptr,
+    };
+    extern char **environ;
+    int spawn_err = posix_spawnp(&pid, "ros2", nullptr, nullptr, argv, environ);
+    if (spawn_err != 0)
     {
-      RCLCPP_ERROR(this->logger, "failed to fork for rosbag recorder");
+      RCLCPP_ERROR(this->logger, "posix_spawnp failed: %s",
+                   std::strerror(spawn_err));
       return false;
-    }
-    if (pid == 0)
-    {
-      // child: exec ros2 bag record -o <file> <topic>
-      execlp("ros2", "ros2", "bag", "record", "-o",
-             this->record_rosbag_joints_file.c_str(),
-             this->joint_state_topic.c_str(), (char *)NULL);
-      _exit(127);
     }
 
     {
