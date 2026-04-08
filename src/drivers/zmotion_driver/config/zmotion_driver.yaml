@@ -113,6 +113,10 @@
     io:
       # 按需填写输入口编号与状态 topic；为空时不启用 IO 轮询
       input_ids: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+      # 是否仅在 IO 状态变化时记录日志（可显著减少磁盘写入）
+      log_on_change: true
+      # 变化去抖时间（毫秒），在上次记录后的该时间窗口内忽略重复变化
+      debounce_ms: 0
       # state_topics: []
       # emergency_stop_on_high: []
       # trigger_modes 与 input_ids 按序对齐：

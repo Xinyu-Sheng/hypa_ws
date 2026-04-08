@@ -690,8 +690,14 @@ class ZMotionDriverNode::Impl
       this->io_inputs.push_back(io);
     }
 
-    // initialize previous values cache for edge detection (-1 == unknown)
-    this->previous_io_values.assign(this->io_inputs.size(), -1);
+      // read IO logging control parameters
+      this->io_log_on_change = this->node->get_parameter("io.log_on_change").as_bool();
+      this->io_debounce_ms = this->node->get_parameter("io.debounce_ms").as_int();
+
+      // initialize previous values cache for edge detection (-1 == unknown)
+      this->previous_io_values.assign(this->io_inputs.size(), -1);
+      // initialize per-IO last-change timestamps (ms since epoch)
+      this->last_io_change_ms.assign(this->io_inputs.size(), 0);
 
     this->ecat_config.init.InitStructFlag = 0;
 
@@ -1688,6 +1694,12 @@ class ZMotionDriverNode::Impl
     std::vector<int> io_values;
     io_values.reserve(this->io_inputs.size());
 
+    // Track which IOs changed this poll (after debounce)
+    std::vector<bool> changed_flags(this->io_inputs.size(), false);
+
+    // current time in milliseconds for debounce checks
+    const int64_t now_ms = static_cast<int64_t>(this->node->now().nanoseconds() / 1000000LL);
+
     for (std::size_t i = 0; i < this->io_inputs.size(); ++i)
     {
       int value = 0;
@@ -1701,11 +1713,41 @@ class ZMotionDriverNode::Impl
         continue;
       }
 
+      // capture previous value (may be -1 == unknown)
+      int prev = -1;
+      if (i < this->previous_io_values.size())
+      {
+        prev = this->previous_io_values[i];
+      }
+
       // publish state and dispatch configured trigger action (synchronous,
-      // locked)
+      // locked). Dispatch uses previous_io_values as currently stored,
+      // so call before we update previous_io_values.
       this->DispatchIoTriggerLocked(i, value);
 
-      // update previous value for edge detection
+      // detect change (only if previous known)
+      const bool prev_known = (prev != -1);
+      const bool changed = prev_known && (prev != value);
+
+      if (changed && this->io_log_on_change)
+      {
+        // debounce check
+        int64_t last_ms = 0;
+        if (i < this->last_io_change_ms.size())
+        {
+          last_ms = this->last_io_change_ms[i];
+        }
+        if (this->io_debounce_ms <= 0 || (now_ms - last_ms) >= this->io_debounce_ms)
+        {
+          changed_flags[i] = true;
+          if (i < this->last_io_change_ms.size())
+          {
+            this->last_io_change_ms[i] = now_ms;
+          }
+        }
+      }
+
+      // update previous value for next poll
       if (i < this->previous_io_values.size())
       {
         this->previous_io_values[i] = value;
@@ -1716,7 +1758,21 @@ class ZMotionDriverNode::Impl
 
     if (!io_values.empty())
     {
-      this->WriteLogLocked("io", "io_values=" + JoinInts(io_values));
+      if (this->io_log_on_change)
+      {
+        const bool any_changed = std::any_of(changed_flags.begin(),
+                                            changed_flags.end(),
+                                            [](bool v) { return v; });
+        if (any_changed)
+        {
+          this->WriteLogLocked("io", "io_values=" + JoinInts(io_values));
+        }
+      }
+      else
+      {
+        // legacy behavior: log every poll
+        this->WriteLogLocked("io", "io_values=" + JoinInts(io_values));
+      }
     }
   }
 
@@ -2140,6 +2196,13 @@ class ZMotionDriverNode::Impl
 
   std::vector<IoInputConfig> io_inputs;
   std::vector<int> previous_io_values;
+  // If true, only write IO CSV log when an input value changes (reduces I/O)
+  bool io_log_on_change = true;
+  // Debounce window in milliseconds: ignore changes that occur within this
+  // window since the last logged change for the same IO.
+  int io_debounce_ms = 0;
+  // Last logged change timestamp (milliseconds since epoch) per IO index.
+  std::vector<int64_t> last_io_change_ms;
 
   // Last-known feedback values (persist across PublishFeedback calls).
   std::vector<double> last_known_positions;
