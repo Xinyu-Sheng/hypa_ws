@@ -10,7 +10,7 @@
       io_period_ms: 10
       min_remain_buffer: 20 # 安全阈值：硬件 remain buffer 小于或等于该值时直接触发 emergency_stop
       enable_axis_on_activate: true #on_activate 时是否自动使能轴
-      log_file: "/tmp/zmotion_driver_log.csv"
+      log_file: "/tmp/zmotion_driver_log.csv" # 实际文件名会自动追加时间戳，避免覆盖
 
     control:
       velocity_topic: "cmd/velocity_axes" # std_msgs/msg/Float64MultiArray
@@ -29,11 +29,11 @@
     feedback:
       # 记录相关参数
       record_commands_csv_enabled: true
-      record_commands_csv_file: "/tmp/zmotion_commands.csv"
+      record_commands_csv_file: "/tmp/zmotion_commands.csv" # 实际文件名会自动追加时间戳，避免覆盖
       record_joints_csv_enabled: true
-      record_joints_csv_file: "/tmp/zmotion_joint_states.csv"
+      record_joints_csv_file: "/tmp/zmotion_joint_states.csv" # 实际文件名会自动追加时间戳，避免覆盖
       record_rosbag_joints_enabled: true
-      record_rosbag_joints_file: "/tmp/zmotion_joint_states_bag"
+      record_rosbag_joints_file: "/tmp/zmotion_joint_states_bag" # 实际目录会自动追加时间戳，避免覆盖
 
     axis:
       # 数组中填写数字表示 EtherCAT / 硬件接线的下标/顺序，值表示对应的逻辑轴编号

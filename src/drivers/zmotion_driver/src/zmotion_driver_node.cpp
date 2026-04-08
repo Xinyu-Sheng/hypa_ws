@@ -10,9 +10,11 @@
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <ctime>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -106,7 +108,64 @@ std::string SanitizeCsv(const std::string &_text)
   return output;
 }
 
-std::string MakeUniqueRosbagOutputPath(const std::string &_base_path)
+std::string MakeTimestampSuffix()
+{
+  using namespace std::chrono;
+
+  const auto now = system_clock::now();
+  const std::time_t now_c = system_clock::to_time_t(now);
+
+  std::tm local_tm{};
+  if (localtime_r(&now_c, &local_tm) == nullptr)
+  {
+    return std::to_string(duration_cast<microseconds>(now.time_since_epoch())
+                              .count());
+  }
+
+  char time_buffer[32] = {};
+  if (std::strftime(time_buffer, sizeof(time_buffer), "%Y%m%d_%H%M%S",
+                    &local_tm) == 0)
+  {
+    return std::to_string(duration_cast<microseconds>(now.time_since_epoch())
+                              .count());
+  }
+
+  const auto micros_since_epoch =
+      duration_cast<microseconds>(now.time_since_epoch()).count();
+  const long long micros_remainder = micros_since_epoch % 1000000LL;
+
+  std::ostringstream oss;
+  oss << time_buffer << "_" << std::setw(6) << std::setfill('0')
+      << micros_remainder;
+  return oss.str();
+}
+
+std::string MakeTimestampedPath(const std::string &_base_path,
+                                const std::string &_timestamp_suffix)
+{
+  if (_base_path.empty())
+  {
+    return "";
+  }
+
+  if (_timestamp_suffix.empty())
+  {
+    return _base_path;
+  }
+
+  const std::filesystem::path base_path(_base_path);
+  const std::filesystem::path parent_path = base_path.parent_path();
+  const std::string stem = base_path.stem().string();
+  const std::string extension = base_path.extension().string();
+
+  const std::string stamped_name = extension.empty()
+                                       ? stem + "_" + _timestamp_suffix
+                                       : stem + "_" + _timestamp_suffix +
+                                             extension;
+  return (parent_path / stamped_name).string();
+}
+
+std::string MakeUniquePath(const std::string &_base_path)
 {
   if (_base_path.empty())
   {
@@ -118,17 +177,21 @@ std::string MakeUniqueRosbagOutputPath(const std::string &_base_path)
   const bool base_exists = std::filesystem::exists(base_path, error_code);
   if (error_code)
   {
-    return "";
+    return base_path.string();
   }
   if (!base_exists)
   {
     return base_path.string();
   }
 
+  const std::filesystem::path parent_path = base_path.parent_path();
+  const std::string stem = base_path.stem().string();
+  const std::string extension = base_path.extension().string();
+
   for (int suffix = 1; suffix < 1000; ++suffix)
   {
     const std::filesystem::path candidate =
-        base_path.string() + "_" + std::to_string(suffix);
+        parent_path / (stem + "_" + std::to_string(suffix) + extension);
     error_code.clear();
     const bool candidate_exists =
         std::filesystem::exists(candidate, error_code);
@@ -142,7 +205,7 @@ std::string MakeUniqueRosbagOutputPath(const std::string &_base_path)
     }
   }
 
-  return "";
+  return base_path.string();
 }
 
 bool ParseControlMode(const std::string &_mode, AxisControlMode *_result)
@@ -311,6 +374,24 @@ class ZMotionDriverNode::Impl
     this->record_commands_csv_file =
         this->node->get_parameter("feedback.record_commands_csv_file")
             .as_string();
+
+    const std::string output_timestamp = MakeTimestampSuffix();
+
+    this->log_file_path = MakeUniquePath(MakeTimestampedPath(
+      this->log_file_path, output_timestamp));
+    this->record_joints_csv_file = MakeUniquePath(MakeTimestampedPath(
+      this->record_joints_csv_file, output_timestamp));
+    this->record_rosbag_joints_file = MakeUniquePath(MakeTimestampedPath(
+      this->record_rosbag_joints_file, output_timestamp));
+    this->record_commands_csv_file = MakeUniquePath(MakeTimestampedPath(
+      this->record_commands_csv_file, output_timestamp));
+
+    RCLCPP_INFO(this->logger,
+          "timestamped output paths resolved: log=%s, joints=%s, commands=%s, rosbag=%s",
+          this->log_file_path.c_str(),
+          this->record_joints_csv_file.c_str(),
+          this->record_commands_csv_file.c_str(),
+          this->record_rosbag_joints_file.c_str());
 
     std::vector<int64_t> logical_indices;
     (void)this->node->get_parameter("axis.logical_indices", logical_indices);
@@ -955,12 +1036,27 @@ class ZMotionDriverNode::Impl
     }
 
     const std::string rosbag_output_path =
-        MakeUniqueRosbagOutputPath(this->record_rosbag_joints_file);
+        MakeUniquePath(this->record_rosbag_joints_file);
     if (rosbag_output_path.empty())
     {
       RCLCPP_ERROR(this->logger, "failed to resolve rosbag output path from %s",
                    this->record_rosbag_joints_file.c_str());
       return false;
+    }
+
+    try
+    {
+      const std::filesystem::path parent_path =
+          std::filesystem::path(rosbag_output_path).parent_path();
+      if (!parent_path.empty())
+      {
+        std::filesystem::create_directories(parent_path);
+      }
+    }
+    catch (const std::exception &e)
+    {
+      RCLCPP_WARN(this->logger, "failed to create rosbag directory: %s",
+                  e.what());
     }
 
     if (rosbag_output_path != this->record_rosbag_joints_file)
@@ -2106,20 +2202,20 @@ ZMotionDriverNode::on_configure(const rclcpp_lifecycle::State &_state)
   {
     return CallbackReturn::FAILURE;
   }
-  // 打开controller的log文件。函数每次执行，都是在文件末尾续写。
+  // 打开 controller 的 log 文件。参数加载阶段已自动追加时间戳，这里仍保持追加模式。
   if (!this->pimpl_->OpenLogFile())
   {
     return CallbackReturn::FAILURE;
   }
 
-  // 打开joint的log文件。函数每次执行，都是在文件末尾续写。
+  // 打开 joint 的 log 文件。参数加载阶段已自动追加时间戳，这里仍保持追加模式。
   if (!this->pimpl_->OpenJointStateFile())
   {
     this->pimpl_->TearDown();
     return CallbackReturn::FAILURE;
   }
 
-  // 打开 command log 文件（用于控制命令研究）
+  // 打开 command log 文件（用于控制命令研究，参数加载阶段已自动追加时间戳）。
   if (!this->pimpl_->OpenCommandFile())
   {
     this->pimpl_->TearDown();
