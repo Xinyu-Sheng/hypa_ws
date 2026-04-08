@@ -7,21 +7,28 @@ endif()
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-# Force Qt5 only
+# Force Qt5 only (ROS2 强制依赖，不可修改)
 find_package(Qt5 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2)
 set(QT_VERSION_MAJOR 5)
+
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
-find_path(QCUSTOMPLOT_INCLUDE_DIR NAMES qcustomplot.h)
+# ====================== 修复：适配 Ubuntu22.04/24.04 Qt5 QCustomPlot ======================
+find_path(QCUSTOMPLOT_INCLUDE_DIR
+    NAMES qcustomplot.h
+    PATH_SUFFIXES qt5 QCustomPlot-qt5
+)
 
-# find_library(QCUSTOMPLOT_LIBRARY NAMES qcustomplot qcustomplot2)
-find_library(QCUSTOMPLOT_LIBRARY NAMES QCustomPlot qcustomplot qcustomplot2)
+find_library(QCUSTOMPLOT_LIBRARY
+    NAMES qcustomplot-qt5 qcustomplot qcustomplot2
+)
 
 if(NOT QCUSTOMPLOT_INCLUDE_DIR OR NOT QCUSTOMPLOT_LIBRARY)
-    message(FATAL_ERROR "QCustomPlot not found. Please install qcustomplot development package.")
+    message(FATAL_ERROR "QCustomPlot not found. Please install: sudo apt install libqcustomplot-dev")
 endif()
 
+# ==========================================================================================
 set(HYPA_DT_GUI_PLUGIN_TARGET HypaDtGuiPlugin)
 
 add_library(${HYPA_DT_GUI_PLUGIN_TARGET} SHARED
