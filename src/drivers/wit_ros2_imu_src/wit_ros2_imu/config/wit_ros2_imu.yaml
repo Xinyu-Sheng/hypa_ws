@@ -1,9 +1,9 @@
 imuDriverNode:
   ros__parameters:
-    use_sim_time: false
+    # use_sim_time: false
 
     # 串口和协议参数
-    port: "/dev/imu_usb"
+    # port: "/dev/imu_usb"
     baudrate: 2000000
     protocol: "CAN_HIGH"
-    modbusID: 80
+    # modbusID: 80
