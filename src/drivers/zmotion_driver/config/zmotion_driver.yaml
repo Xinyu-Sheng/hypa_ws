@@ -137,9 +137,8 @@
         bus_red_switch: 0 #启不
         red_spare_slot: 0 #不用
 
-
         # 可按驱动类型覆盖
-        # drive_pdo_mode: []
+        drive_pdo_mode: [5, 5, 5, 5, 5, 5, 5, 5, 5]
         # node_io_id: [] #用不到，这参数是给IO从站
         # node_aio_id: [] #用不到，这参数是给IO从站
 
