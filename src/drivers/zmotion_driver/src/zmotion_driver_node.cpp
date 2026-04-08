@@ -106,6 +106,45 @@ std::string SanitizeCsv(const std::string &_text)
   return output;
 }
 
+std::string MakeUniqueRosbagOutputPath(const std::string &_base_path)
+{
+  if (_base_path.empty())
+  {
+    return "";
+  }
+
+  const std::filesystem::path base_path(_base_path);
+  std::error_code error_code;
+  const bool base_exists = std::filesystem::exists(base_path, error_code);
+  if (error_code)
+  {
+    return "";
+  }
+  if (!base_exists)
+  {
+    return base_path.string();
+  }
+
+  for (int suffix = 1; suffix < 1000; ++suffix)
+  {
+    const std::filesystem::path candidate =
+        base_path.string() + "_" + std::to_string(suffix);
+    error_code.clear();
+    const bool candidate_exists =
+        std::filesystem::exists(candidate, error_code);
+    if (error_code)
+    {
+      continue;
+    }
+    if (!candidate_exists)
+    {
+      return candidate.string();
+    }
+  }
+
+  return "";
+}
+
 bool ParseControlMode(const std::string &_mode, AxisControlMode *_result)
 {
   if (_result == nullptr)
@@ -915,6 +954,23 @@ class ZMotionDriverNode::Impl
       }
     }
 
+    const std::string rosbag_output_path =
+        MakeUniqueRosbagOutputPath(this->record_rosbag_joints_file);
+    if (rosbag_output_path.empty())
+    {
+      RCLCPP_ERROR(this->logger, "failed to resolve rosbag output path from %s",
+                   this->record_rosbag_joints_file.c_str());
+      return false;
+    }
+
+    if (rosbag_output_path != this->record_rosbag_joints_file)
+    {
+      RCLCPP_WARN(this->logger,
+                  "rosbag output path already exists, using %s instead of %s",
+                  rosbag_output_path.c_str(),
+                  this->record_rosbag_joints_file.c_str());
+    }
+
     // Use posix_spawnp instead of fork+execlp to avoid fork-in-multithreaded
     // deadlock risks. Inherit parent environment via global ::environ.
     pid_t pid = -1;
@@ -923,7 +979,8 @@ class ZMotionDriverNode::Impl
         const_cast<char *>("bag"),
         const_cast<char *>("record"),
         const_cast<char *>("-o"),
-        const_cast<char *>(this->record_rosbag_joints_file.c_str()),
+        const_cast<char *>(rosbag_output_path.c_str()),
+        const_cast<char *>("--topics"),
         const_cast<char *>(this->joint_state_topic.c_str()),
         nullptr,
     };
