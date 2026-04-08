@@ -1820,116 +1820,127 @@ class ZMotionDriverNode::Impl
 
   bool ActivateNode()
   {
-    std::lock_guard<std::mutex> lock(this->mutex);
-
-    if (this->enable_axis_on_activate && !this->emergency_stop)
     {
-      for (std::size_t i = 0; i < this->axes.size(); ++i)
-      {
-        CallResult result =
-            this->sdk->SetAxisEnable(this->axes[i].physical_axis, true);
-        if (!result.ok)
-        {
-          RCLCPP_ERROR(this->logger, "axis enable failed (logical=%d): %s",
-                       this->axes[i].logical_index, result.message.c_str());
+      std::lock_guard<std::mutex> lock(this->mutex);
 
-          (void)this->sdk->StopAll();
-          for (std::size_t j = 0; j < this->axes.size(); ++j)
+      if (this->enable_axis_on_activate && !this->emergency_stop)
+      {
+        for (std::size_t i = 0; i < this->axes.size(); ++i)
+        {
+          CallResult result =
+              this->sdk->SetAxisEnable(this->axes[i].physical_axis, true);
+          if (!result.ok)
           {
-            (void)this->sdk->SetAxisEnable(this->axes[j].physical_axis, false);
+            RCLCPP_ERROR(this->logger, "axis enable failed (logical=%d): %s",
+                         this->axes[i].logical_index, result.message.c_str());
+
+            (void)this->sdk->StopAll();
+            for (std::size_t j = 0; j < this->axes.size(); ++j)
+            {
+              (void)this->sdk->SetAxisEnable(this->axes[j].physical_axis,
+                                             false);
+            }
+            this->active = false;
+            this->WriteLogLocked("lifecycle", "activate_failed");
+            return false;
           }
-          this->active = false;
-          this->WriteLogLocked("lifecycle", "activate_failed");
-          return false;
+        }
+      }
+
+      this->active = true;
+
+      if (this->joint_state_pub != nullptr)
+      {
+        this->joint_state_pub->on_activate();
+      }
+
+      for (std::size_t i = 0; i < this->axis_position_pubs.size(); ++i)
+      {
+        if (this->axis_position_pubs[i] != nullptr)
+        {
+          this->axis_position_pubs[i]->on_activate();
+        }
+      }
+
+      for (int group = 0; group < 2; ++group)
+      {
+        if (this->mimic_position_pubs[group] != nullptr)
+        {
+          this->mimic_position_pubs[group]->on_activate();
+        }
+      }
+
+      for (std::size_t i = 0; i < this->io_state_pubs.size(); ++i)
+      {
+        if (this->io_state_pubs[i] != nullptr)
+        {
+          this->io_state_pubs[i]->on_activate();
         }
       }
     }
 
-    this->active = true;
-
-    if (this->joint_state_pub != nullptr)
-    {
-      this->joint_state_pub->on_activate();
-    }
-
-    for (std::size_t i = 0; i < this->axis_position_pubs.size(); ++i)
-    {
-      if (this->axis_position_pubs[i] != nullptr)
-      {
-        this->axis_position_pubs[i]->on_activate();
-      }
-    }
-
-    for (int group = 0; group < 2; ++group)
-    {
-      if (this->mimic_position_pubs[group] != nullptr)
-      {
-        this->mimic_position_pubs[group]->on_activate();
-      }
-    }
-
-    for (std::size_t i = 0; i < this->io_state_pubs.size(); ++i)
-    {
-      if (this->io_state_pubs[i] != nullptr)
-      {
-        this->io_state_pubs[i]->on_activate();
-      }
-    }
-
-    // start rosbag recorder if requested
+    // Start rosbag outside the lifecycle lock to avoid recursive mutex lock.
     if (!this->StartRosbagRecorder())
     {
       RCLCPP_ERROR(this->logger, "failed to start rosbag recorder");
     }
 
-    this->WriteLogLocked("lifecycle", "activate");
+    {
+      std::lock_guard<std::mutex> lock(this->mutex);
+      this->WriteLogLocked("lifecycle", "activate");
+    }
     return true;
   }
 
   bool DeactivateNode()
   {
-    std::lock_guard<std::mutex> lock(this->mutex);
-
-    this->active = false;
-    this->emergency_stop = false;
-    this->previous_io_values.clear();
-
-    (void)this->sdk->StopAll();
-    for (std::size_t i = 0; i < this->axes.size(); ++i)
     {
-      (void)this->sdk->SetAxisEnable(this->axes[i].physical_axis, false);
-    }
+      std::lock_guard<std::mutex> lock(this->mutex);
 
-    if (this->joint_state_pub != nullptr)
-    {
-      this->joint_state_pub->on_deactivate();
-    }
-    for (std::size_t i = 0; i < this->axis_position_pubs.size(); ++i)
-    {
-      if (this->axis_position_pubs[i] != nullptr)
+      this->active = false;
+      this->emergency_stop = false;
+      this->previous_io_values.clear();
+
+      (void)this->sdk->StopAll();
+      for (std::size_t i = 0; i < this->axes.size(); ++i)
       {
-        this->axis_position_pubs[i]->on_deactivate();
+        (void)this->sdk->SetAxisEnable(this->axes[i].physical_axis, false);
+      }
+
+      if (this->joint_state_pub != nullptr)
+      {
+        this->joint_state_pub->on_deactivate();
+      }
+      for (std::size_t i = 0; i < this->axis_position_pubs.size(); ++i)
+      {
+        if (this->axis_position_pubs[i] != nullptr)
+        {
+          this->axis_position_pubs[i]->on_deactivate();
+        }
+      }
+      for (int group = 0; group < 2; ++group)
+      {
+        if (this->mimic_position_pubs[group] != nullptr)
+        {
+          this->mimic_position_pubs[group]->on_deactivate();
+        }
+      }
+      for (std::size_t i = 0; i < this->io_state_pubs.size(); ++i)
+      {
+        if (this->io_state_pubs[i] != nullptr)
+        {
+          this->io_state_pubs[i]->on_deactivate();
+        }
       }
     }
-    for (int group = 0; group < 2; ++group)
-    {
-      if (this->mimic_position_pubs[group] != nullptr)
-      {
-        this->mimic_position_pubs[group]->on_deactivate();
-      }
-    }
-    for (std::size_t i = 0; i < this->io_state_pubs.size(); ++i)
-    {
-      if (this->io_state_pubs[i] != nullptr)
-      {
-        this->io_state_pubs[i]->on_deactivate();
-      }
-    }
 
-    // stop rosbag recorder if running
+    // Stop rosbag outside the lifecycle lock to avoid recursive mutex lock.
     this->StopRosbagRecorder();
 
-    this->WriteLogLocked("lifecycle", "deactivate");
+    {
+      std::lock_guard<std::mutex> lock(this->mutex);
+      this->WriteLogLocked("lifecycle", "deactivate");
+    }
     return true;
   }
 
