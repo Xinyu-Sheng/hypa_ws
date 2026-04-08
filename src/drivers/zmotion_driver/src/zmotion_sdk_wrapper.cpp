@@ -6,7 +6,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
-#include <unordered_set>
+#include <unordered_map>
 #include <vector>
 
 #include "zmcaux.h"
@@ -102,7 +102,7 @@ class ZMotionSdkWrapper::Impl
   public:
   ZMC_HANDLE handle = nullptr;
   bool connected = false;
-  std::unordered_set<int> moving_axes;
+  std::unordered_map<int, int> moving_axes_direction;
 
   // 运动控制那部分并不靠 Execute()；Execute() 只是内部对 ZAux_Execute()
   // 的统一封装，用于普通命令/查询、获取响应并做错误封装。
@@ -410,7 +410,7 @@ CallResult ZMotionSdkWrapper::Disconnect()
   const int32 code = ZAux_Close(this->pimpl_->handle);
   this->pimpl_->connected = false;
   this->pimpl_->handle = nullptr;
-  this->pimpl_->moving_axes.clear();
+  this->pimpl_->moving_axes_direction.clear();
   return WrapCode(code, "ZAux_Close failed");
 }
 
@@ -766,8 +766,8 @@ CallResult ZMotionSdkWrapper::ConfigureAxis(const int _axis,
     return WrapCode(units_code, "ZAux_Direct_SetUnits failed");
   }
 
-  const int32 speed_code = ZAux_Direct_SetSpeed(this->pimpl_->handle, _axis,
-                                                static_cast<float>(_speed));
+  const int32 speed_code = ZAux_Direct_SetSpeed(
+      this->pimpl_->handle, _axis, static_cast<float>(std::fabs(_speed)));
   if (speed_code != kErrOk)
   {
     return WrapCode(speed_code, "ZAux_Direct_SetSpeed failed");
@@ -809,31 +809,34 @@ CallResult ZMotionSdkWrapper::CommandVelocity(const int _axis,
         WrapCode(cancel_code, "ZAux_Direct_Single_Cancel failed");
     if (cancel_result.ok)
     {
-      this->pimpl_->moving_axes.erase(_axis);
+      this->pimpl_->moving_axes_direction.erase(_axis);
     }
     return cancel_result;
   }
 
-  const int32 speed_code = ZAux_Direct_SetSpeed(this->pimpl_->handle, _axis,
-                                                static_cast<float>(_velocity));
+  const int direction = (_velocity > 0.0) ? 1 : -1;
+  const double speed_magnitude = std::fabs(_velocity);
+  const int32 speed_code = ZAux_Direct_SetSpeed(
+      this->pimpl_->handle, _axis, static_cast<float>(speed_magnitude));
   if (speed_code != kErrOk)
   {
     return WrapCode(speed_code, "ZAux_Direct_SetSpeed failed");
   }
 
-  if (this->pimpl_->moving_axes.find(_axis) != this->pimpl_->moving_axes.end())
+  auto moving_it = this->pimpl_->moving_axes_direction.find(_axis);
+  if ((moving_it != this->pimpl_->moving_axes_direction.end()) &&
+      (moving_it->second == direction))
   {
     return CallResult::Success();
   }
 
-  const int direction = (_velocity > 0.0) ? 1 : -1;
   const int32 move_code =
       ZAux_Direct_Single_Vmove(this->pimpl_->handle, _axis, direction);
   const CallResult move_result =
       WrapCode(move_code, "ZAux_Direct_Single_Vmove failed");
   if (move_result.ok)
   {
-    this->pimpl_->moving_axes.insert(_axis);
+    this->pimpl_->moving_axes_direction[_axis] = direction;
   }
   return move_result;
 }
@@ -925,7 +928,7 @@ CallResult ZMotionSdkWrapper::CancelAxis(const int _axis)
   const CallResult result = WrapCode(code, "ZAux_Direct_Single_Cancel failed");
   if (result.ok)
   {
-    this->pimpl_->moving_axes.erase(_axis);
+    this->pimpl_->moving_axes_direction.erase(_axis);
   }
   return result;
 }
@@ -936,7 +939,7 @@ CallResult ZMotionSdkWrapper::StopAll()
   const CallResult result = WrapCode(code, "ZAux_Direct_Rapidstop failed");
   if (result.ok)
   {
-    this->pimpl_->moving_axes.clear();
+    this->pimpl_->moving_axes_direction.clear();
   }
   return result;
 }
