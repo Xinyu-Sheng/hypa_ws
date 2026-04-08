@@ -10,12 +10,12 @@ from imu_msg.msg import ImuData
 
 
 class protocolType(Enum):
-    TTL_STD = 1          # TTL-标准精度
-    TTL_HIGH = 2         # TTL-高精度
-    CAN_STD = 3          # CAN-标准精度
-    CAN_HIGH = 4         # CAN-高精度
-    RS485_STD = 5        # RS485-标准精度
-    RS485_HIGH = 6       # RS485-高精度
+    TTL_STD = 1  # TTL-标准精度
+    TTL_HIGH = 2  # TTL-高精度
+    CAN_STD = 3  # CAN-标准精度
+    CAN_HIGH = 4  # CAN-高精度
+    RS485_STD = 5  # RS485-标准精度
+    RS485_HIGH = 6  # RS485-高精度
 
 
 class imuDriverNode(Node):
@@ -24,7 +24,7 @@ class imuDriverNode(Node):
 
         # 参数
         self.declare_parameter("namespace", "")
-        self.declare_parameter("use_sim_time", False)
+        # self.declare_parameter("use_sim_time", False)
         self.declare_parameter("port", "/dev/imu_usb")
         self.declare_parameter("baudrate", 230400)
         self.declare_parameter("protocol", "RS485_HIGH")
@@ -40,10 +40,7 @@ class imuDriverNode(Node):
 
         # 串口
         self.serialPort = serial.Serial(
-            self.port,
-            self.baudrate,
-            timeout=0.001,
-            write_timeout=0
+            self.port, self.baudrate, timeout=0.001, write_timeout=0
         )
 
         self.get_logger().info(f"Serial opened: {self.port} @ {self.baudrate}")
@@ -62,7 +59,7 @@ class imuDriverNode(Node):
         self.gyroData = np.zeros(3)
         self.angleData = np.zeros(3)
         self.magData = np.zeros(3)
-        self.currentRequestAddr = None      # 标记 485 当前询问地址
+        self.currentRequestAddr = None  # 标记 485 当前询问地址
 
         # 处理后的数据
         self.acc = np.zeros(3)
@@ -76,7 +73,7 @@ class imuDriverNode(Node):
 
         # 定时器
         self.create_timer(0.001, self.timerCallback)
-        self.create_timer(0.1, self.printMsg)       # 终端打印
+        self.create_timer(0.1, self.printMsg)  # 终端打印
 
     # ==========================================================
     # 主循环
@@ -154,7 +151,7 @@ class imuDriverNode(Node):
             elif self.protocol in (protocolType.RS485_STD, protocolType.RS485_HIGH):
                 if len(self.rxBuffer) < 5:
                     return
-                
+
                 # 地址不对，丢 1 字节重新对齐
                 if self.rxBuffer[0] != self.modbusID:
                     self.rxBuffer.pop(0)
@@ -180,9 +177,9 @@ class imuDriverNode(Node):
                 calcCRC = ((calcCRC & 0xFF) << 8) | ((calcCRC >> 8) & 0xFF)
 
                 if recvCRC != calcCRC:
-                    self.rxBuffer.pop(0)        # CRC 错误，丢 1 字节重新对齐
+                    self.rxBuffer.pop(0)  # CRC 错误，丢 1 字节重新对齐
                     continue
-                
+
                 # 通过校验，删除该帧
                 del self.rxBuffer[:frameLen]
 
@@ -219,8 +216,8 @@ class imuDriverNode(Node):
 
             # 高精度 32bit 数据
             elif dataType == 0x53:
-                low16 = struct.unpack("<H", frame[4:6])[0]      # 读取低 16bit
-                high16 = struct.unpack("<h", frame[6:8])[0]      # 读取高 16bit
+                low16 = struct.unpack("<H", frame[4:6])[0]  # 读取低 16bit
+                high16 = struct.unpack("<h", frame[6:8])[0]  # 读取高 16bit
                 angle32 = (high16 << 16) | low16
 
                 # 写入对应轴
@@ -231,8 +228,8 @@ class imuDriverNode(Node):
                     self.angleData[1] = angle32
                 elif axis == 0x03:
                     self.angleData[2] = angle32
-        
-        self.publishImu() 
+
+        self.publishImu()
 
     # ==========================================================
     # CAN处理
@@ -265,8 +262,8 @@ class imuDriverNode(Node):
 
             # 高精度 32bit 数据
             elif dataType == 0x53:
-                low16 = struct.unpack("<H", frame[4:6])[0]      # 读取低 16bit
-                high16 = struct.unpack("<h", frame[6:8])[0]      # 读取高 16bit
+                low16 = struct.unpack("<H", frame[4:6])[0]  # 读取低 16bit
+                high16 = struct.unpack("<h", frame[6:8])[0]  # 读取高 16bit
                 angle32 = (high16 << 16) | low16
 
                 # 写入对应轴
@@ -277,7 +274,7 @@ class imuDriverNode(Node):
                     self.angleData[1] = angle32
                 elif axis == 0x03:
                     self.angleData[2] = angle32
-        
+
         self.publishImu()
 
     # ==========================================================
@@ -288,7 +285,7 @@ class imuDriverNode(Node):
             return
 
         byteCount = frame[2]
-        data = frame[3:3+byteCount]
+        data = frame[3 : 3 + byteCount]
 
         addr = self.currentRequestAddr
 
@@ -310,13 +307,13 @@ class imuDriverNode(Node):
             if addr == 0x3D:  # 角度
                 if len(data) != 12:
                     return
-                
+
                 def parse32(offset):
                     raw = (
-                        (data[offset+2] << 24) |
-                        (data[offset+3] << 16) |
-                        (data[offset+0] << 8)  |
-                        data[offset+1]
+                        (data[offset + 2] << 24)
+                        | (data[offset + 3] << 16)
+                        | (data[offset + 0] << 8)
+                        | data[offset + 1]
                     )
                     if raw & 0x80000000:
                         raw -= 0x100000000
@@ -369,7 +366,11 @@ class imuDriverNode(Node):
         gx, gy, gz = np.radians(self.gyroData * gyroScale)
         mx, my, mz = self.magData
 
-        if self.protocol in (protocolType.TTL_HIGH, protocolType.CAN_HIGH, protocolType.RS485_HIGH):
+        if self.protocol in (
+            protocolType.TTL_HIGH,
+            protocolType.CAN_HIGH,
+            protocolType.RS485_HIGH,
+        ):
             roll, pitch, yaw = np.radians(self.angleData / 1000.0)
         else:
             angleScale = 180.0 / 32768.0
@@ -423,15 +424,15 @@ class imuDriverNode(Node):
         frame.append(length & 0xFF)
 
         crc = self.modbusCRC(frame)
-        frame.append(crc & 0xFF)          # CRC_L
-        frame.append((crc >> 8) & 0xFF)   # CRC_H
+        frame.append(crc & 0xFF)  # CRC_L
+        frame.append((crc >> 8) & 0xFF)  # CRC_H
 
         return bytes(frame)
 
     @staticmethod
     def ttlChecksum(frame):
         return (sum(frame[0:10]) & 0xFF) == frame[10]
-    
+
     @staticmethod
     def modbusCRC(data: bytes):
         crc = 0xFFFF
@@ -460,18 +461,27 @@ class imuDriverNode(Node):
         qw = cr * cp * cy + sr * sp * sy
 
         return [qx, qy, qz, qw]
-    
+
     def printMsg(self):
-        print(f"Accel: x={self.acc[0]:+12.3f} | y={self.acc[1]:+12.3f} | z={self.acc[2]:+12.3f} m/s²")
-        print(f"Gyro:  x={math.degrees(self.gyro[0]):+12.3f} | y={math.degrees(self.gyro[1]):+12.3f} | z={math.degrees(self.gyro[2]):+12.3f} °/s")
-        print(f"Angle: x={math.degrees(self.angle[0]):+12.3f} | y={math.degrees(self.angle[1]):+12.3f} | z={math.degrees(self.angle[2]):+12.3f} °")
-        print(f"Mag:   x={self.mag[0]:+12.3f} | y={self.mag[1]:+12.3f} | z={self.mag[2]:+12.3f}")
-        print("\033[H\033[J", end="")       # 清屏
-    
+        print(
+            f"Accel: x={self.acc[0]:+12.3f} | y={self.acc[1]:+12.3f} | z={self.acc[2]:+12.3f} m/s²"
+        )
+        print(
+            f"Gyro:  x={math.degrees(self.gyro[0]):+12.3f} | y={math.degrees(self.gyro[1]):+12.3f} | z={math.degrees(self.gyro[2]):+12.3f} °/s"
+        )
+        print(
+            f"Angle: x={math.degrees(self.angle[0]):+12.3f} | y={math.degrees(self.angle[1]):+12.3f} | z={math.degrees(self.angle[2]):+12.3f} °"
+        )
+        print(
+            f"Mag:   x={self.mag[0]:+12.3f} | y={self.mag[1]:+12.3f} | z={self.mag[2]:+12.3f}"
+        )
+        print("\033[H\033[J", end="")  # 清屏
+
     def shutdown(self):
         if self.serialPort and self.serialPort.is_open:
             self.serialPort.close()
             self.get_logger().info("Serial port closed")
+
 
 def main():
 
@@ -483,10 +493,11 @@ def main():
     except KeyboardInterrupt:
         pass
     finally:
-        node.shutdown()      # 关闭串口
+        node.shutdown()  # 关闭串口
         rclpy.spin_once(node, timeout_sec=0.1)  # 确保回调退出
         node.destroy_node()
         rclpy.shutdown()
+
 
 if __name__ == "__main__":
     main()
