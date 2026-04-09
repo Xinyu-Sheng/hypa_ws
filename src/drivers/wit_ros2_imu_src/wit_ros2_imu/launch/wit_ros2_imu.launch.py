@@ -41,6 +41,7 @@ def generate_launch_description():
         executable="wit_ros2_imu",
         name="imuDriverNode",
         namespace=LaunchConfiguration("namespace"),
+        # output="log",
         output="screen",
         emulate_tty=True,
         parameters=[
