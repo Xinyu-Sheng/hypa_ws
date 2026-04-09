@@ -5,7 +5,7 @@ import numpy as np
 import rclpy
 from enum import Enum
 from rclpy.node import Node
-from sensor_msgs.msg import Imu
+from sensor_msgs.msg import Imu, MagneticField
 from imu_msg.msg import ImuData
 
 
@@ -29,12 +29,16 @@ class imuDriverNode(Node):
         self.declare_parameter("baudrate", 230400)
         self.declare_parameter("protocol", "RS485_HIGH")
         self.declare_parameter("modbusID", 0x50)
+        self.declare_parameter("mag_topic", "imu/mag")
+        self.declare_parameter("publish_mag", True)
 
         self.namespace_param = self.get_parameter("namespace").value
         self.port = self.get_parameter("port").value
         self.baudrate = self.get_parameter("baudrate").value
         self.modbusID = self.get_parameter("modbusID").value
         protocolStr = self.get_parameter("protocol").value
+        self.mag_topic = self.get_parameter("mag_topic").value
+        self.publish_mag = self.get_parameter("publish_mag").value
 
         self.protocol = protocolType[protocolStr]
 
@@ -70,6 +74,9 @@ class imuDriverNode(Node):
         # 发布器
         self.imuPublisher = self.create_publisher(Imu, "imu/data", 10)
         self.imuRpyPublisher = self.create_publisher(ImuData, "imu/ImuDataWithRPY", 10)
+        self.magPublisher = None
+        if self.publish_mag:
+            self.magPublisher = self.create_publisher(MagneticField, self.mag_topic, 10)
 
         # 定时器
         self.create_timer(0.001, self.timerCallback)
@@ -401,6 +408,14 @@ class imuDriverNode(Node):
         imuMsg.orientation.w = quaternion[3]
 
         self.imuPublisher.publish(imuMsg)
+        if getattr(self, "publish_mag", False) and getattr(self, "magPublisher", None):
+            magMsg = MagneticField()
+            magMsg.header = imuMsg.header
+            magMsg.magnetic_field.x = float(mx)
+            magMsg.magnetic_field.y = float(my)
+            magMsg.magnetic_field.z = float(mz)
+            magMsg.magnetic_field_covariance = [0.0] * 9
+            self.magPublisher.publish(magMsg)
 
         imuRpyMsg = ImuData()
         imuRpyMsg.header = imuMsg.header

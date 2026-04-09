@@ -24,6 +24,18 @@ def generate_launch_description():
         description="WIT IMU 参数文件路径",
     )
 
+    mag_topic_arg = DeclareLaunchArgument(
+        "mag_topic",
+        default_value="imu/mag",
+        description="磁场话题名（默认 imu/mag）",
+    )
+
+    publish_mag_arg = DeclareLaunchArgument(
+        "publish_mag",
+        default_value="True",
+        description="是否发布磁场消息（True/False）",
+    )
+
     imu_node = Node(
         package="wit_ros2_imu",
         executable="wit_ros2_imu",
@@ -33,6 +45,8 @@ def generate_launch_description():
         parameters=[
             LaunchConfiguration("params_file"),
             {"namespace": LaunchConfiguration("namespace")},
+            {"mag_topic": LaunchConfiguration("mag_topic")},
+            {"publish_mag": LaunchConfiguration("publish_mag")},
         ],
     )
 
@@ -40,6 +54,8 @@ def generate_launch_description():
         [
             namespace_arg,
             params_file_arg,
+            mag_topic_arg,
+            publish_mag_arg,
             imu_node,
         ]
     )
