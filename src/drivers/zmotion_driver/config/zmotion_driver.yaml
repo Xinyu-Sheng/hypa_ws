@@ -32,22 +32,22 @@
         - "joint_10"
         - "joint_11"
 
-      # 控制模式
+      # 控制模式（与ethercat初始化无关）
       control_modes:
         - "velocity"
         - "velocity"
         - "velocity"
         - "velocity"
-        - "velocity"
-        - "velocity"
-        - "velocity"
-        - "velocity"
-        - "velocity"
-        - "velocity"
-        - "velocity"
-        - "velocity"
+        - "position"
+        - "position"
+        - "position"
+        - "position"
+        - "position"
+        - "position"
+        - "position"
+        - "position"
 
-      # 位置模式支持 absolute / relative
+      # 位置模式支持 absolute / relative （与ethercat初始化无关）
       position_modes:
         - "absolute"
         - "absolute"

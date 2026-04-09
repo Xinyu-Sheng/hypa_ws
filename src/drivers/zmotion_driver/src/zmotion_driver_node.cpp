@@ -525,9 +525,9 @@ class ZMotionDriverNode::Impl
     this->mimic_member_logical_axes.clear();
     for (int group = 0; group < 2; ++group)
     {
-      if (this->mimic_groups[group].size() != 2U)
+      if (this->mimic_groups[group].size() != 4U)
       {
-        RCLCPP_ERROR(this->logger, "mimic group %d must contain 2 logical axes",
+        RCLCPP_ERROR(this->logger, "mimic group %d must contain 4 logical axes",
                      group);
         return false;
       }
@@ -1723,6 +1723,66 @@ class ZMotionDriverNode::Impl
       cmd.values = std::vector<double>{target_vel};
       this->DispatchCommandLocked(cmd);
     }
+    else if ((cfg.io_id == 8) || (cfg.io_id == 9) || (cfg.io_id == 10) ||
+             (cfg.io_id == 11))
+    {
+      const int group = (cfg.io_id <= 9) ? 0 : 1;
+      if (this->mimic_groups[group].size() != 2U)
+      {
+        this->WriteLogLocked("io_action", "io_" + std::to_string(cfg.io_id) +
+                                              " triggered but mimic group " +
+                                              std::to_string(group) +
+                                              " is not configured");
+        return;
+      }
+      if (!this->configured || !this->active || this->emergency_stop)
+      {
+        this->WriteLogLocked(
+            "io_action",
+            "io_" + std::to_string(cfg.io_id) +
+                " triggered but node not active/configured or in emergency");
+        return;
+      }
+
+      const int logical_axis = this->mimic_groups[group][0];
+      auto it = this->logical_to_axis_index.find(logical_axis);
+      if (it == this->logical_to_axis_index.end())
+      {
+        this->WriteLogLocked(
+            "io_action",
+            "io_" + std::to_string(cfg.io_id) +
+                " triggered but mimic group logical axis not found");
+        return;
+      }
+
+      double speed_mag = 0.1;
+      if (it != this->logical_to_axis_index.end())
+      {
+        speed_mag = this->axes[it->second].speed;
+      }
+
+      double target_value = 0.0;
+      if ((cfg.io_id % 2) == 0)
+      {
+        target_value = (high ? speed_mag : 0.0);
+      }
+      else
+      {
+        target_value = (high ? -speed_mag : 0.0);
+      }
+
+      PendingCommand cmd;
+      cmd.type = PendingType::kVelocity;
+      cmd.logical_axes = this->mimic_groups[group];
+      cmd.values = std::vector<double>{target_value, target_value};
+
+      this->WriteLogLocked("io_action",
+                           "io_" + std::to_string(cfg.io_id) +
+                               " triggered: mimic_group" +
+                               std::to_string(group + 1) +
+                               " velocity=" + std::to_string(target_value));
+      this->DispatchCommandLocked(cmd);
+    }
     else
     {
       this->WriteLogLocked("io_action",
@@ -1761,7 +1821,7 @@ class ZMotionDriverNode::Impl
       return;
     }
 
-    if (this->mimic_groups[_group].size() != 2U)
+    if (this->mimic_groups[_group].size() != 4U)
     {
       return;
     }
@@ -1777,7 +1837,8 @@ class ZMotionDriverNode::Impl
 
     PendingCommand cmd;
     cmd.logical_axes = this->mimic_groups[_group];
-    cmd.values = std::vector<double>{_msg->data, _msg->data};
+    cmd.values =
+        std::vector<double>{_msg->data, _msg->data, _msg->data, _msg->data};
 
     if (axis.position_mode == AxisPositionMode::kAbsolute)
     {
