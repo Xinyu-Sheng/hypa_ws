@@ -864,6 +864,93 @@ void HypaDataManager::handleJointStateMessage(
   }
 }
 
+void HypaDataManager::handleMagMessage(
+    const sensor_msgs::msg::MagneticField::ConstSharedPtr &_msg,
+    const char *_topicSource)
+{
+  if (!_msg)
+  {
+    HYPA_DT_DEBUG_LOG() << "[HypaDataManager] handleMagMessage: null message";
+    return;
+  }
+
+  using namespace std::chrono;
+  HYPA_DT_DEBUG_LOG() << "[HypaDataManager] handleMagMessage received:"
+                      << QString::fromStdString(_msg->header.frame_id)
+                      << "stamp:" << _msg->header.stamp.sec
+                      << _msg->header.stamp.nanosec;
+
+  const auto t_total_start = steady_clock::now();
+  const MagSample sample = this->createMagSample(_msg);
+  std::string source;
+  if (!_msg->header.frame_id.empty())
+  {
+    source = _msg->header.frame_id;
+  }
+  else if (_topicSource != nullptr && _topicSource[0] != '\0')
+  {
+    source = _topicSource;
+  }
+  else
+  {
+    source = std::string("mag");
+  }
+
+  steady_clock::time_point t_lock_start;
+  steady_clock::time_point t_lock_end;
+  {
+    t_lock_start = steady_clock::now();
+    std::lock_guard<std::mutex> lock(this->mutex_);
+    auto &cache = this->mag_caches_[source];
+    if (std::find(this->mag_source_order_.begin(),
+                  this->mag_source_order_.end(),
+                  source) == this->mag_source_order_.end())
+    {
+      this->mag_source_order_.push_back(source);
+    }
+
+    cache.samples.push_back(sample);
+    cache.total_samples += 1;
+    const double window_start_sec = sample.stamp_sec - HISTORY_WINDOW_SEC;
+    while (cache.samples.size() > 1 &&
+           cache.samples.front().stamp_sec < window_start_sec)
+    {
+      cache.samples.pop_front();
+    }
+    if (cache.samples.size() > MAX_SAMPLES)
+      cache.samples.pop_front();
+    t_lock_end = steady_clock::now();
+  }
+
+  emit magDataUpdated();
+
+  const auto t_total_end = steady_clock::now();
+  const uint64_t total_ns =
+      duration_cast<nanoseconds>(t_total_end - t_total_start).count();
+  const uint64_t lock_ns =
+      duration_cast<nanoseconds>(t_lock_end - t_lock_start).count();
+  const uint64_t c =
+      this->mag_msg_count_.fetch_add(1, std::memory_order_relaxed) + 1;
+  this->mag_msg_total_ns_.fetch_add(total_ns, std::memory_order_relaxed);
+  this->mag_msg_lock_ns_.fetch_add(lock_ns, std::memory_order_relaxed);
+  if ((c % kMetricsLogInterval) == 0)
+  {
+    HYPA_DT_DEBUG_LOG()
+        << "[HypaDataManager] mag msg avg total ms:"
+        << (this->mag_msg_total_ns_.load() / static_cast<double>(c)) / 1e6
+        << "avg lock ms:"
+        << (this->mag_msg_lock_ns_.load() / static_cast<double>(c)) / 1e6;
+    std::ostringstream oss;
+    oss << make_timestamp() << " type=mag_msg"
+        << " avg_total_ms="
+        << (this->mag_msg_total_ns_.load() / static_cast<double>(c)) / 1e6
+        << " avg_lock_ms="
+        << (this->mag_msg_lock_ns_.load() / static_cast<double>(c)) / 1e6
+        << " count=" << c;
+    append_metrics_log(oss.str());
+  }
+}
+
 double HypaDataManager::messageStampToSec(
     const builtin_interfaces::msg::Time &_stamp)
 {
