@@ -226,6 +226,15 @@ QString HypaDataManager::formatSourceSummary(const QString &_kind,
     return this->formatSeriesSummary(_kind, _source, metrics);
   }
 
+  if (_kind == "mag")
+  {
+    QVariantList metrics;
+    metrics << QStringLiteral("magnetic_field_x")
+            << QStringLiteral("magnetic_field_y")
+            << QStringLiteral("magnetic_field_z");
+    return this->formatSeriesSummary(_kind, _source, metrics);
+  }
+
   return QStringLiteral("No data");
 }
 
@@ -250,6 +259,10 @@ QString HypaDataManager::formatSeriesSummary(const QString &_kind,
     else if (_kind == "joint")
     {
       found = this->getLatestJointValue(_source, metric, value);
+    }
+    else if (_kind == "mag")
+    {
+      found = this->getLatestMagValue(_source, metric, value);
     }
 
     if (found)
@@ -1030,6 +1043,29 @@ bool HypaDataManager::getLatestJointValue(const QString &_source,
     _value = sample.velocity;
   else if (_metric == "effort")
     _value = sample.effort;
+  else
+    return false;
+
+  return true;
+}
+
+bool HypaDataManager::getLatestMagValue(const QString &_source,
+                                        const QString &_metric,
+                                        double &_value) const
+{
+  std::lock_guard<std::mutex> lock(this->mutex_);
+  const auto cache_it = this->mag_caches_.find(_source.toStdString());
+  if (cache_it == this->mag_caches_.end() || cache_it->second.samples.empty())
+    return false;
+
+  const auto &sample = cache_it->second.samples.back();
+
+  if (_metric == "magnetic_field_x")
+    _value = sample.magnetic_field_x;
+  else if (_metric == "magnetic_field_y")
+    _value = sample.magnetic_field_y;
+  else if (_metric == "magnetic_field_z")
+    _value = sample.magnetic_field_z;
   else
     return false;
 

@@ -128,6 +128,8 @@ class HypaDataManager : public QObject
                          double &_value) const;
   bool getLatestJointValue(const QString &_source, const QString &_metric,
                            double &_value) const;
+  bool getLatestMagValue(const QString &_source, const QString &_metric,
+                         double &_value) const;
   QVariantList samplesToPoints(const std::deque<ImuSample> &_samples,
                                const QString &_metric) const;
   QVariantList samplesToPoints(const std::deque<JointSample> &_samples,
