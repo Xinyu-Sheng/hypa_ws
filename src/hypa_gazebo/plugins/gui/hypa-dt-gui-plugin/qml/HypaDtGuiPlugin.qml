@@ -262,7 +262,7 @@ Rectangle {
                 chartKind: "mag"
                 selectionModel: root.magModel
                 dataProvider: Backend
-                yScale: 0.5
+                yScale: 5.0
                 metrics: ["magnetic_field_x"]
               }
 
@@ -272,7 +272,7 @@ Rectangle {
                 chartKind: "mag"
                 selectionModel: root.magModel
                 dataProvider: Backend
-                yScale: 0.5
+                yScale: 5.0
                 metrics: ["magnetic_field_y"]
               }
 
@@ -282,7 +282,7 @@ Rectangle {
                 chartKind: "mag"
                 selectionModel: root.magModel
                 dataProvider: Backend
-                yScale: 0.5
+                yScale: 5.0
                 metrics: ["magnetic_field_z"]
               }
             }
