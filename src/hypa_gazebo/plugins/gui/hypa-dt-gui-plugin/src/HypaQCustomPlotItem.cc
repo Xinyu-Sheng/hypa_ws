@@ -10,6 +10,7 @@
 #include <QVariantMap>
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 #include "hypa-dt-gui-plugin/HypaDtGuiPlugin.hh"
 
@@ -23,6 +24,10 @@ constexpr double kHistoryWindowSec = 30.0;
 HypaQCustomPlotItem::HypaQCustomPlotItem(QQuickItem *_parent)
     : QQuickPaintedItem(_parent)
 {
+  this->auto_y_range_ = true;
+  this->y_scale_ = 1.0;
+  this->y_min_override_ = std::numeric_limits<double>::quiet_NaN();
+  this->y_max_override_ = std::numeric_limits<double>::quiet_NaN();
   this->setAntialiasing(false);
   this->setRenderTarget(QQuickPaintedItem::FramebufferObject);
   this->ensurePlot();
@@ -80,6 +85,62 @@ void HypaQCustomPlotItem::setDataProvider(QObject *_dataProvider)
 bool HypaQCustomPlotItem::hasData() const
 {
   return this->has_data_;
+}
+
+bool HypaQCustomPlotItem::autoYRange() const
+{
+  return this->auto_y_range_;
+}
+
+void HypaQCustomPlotItem::setAutoYRange(bool _v)
+{
+  if (this->auto_y_range_ == _v)
+    return;
+  this->auto_y_range_ = _v;
+  this->plot_dirty_ = true;
+  this->update();
+  emit autoYRangeChanged();
+}
+
+double HypaQCustomPlotItem::yScale() const
+{
+  return this->y_scale_;
+}
+
+void HypaQCustomPlotItem::setYScale(double _v)
+{
+  if (std::abs(this->y_scale_ - _v) < 1e-12)
+    return;
+  this->y_scale_ = _v;
+  this->plot_dirty_ = true;
+  this->update();
+  emit yScaleChanged();
+}
+
+double HypaQCustomPlotItem::yMin() const
+{
+  return this->y_min_override_;
+}
+
+void HypaQCustomPlotItem::setYMin(double _v)
+{
+  this->y_min_override_ = _v;
+  this->plot_dirty_ = true;
+  this->update();
+  emit yRangeChanged();
+}
+
+double HypaQCustomPlotItem::yMax() const
+{
+  return this->y_max_override_;
+}
+
+void HypaQCustomPlotItem::setYMax(double _v)
+{
+  this->y_max_override_ = _v;
+  this->plot_dirty_ = true;
+  this->update();
+  emit yRangeChanged();
 }
 
 void HypaQCustomPlotItem::refreshPlot()
@@ -374,6 +435,21 @@ void HypaQCustomPlotItem::updateAxesFromRanges()
     min_y -= padding;
     max_y += padding;
   }
+
+  // Apply yScale (centered) if requested
+  if (std::abs(this->y_scale_ - 1.0) > 1e-12)
+  {
+    const double center = (min_y + max_y) * 0.5;
+    const double half_span = (max_y - min_y) * 0.5 * this->y_scale_;
+    min_y = center - half_span;
+    max_y = center + half_span;
+  }
+
+  // Apply explicit overrides if set (use NaN to indicate unset)
+  if (!std::isnan(this->y_min_override_))
+    min_y = this->y_min_override_;
+  if (!std::isnan(this->y_max_override_))
+    max_y = this->y_max_override_;
 
   this->plot_->yAxis->setRange(min_y, max_y);
 }

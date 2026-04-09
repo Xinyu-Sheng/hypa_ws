@@ -27,6 +27,10 @@ Rectangle {
   property var dataProvider
   property var metrics: []
   property int dataRevision: 0
+  property real yScale: 1.0
+  property bool autoYRange: true
+  property real yMin: NaN
+  property real yMax: NaN
   property bool hasVisibleSeries: chartItem ? chartItem.hasData : false
   property var seriesModel: []
   property bool debugEnabled: false
@@ -233,6 +237,10 @@ Rectangle {
         chartKind: root.chartKind
         seriesModel: root.seriesModel
         dataProvider: root.dataProvider
+        autoYRange: root.autoYRange
+        yScale: root.yScale
+        yMin: root.yMin
+        yMax: root.yMax
 
         Text {
           anchors.centerIn: parent

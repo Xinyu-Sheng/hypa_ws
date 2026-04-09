@@ -24,6 +24,11 @@ class HypaQCustomPlotItem : public QQuickPaintedItem
   Q_PROPERTY(QObject *dataProvider READ dataProvider WRITE setDataProvider
                  NOTIFY dataProviderChanged)
   Q_PROPERTY(bool hasData READ hasData NOTIFY hasDataChanged)
+  Q_PROPERTY(bool autoYRange READ autoYRange WRITE setAutoYRange NOTIFY
+                 autoYRangeChanged)
+  Q_PROPERTY(double yScale READ yScale WRITE setYScale NOTIFY yScaleChanged)
+  Q_PROPERTY(double yMin READ yMin WRITE setYMin NOTIFY yRangeChanged)
+  Q_PROPERTY(double yMax READ yMax WRITE setYMax NOTIFY yRangeChanged)
 
   public:
   explicit HypaQCustomPlotItem(QQuickItem *_parent = nullptr);
@@ -31,6 +36,18 @@ class HypaQCustomPlotItem : public QQuickPaintedItem
 
   QString chartKind() const;
   void setChartKind(const QString &_chartKind);
+
+  bool autoYRange() const;
+  void setAutoYRange(bool _v);
+
+  double yScale() const;
+  void setYScale(double _v);
+
+  double yMin() const;
+  void setYMin(double _v);
+
+  double yMax() const;
+  void setYMax(double _v);
 
   QVariantList seriesModel() const;
   void setSeriesModel(const QVariantList &_seriesModel);
@@ -49,6 +66,9 @@ class HypaQCustomPlotItem : public QQuickPaintedItem
   void seriesModelChanged();
   void dataProviderChanged();
   void hasDataChanged();
+  void autoYRangeChanged();
+  void yScaleChanged();
+  void yRangeChanged();
 
   private Q_SLOTS:
   void onBackendUpdated();
@@ -77,6 +97,10 @@ class HypaQCustomPlotItem : public QQuickPaintedItem
   QVariantList series_model_;
   QObject *data_provider_ = nullptr;
   bool has_data_ = false;
+  bool auto_y_range_ = true;
+  double y_scale_ = 1.0;
+  double y_min_override_;
+  double y_max_override_;
 
   std::unique_ptr<QCustomPlot> plot_;
   QHash<QString, SeriesState> series_states_;
