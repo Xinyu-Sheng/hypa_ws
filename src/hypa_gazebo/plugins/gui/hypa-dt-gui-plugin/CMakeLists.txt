@@ -112,3 +112,25 @@ target_link_libraries(hypa-dt-gui-plugin-test-node
 install(TARGETS hypa-dt-gui-plugin-test-node
     RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
+
+add_executable(hypa-dt-gui-plugin-test-simplified-node
+    tests/hypa-dt-gui-plugin_test_simplified_node.cpp
+)
+
+target_include_directories(hypa-dt-gui-plugin-test-simplified-node
+    PRIVATE
+    include
+)
+
+ament_target_dependencies(hypa-dt-gui-plugin-test-simplified-node
+    rclcpp
+    sensor_msgs
+)
+
+target_link_libraries(hypa-dt-gui-plugin-test-simplified-node
+    Qt5::Core
+)
+
+install(TARGETS hypa-dt-gui-plugin-test-simplified-node
+    RUNTIME DESTINATION lib/${PROJECT_NAME}
+)
