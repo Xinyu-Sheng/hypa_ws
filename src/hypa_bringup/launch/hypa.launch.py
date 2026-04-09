@@ -25,9 +25,6 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(
             os.path.join(pkg_project_bringup, "launch", "rosbag.launch.py")
         ),
-        launch_arguments={
-            "namespace": LaunchConfiguration("namespace"),
-        }.items(),
         condition=IfCondition(LaunchConfiguration("enable_rosbag")),
     )
 
@@ -48,11 +45,6 @@ def generate_launch_description():
         [
             DeclareLaunchArgument(
                 "rviz", default_value="true", description="Open RViz."
-            ),
-            DeclareLaunchArgument(
-                "namespace",
-                default_value="hypa",
-                description="Robot namespace for rosbag recording.",
             ),
             DeclareLaunchArgument(
                 "enable_rosbag",

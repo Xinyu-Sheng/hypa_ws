@@ -15,6 +15,7 @@
   <depend>launch_ros</depend>
   <depend>hypa_gazebo</depend>
   <depend>rviz2</depend>
+  <depend>python3-yaml</depend>
 
   <!-- rosout_bridge 节点依赖 -->
   <depend>rclcpp</depend>

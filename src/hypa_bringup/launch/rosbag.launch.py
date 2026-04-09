@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
-"""独立启动 joint_states 的 rosbag 录制进程。"""
+"""独立启动固定话题的 rosbag 录制进程。"""
 
 from datetime import datetime
 from pathlib import Path
 
+import yaml
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import (
-    DeclareLaunchArgument,
-    ExecuteProcess,
-    LogInfo,
-    OpaqueFunction,
-)
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, LogInfo, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
 
 
@@ -32,19 +29,29 @@ def _resolve_unique_output_prefix(_output_prefix: str) -> str:
     return str(unique_candidate)
 
 
+def _load_topics_from_yaml() -> list[str]:
+    topics_path = (
+        Path(get_package_share_directory("hypa_bringup"))
+        / "config"
+        / "rosbag_topics.yaml"
+    )
+    if not topics_path.is_file():
+        raise FileNotFoundError(f"rosbag topic 配置文件不存在: {topics_path}")
+
+    topics = yaml.safe_load(topics_path.read_text(encoding="utf-8")) or []
+    if not isinstance(topics, list):
+        raise ValueError(f"rosbag topic 配置文件必须是话题列表: {topics_path}")
+
+    return topics
+
+
 def _launch_rosbag(context, *_args, **_kwargs):
-    namespace = LaunchConfiguration("namespace").perform(context).strip("/")
-    topic_name = LaunchConfiguration("topic_name").perform(context).strip("/")
     output_prefix = LaunchConfiguration("output_prefix").perform(context)
     resolved_output_prefix = _resolve_unique_output_prefix(output_prefix)
-
-    if namespace:
-        topic = f"/{namespace}/{topic_name}"
-    else:
-        topic = f"/{topic_name}"
+    topics = _load_topics_from_yaml()
 
     return [
-        LogInfo(msg=f"启动 rosbag 录制: {resolved_output_prefix} -> {topic}"),
+        LogInfo(msg=f"启动 rosbag 录制: {resolved_output_prefix} -> {topics}"),
         ExecuteProcess(
             cmd=[
                 "ros2",
@@ -53,7 +60,7 @@ def _launch_rosbag(context, *_args, **_kwargs):
                 "-o",
                 resolved_output_prefix,
                 "--topics",
-                topic,
+                *topics,
             ],
             output="screen",
         ),
@@ -64,18 +71,8 @@ def generate_launch_description():
     return LaunchDescription(
         [
             DeclareLaunchArgument(
-                "namespace",
-                default_value="hypa",
-                description="机器人命名空间。",
-            ),
-            DeclareLaunchArgument(
-                "topic_name",
-                default_value="joint_states",
-                description="要录制的话题名。",
-            ),
-            DeclareLaunchArgument(
                 "output_prefix",
-                default_value="/tmp/zmotion_joint_states_bag",
+                default_value="/tmp/zmotion_bag",
                 description="rosbag 输出前缀。",
             ),
             OpaqueFunction(function=_launch_rosbag),
