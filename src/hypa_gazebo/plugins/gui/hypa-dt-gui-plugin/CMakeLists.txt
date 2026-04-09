@@ -7,28 +7,16 @@ endif()
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-# Force Qt5 only (ROS2 强制依赖，不可修改)
-find_package(Qt5 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2)
+# Force Qt5 only (ROS2 强制依赖，不可修改) + 新增Widgets（QCustomPlot必需）
+find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets Qml Quick QuickControls2)
 set(QT_VERSION_MAJOR 5)
+
+# 全自动查找 QCustomPlot（最优解，适配你的Ubuntu24.04）
+find_package(QCustomPlot REQUIRED)
 
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
-# ====================== 修复：适配 Ubuntu22.04/24.04 Qt5 QCustomPlot ======================
-find_path(QCUSTOMPLOT_INCLUDE_DIR
-    NAMES qcustomplot.h
-    PATH_SUFFIXES qt5 QCustomPlot-qt5
-)
-
-find_library(QCUSTOMPLOT_LIBRARY
-    NAMES qcustomplot-qt5 qcustomplot qcustomplot2
-)
-
-if(NOT QCUSTOMPLOT_INCLUDE_DIR OR NOT QCUSTOMPLOT_LIBRARY)
-    message(FATAL_ERROR "QCustomPlot not found. Please install: sudo apt install libqcustomplot-dev")
-endif()
-
-# ==========================================================================================
 set(HYPA_DT_GUI_PLUGIN_TARGET HypaDtGuiPlugin)
 
 add_library(${HYPA_DT_GUI_PLUGIN_TARGET} SHARED
@@ -46,8 +34,6 @@ add_library(${HYPA_DT_GUI_PLUGIN_TARGET} SHARED
 target_include_directories(${HYPA_DT_GUI_PLUGIN_TARGET}
     PUBLIC
     include
-    PRIVATE
-    ${QCUSTOMPLOT_INCLUDE_DIR}
 )
 
 ament_target_dependencies(${HYPA_DT_GUI_PLUGIN_TARGET}
@@ -58,10 +44,11 @@ ament_target_dependencies(${HYPA_DT_GUI_PLUGIN_TARGET}
 target_link_libraries(${HYPA_DT_GUI_PLUGIN_TARGET}
     Qt5::Core
     Qt5::Gui
+    Qt5::Widgets
     Qt5::Qml
     Qt5::Quick
     Qt5::QuickControls2
-    ${QCUSTOMPLOT_LIBRARY}
+    QCustomPlot::QCustomPlot # 修复：官方CMake链接方式
     gz-gui${GZ_GUI_VER}::gz-gui${GZ_GUI_VER}
 )
 
