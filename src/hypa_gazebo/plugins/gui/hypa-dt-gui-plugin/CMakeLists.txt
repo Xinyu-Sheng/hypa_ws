@@ -22,7 +22,7 @@ find_path(QCUSTOMPLOT_INCLUDE_DIR
 
 find_library(QCUSTOMPLOT_LIBRARY
     NAMES qcustomplot-qt5 qcustomplot qcustomplot2
-)
+)2
 
 if(NOT QCUSTOMPLOT_INCLUDE_DIR OR NOT QCUSTOMPLOT_LIBRARY)
     message(FATAL_ERROR "QCustomPlot not found. Please install: sudo apt install libqcustomplot-dev")
