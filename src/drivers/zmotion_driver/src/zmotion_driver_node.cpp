@@ -1,11 +1,5 @@
 #include "zmotion_driver/zmotion_driver_node.hpp"
 
-#include <signal.h>
-#include <spawn.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
-
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -21,7 +15,6 @@
 #include <set>
 #include <sstream>
 #include <string>
-#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -32,8 +25,6 @@
 #include "std_msgs/msg/float64_multi_array.hpp"
 #include "zmotion_driver/zmotion_sdk_wrapper.hpp"
 #include "zmotion_driver/zmotion_types.hpp"
-
-extern "C" char **environ;
 
 namespace zmotion_driver
 {
@@ -358,14 +349,6 @@ class ZMotionDriverNode::Impl
         this->node->get_parameter("feedback.record_joints_csv_file")
             .as_string();
 
-    this->record_rosbag_joints_enabled =
-        this->node->get_parameter("feedback.record_rosbag_joints_enabled")
-            .as_bool();
-
-    this->record_rosbag_joints_file =
-        this->node->get_parameter("feedback.record_rosbag_joints_file")
-            .as_string();
-
     // Command CSV for research: whether to record and file path
     this->record_commands_csv_enabled =
         this->node->get_parameter("feedback.record_commands_csv_enabled")
@@ -381,17 +364,14 @@ class ZMotionDriverNode::Impl
       this->log_file_path, output_timestamp));
     this->record_joints_csv_file = MakeUniquePath(MakeTimestampedPath(
       this->record_joints_csv_file, output_timestamp));
-    this->record_rosbag_joints_file = MakeUniquePath(MakeTimestampedPath(
-      this->record_rosbag_joints_file, output_timestamp));
     this->record_commands_csv_file = MakeUniquePath(MakeTimestampedPath(
       this->record_commands_csv_file, output_timestamp));
 
     RCLCPP_INFO(this->logger,
-          "timestamped output paths resolved: log=%s, joints=%s, commands=%s, rosbag=%s",
-          this->log_file_path.c_str(),
-          this->record_joints_csv_file.c_str(),
-          this->record_commands_csv_file.c_str(),
-          this->record_rosbag_joints_file.c_str());
+                "timestamped output paths resolved: log=%s, joints=%s, commands=%s",
+                this->log_file_path.c_str(),
+                this->record_joints_csv_file.c_str(),
+                this->record_commands_csv_file.c_str());
 
     std::vector<int64_t> logical_indices;
     (void)this->node->get_parameter("axis.logical_indices", logical_indices);
@@ -1026,127 +1006,6 @@ class ZMotionDriverNode::Impl
                          << SanitizeCsv(_message) << "\n";
   }
 
-  bool StartRosbagRecorder()
-  {
-    if (!this->record_rosbag_joints_enabled)
-    {
-      return true;
-    }
-    {
-      std::lock_guard<std::mutex> lock(this->mutex);
-      if (this->rosbag_pid > 0)
-      {
-        // already running
-        return true;
-      }
-    }
-
-    const std::string rosbag_output_path =
-        MakeUniquePath(this->record_rosbag_joints_file);
-    if (rosbag_output_path.empty())
-    {
-      RCLCPP_ERROR(this->logger, "failed to resolve rosbag output path from %s",
-                   this->record_rosbag_joints_file.c_str());
-      return false;
-    }
-
-    try
-    {
-      const std::filesystem::path parent_path =
-          std::filesystem::path(rosbag_output_path).parent_path();
-      if (!parent_path.empty())
-      {
-        std::filesystem::create_directories(parent_path);
-      }
-    }
-    catch (const std::exception &e)
-    {
-      RCLCPP_WARN(this->logger, "failed to create rosbag directory: %s",
-                  e.what());
-    }
-
-    if (rosbag_output_path != this->record_rosbag_joints_file)
-    {
-      RCLCPP_WARN(this->logger,
-                  "rosbag output path already exists, using %s instead of %s",
-                  rosbag_output_path.c_str(),
-                  this->record_rosbag_joints_file.c_str());
-    }
-
-    // Use posix_spawnp instead of fork+execlp to avoid fork-in-multithreaded
-    // deadlock risks. Inherit parent environment via global ::environ.
-    pid_t pid = -1;
-    char *const argv[] = {
-        const_cast<char *>("ros2"),
-        const_cast<char *>("bag"),
-        const_cast<char *>("record"),
-        const_cast<char *>("-o"),
-        const_cast<char *>(rosbag_output_path.c_str()),
-        const_cast<char *>("--topics"),
-        const_cast<char *>(this->joint_state_topic.c_str()),
-        nullptr,
-    };
-    int spawn_err =
-        posix_spawnp(&pid, "ros2", nullptr, nullptr, argv, ::environ);
-    if (spawn_err != 0)
-    {
-      RCLCPP_ERROR(this->logger, "posix_spawnp failed: %s",
-                   std::strerror(spawn_err));
-      return false;
-    }
-
-    {
-      std::lock_guard<std::mutex> lock(this->mutex);
-      this->rosbag_pid = pid;
-    }
-    RCLCPP_INFO(this->logger, "started rosbag record pid=%d",
-                static_cast<int>(pid));
-    return true;
-  }
-
-  void StopRosbagRecorder()
-  {
-    // Read pid under lock to avoid races with concurrent callers.
-    pid_t pid = -1;
-    {
-      std::lock_guard<std::mutex> lock(this->mutex);
-      pid = this->rosbag_pid;
-    }
-
-    if (pid <= 0)
-    {
-      return;
-    }
-
-    // Send SIGINT to the child process to request shutdown.
-    (void)kill(pid, SIGINT);
-
-    // If a waiter thread is already active, do not spawn another.
-    if (this->rosbag_wait_thread.joinable())
-    {
-      return;
-    }
-
-    // Spawn a background waiter thread that will reap the child and update
-    // the rosbag_pid state. The thread is stored as a member so it can be
-    // joined later to avoid use-after-free.
-    this->rosbag_wait_thread = std::thread(
-        [this, pid]()
-        {
-          int status = 0;
-          (void)waitpid(pid, &status, 0);
-          {
-            std::lock_guard<std::mutex> lock(this->mutex);
-            if (this->rosbag_pid == pid)
-            {
-              this->rosbag_pid = -1;
-            }
-          }
-          RCLCPP_INFO(this->logger, "stopped rosbag record pid=%d",
-                      static_cast<int>(pid));
-        });
-  }
-
   bool ConfigureHardware()
   {
     std::lock_guard<std::mutex> lock(this->mutex);
@@ -1306,23 +1165,6 @@ class ZMotionDriverNode::Impl
     this->ResetInterfaces();
     this->CloseLogFile();
     this->CloseCommandFile();
-    this->StopRosbagRecorder();
-
-    // Join the rosbag waiter thread if it was created to ensure no background
-    // thread will access this object after TearDown/destruction.
-    if (this->rosbag_wait_thread.joinable())
-    {
-      try
-      {
-        this->rosbag_wait_thread.join();
-      }
-      catch (const std::exception &e)
-      {
-        RCLCPP_WARN(this->logger,
-                    "exception while joining rosbag waiter thread: %s",
-                    e.what());
-      }
-    }
 
     this->CloseJointStateFile();
   }
@@ -2088,12 +1930,6 @@ class ZMotionDriverNode::Impl
       }
     }
 
-    // Start rosbag outside the lifecycle lock to avoid recursive mutex lock.
-    if (!this->StartRosbagRecorder())
-    {
-      RCLCPP_ERROR(this->logger, "failed to start rosbag recorder");
-    }
-
     {
       std::lock_guard<std::mutex> lock(this->mutex);
       this->WriteLogLocked("lifecycle", "activate");
@@ -2142,9 +1978,6 @@ class ZMotionDriverNode::Impl
         }
       }
     }
-
-    // Stop rosbag outside the lifecycle lock to avoid recursive mutex lock.
-    this->StopRosbagRecorder();
 
     {
       std::lock_guard<std::mutex> lock(this->mutex);
@@ -2222,10 +2055,6 @@ class ZMotionDriverNode::Impl
   std::mutex joint_state_stream_mutex;
   bool record_joints_csv_enabled = false;
   std::string record_joints_csv_file;
-  bool record_rosbag_joints_enabled = false;
-  std::string record_rosbag_joints_file;
-  pid_t rosbag_pid = -1;
-  std::thread rosbag_wait_thread;
 
   rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::JointState>::SharedPtr
       joint_state_pub;

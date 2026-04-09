@@ -32,8 +32,6 @@
       record_commands_csv_file: "/tmp/zmotion_commands.csv" # 实际文件名会自动追加时间戳，避免覆盖
       record_joints_csv_enabled: true
       record_joints_csv_file: "/tmp/zmotion_joint_states.csv" # 实际文件名会自动追加时间戳，避免覆盖
-      record_rosbag_joints_enabled: true
-      record_rosbag_joints_file: "/tmp/zmotion_joint_states_bag" # 实际目录会自动追加时间戳，避免覆盖
 
     axis:
       # 数组中填写数字表示 EtherCAT / 硬件接线的下标/顺序，值表示对应的逻辑轴编号

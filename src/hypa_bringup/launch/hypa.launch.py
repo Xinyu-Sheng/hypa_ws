@@ -21,6 +21,16 @@ def generate_launch_description():
         )
     )
 
+    rosbag_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(pkg_project_bringup, "launch", "rosbag.launch.py")
+        ),
+        launch_arguments={
+            "namespace": LaunchConfiguration("namespace"),
+        }.items(),
+        condition=IfCondition(LaunchConfiguration("enable_rosbag")),
+    )
+
     rviz = Node(
         package="rviz2",
         executable="rviz2",
@@ -36,10 +46,20 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-            gazebo_launch,
             DeclareLaunchArgument(
                 "rviz", default_value="true", description="Open RViz."
             ),
+            DeclareLaunchArgument(
+                "namespace",
+                default_value="hypa",
+                description="Robot namespace for rosbag recording.",
+            ),
+            DeclareLaunchArgument(
+                "enable_rosbag",
+                default_value="false",
+                description="Whether to start rosbag recording.",
+            ),
+            gazebo_launch,
             Node(
                 package="hypa_bringup",
                 executable="rosout_bridge_node",
@@ -53,6 +73,7 @@ def generate_launch_description():
                     }
                 ],
             ),
+            rosbag_launch,
             rviz,
         ]
     )
