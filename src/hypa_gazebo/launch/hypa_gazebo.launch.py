@@ -5,6 +5,7 @@ from launch.actions import (
     ExecuteProcess,
     IncludeLaunchDescription,
     RegisterEventHandler,
+    UnsetEnvironmentVariable,
 )
 from launch.event_handlers import OnProcessStart
 from launch.launch_description_sources import PythonLaunchDescriptionSource
@@ -80,6 +81,7 @@ def generate_launch_description():
                 cmd=["bash", "-c", "echo GZ_SIM_RESOURCE_PATH=$GZ_SIM_RESOURCE_PATH"],
                 output="screen",
             ),
+            UnsetEnvironmentVariable("GZ_CONFIG_PATH"),
             gz_sim,
             # wmctrl_fullscreen,
             bridge,
