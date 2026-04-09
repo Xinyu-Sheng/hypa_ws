@@ -14,7 +14,7 @@ def generate_launch_description():
 
     namespace_arg = DeclareLaunchArgument(
         "namespace",
-        default_value="",
+        default_value="hypa",
         description="WIT IMU 节点命名空间",
     )
 
@@ -27,6 +27,7 @@ def generate_launch_description():
     imu_node = Node(
         package="wit_ros2_imu",
         executable="wit_ros2_imu",
+        name="imuDriverNode",
         namespace=LaunchConfiguration("namespace"),
         output="screen",
         parameters=[
