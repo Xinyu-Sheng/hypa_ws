@@ -42,6 +42,7 @@ def generate_launch_description():
         name="imuDriverNode",
         namespace=LaunchConfiguration("namespace"),
         output="screen",
+        emulate_tty=True,
         parameters=[
             LaunchConfiguration("params_file"),
             {"namespace": LaunchConfiguration("namespace")},
