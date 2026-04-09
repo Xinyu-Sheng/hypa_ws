@@ -126,6 +126,18 @@ bool HypaDataManager::initialize()
             [this](const sensor_msgs::msg::JointState::ConstSharedPtr _msg)
             { this->handleJointStateMessage(_msg); });
 
+    this->mag_subscription_ =
+        this->node_->create_subscription<sensor_msgs::msg::MagneticField>(
+            MAG_TOPIC, rclcpp::SensorDataQoS(),
+            [this](const sensor_msgs::msg::MagneticField::ConstSharedPtr _msg)
+            { this->handleMagMessage(_msg, MAG_TOPIC); });
+
+    this->mag_subscription_1_ =
+        this->node_->create_subscription<sensor_msgs::msg::MagneticField>(
+            MAG_TOPIC_1, rclcpp::SensorDataQoS(),
+            [this](const sensor_msgs::msg::MagneticField::ConstSharedPtr _msg)
+            { this->handleMagMessage(_msg, MAG_TOPIC_1); });
+
     this->executor_ =
         std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
     this->executor_->add_node(this->node_->get_node_base_interface());
@@ -139,7 +151,8 @@ bool HypaDataManager::initialize()
         });
 
     qDebug() << "[HypaDataManager] subscribed to" << IMU_TOPIC << ","
-             << IMU_TOPIC_1 << "and" << JOINT_TOPIC;
+             << IMU_TOPIC_1 << "," << MAG_TOPIC << "," << MAG_TOPIC_1 << "and"
+             << JOINT_TOPIC;
     return true;
   }
   catch (const std::exception &exception)
@@ -256,6 +269,7 @@ QVariantList HypaDataManager::getSeriesPoints(const QString &_kind,
   // Snapshot data while holding the lock, convert to QVariantList after.
   std::deque<ImuSample> imu_samples_copy;
   std::deque<JointSample> joint_samples_copy;
+  std::deque<MagSample> mag_samples_copy;
 
   {
     t_lock_start = steady_clock::now();
@@ -301,6 +315,47 @@ QVariantList HypaDataManager::getSeriesPoints(const QString &_kind,
       }
 
       imu_samples_copy = cache_it->second.samples;
+    }
+    else if (_kind == "mag")
+    {
+      const auto cache_it = this->mag_caches_.find(_source.toStdString());
+      if (cache_it == this->mag_caches_.end())
+      {
+        t_lock_end = steady_clock::now();
+        const auto t_total_end = steady_clock::now();
+        const uint64_t total_ns =
+            duration_cast<nanoseconds>(t_total_end - t_total_start).count();
+        const uint64_t lock_ns =
+            duration_cast<nanoseconds>(t_lock_end - t_lock_start).count();
+        const uint64_t c =
+            this->get_series_count_.fetch_add(1, std::memory_order_relaxed) + 1;
+        this->get_series_total_ns_.fetch_add(total_ns,
+                                             std::memory_order_relaxed);
+        this->get_series_lock_ns_.fetch_add(lock_ns, std::memory_order_relaxed);
+        if ((c % kMetricsLogInterval) == 0)
+        {
+          HYPA_DT_DEBUG_LOG()
+              << "[HypaDataManager] getSeriesPoints avg total ms:"
+              << (this->get_series_total_ns_.load() / static_cast<double>(c)) /
+                     1e6
+              << "avg lock ms:"
+              << (this->get_series_lock_ns_.load() / static_cast<double>(c)) /
+                     1e6;
+          std::ostringstream oss;
+          oss << make_timestamp() << " type=get_series"
+              << " avg_total_ms="
+              << (this->get_series_total_ns_.load() / static_cast<double>(c)) /
+                     1e6
+              << " avg_lock_ms="
+              << (this->get_series_lock_ns_.load() / static_cast<double>(c)) /
+                     1e6
+              << " count=" << c;
+          append_metrics_log(oss.str());
+        }
+        return QVariantList();
+      }
+
+      mag_samples_copy = cache_it->second.samples;
     }
     else if (_kind == "joint")
     {
@@ -366,6 +421,8 @@ QVariantList HypaDataManager::getSeriesPoints(const QString &_kind,
     points = this->samplesToPoints(imu_samples_copy, _metric);
   else if (_kind == "joint")
     points = this->samplesToPoints(joint_samples_copy, _metric);
+  else if (_kind == "mag")
+    points = this->samplesToPoints(mag_samples_copy, _metric);
 
   const auto t_total_end = steady_clock::now();
   const uint64_t total_ns =
@@ -478,6 +535,60 @@ bool HypaDataManager::getSeriesDataDelta(
         value = sample.linear_acceleration_y;
       else if (_metric == "linear_acceleration_z")
         value = sample.linear_acceleration_z;
+      else
+        return false;
+
+      _xValues.push_back(sample.stamp_sec);
+      _yValues.push_back(value);
+    }
+
+    return true;
+  }
+
+  if (_kind == "mag")
+  {
+    const auto cache_it = this->mag_caches_.find(_source.toStdString());
+    if (cache_it == this->mag_caches_.end())
+      return false;
+
+    const auto &samples = cache_it->second.samples;
+    const uint64_t total = cache_it->second.total_samples;
+    const uint64_t available = static_cast<uint64_t>(samples.size());
+    const uint64_t earliest = (total > available) ? (total - available) : 0;
+
+    _latestSequence = total;
+    if (available == 0)
+      return true;
+
+    uint64_t begin_sequence = _lastSequence;
+    if (begin_sequence < earliest)
+    {
+      begin_sequence = earliest;
+      _resetRequired = true;
+    }
+
+    if (begin_sequence > total)
+      begin_sequence = total;
+
+    const uint64_t begin_index_u64 = begin_sequence - earliest;
+    const size_t begin_index = static_cast<size_t>(begin_index_u64);
+    if (begin_index >= samples.size())
+      return true;
+
+    const size_t append_count = samples.size() - begin_index;
+    _xValues.reserve(static_cast<int>(append_count));
+    _yValues.reserve(static_cast<int>(append_count));
+
+    for (size_t i = begin_index; i < samples.size(); ++i)
+    {
+      const auto &sample = samples[i];
+      double value = 0.0;
+      if (_metric == "magnetic_field_x")
+        value = sample.magnetic_field_x;
+      else if (_metric == "magnetic_field_y")
+        value = sample.magnetic_field_y;
+      else if (_metric == "magnetic_field_z")
+        value = sample.magnetic_field_z;
       else
         return false;
 
@@ -894,6 +1005,33 @@ QVariantList HypaDataManager::samplesToPoints(
   return points;
 }
 
+QVariantList HypaDataManager::samplesToPoints(
+    const std::deque<MagSample> &_samples, const QString &_metric) const
+{
+  QVariantList points;
+  points.reserve(static_cast<int>(_samples.size()));
+
+  for (const auto &sample : _samples)
+  {
+    double value = 0.0;
+    if (_metric == "magnetic_field_x")
+      value = sample.magnetic_field_x;
+    else if (_metric == "magnetic_field_y")
+      value = sample.magnetic_field_y;
+    else if (_metric == "magnetic_field_z")
+      value = sample.magnetic_field_z;
+    else
+      continue;
+
+    QVariantMap point;
+    point["x"] = sample.stamp_sec;
+    point["y"] = value;
+    points.push_back(point);
+  }
+
+  return points;
+}
+
 ImuSample HypaDataManager::createImuSample(
     const sensor_msgs::msg::Imu::ConstSharedPtr &_msg) const
 {
@@ -926,6 +1064,27 @@ ImuSample HypaDataManager::createImuSample(
     sample.linear_acceleration_covariance[i] =
         _msg->linear_acceleration_covariance[i];
   }
+
+  return sample;
+}
+
+MagSample HypaDataManager::createMagSample(
+    const sensor_msgs::msg::MagneticField::ConstSharedPtr &_msg) const
+{
+  MagSample sample;
+  sample.stamp_sec = messageStampToSec(_msg->header.stamp);
+  if (sample.stamp_sec <= 0.0)
+  {
+    if (this->node_)
+      sample.stamp_sec = this->node_->now().seconds();
+  }
+
+  sample.magnetic_field_x = _msg->magnetic_field.x;
+  sample.magnetic_field_y = _msg->magnetic_field.y;
+  sample.magnetic_field_z = _msg->magnetic_field.z;
+
+  for (size_t i = 0; i < 9; ++i)
+    sample.magnetic_field_covariance[i] = _msg->magnetic_field_covariance[i];
 
   return sample;
 }

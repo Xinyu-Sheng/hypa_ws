@@ -137,6 +137,12 @@ Rectangle {
         root.requestRefresh()
       }
     }
+
+    function onMagDataUpdated() {
+      if (root.chartKind === "mag") {
+        root.requestRefresh()
+      }
+    }
   }
 
   Timer {

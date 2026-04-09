@@ -20,6 +20,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
+#include <sensor_msgs/msg/magnetic_field.hpp>
 
 namespace hypa_dt_gui_plugin
 {
@@ -41,6 +42,15 @@ struct ImuSample
   std::array<double, 9> linear_acceleration_covariance{};
 };
 
+struct MagSample
+{
+  double stamp_sec = 0.0;
+  double magnetic_field_x = 0.0;
+  double magnetic_field_y = 0.0;
+  double magnetic_field_z = 0.0;
+  std::array<double, 9> magnetic_field_covariance{};
+};
+
 struct JointSample
 {
   double stamp_sec = 0.0;
@@ -60,6 +70,7 @@ class HypaDataManager : public QObject
   bool initialize();
 
   Q_INVOKABLE QStringList getImuSourceNames() const;
+  Q_INVOKABLE QStringList getMagSourceNames() const;
   Q_INVOKABLE QStringList getJointNames() const;
   Q_INVOKABLE QString formatSourceSummary(const QString &_kind,
                                           const QString &_source) const;
@@ -80,6 +91,7 @@ class HypaDataManager : public QObject
   Q_SIGNALS:
   void imuDataUpdated();
   void jointDataUpdated();
+  void magDataUpdated();
 
   private:
   struct ImuCache
@@ -94,8 +106,17 @@ class HypaDataManager : public QObject
     uint64_t total_samples = 0;
   };
 
+  struct MagCache
+  {
+    std::deque<MagSample> samples;
+    uint64_t total_samples = 0;
+  };
+
   void handleImuMessage(const sensor_msgs::msg::Imu::ConstSharedPtr &_msg,
                         const char *_topicSource);
+  void handleMagMessage(
+      const sensor_msgs::msg::MagneticField::ConstSharedPtr &_msg,
+      const char *_topicSource);
   void handleJointStateMessage(
       const sensor_msgs::msg::JointState::ConstSharedPtr &_msg);
 
@@ -111,9 +132,13 @@ class HypaDataManager : public QObject
                                const QString &_metric) const;
   QVariantList samplesToPoints(const std::deque<JointSample> &_samples,
                                const QString &_metric) const;
+  QVariantList samplesToPoints(const std::deque<MagSample> &_samples,
+                               const QString &_metric) const;
 
   ImuSample createImuSample(
       const sensor_msgs::msg::Imu::ConstSharedPtr &_msg) const;
+  MagSample createMagSample(
+      const sensor_msgs::msg::MagneticField::ConstSharedPtr &_msg) const;
   JointSample createJointSample(
       const sensor_msgs::msg::JointState::ConstSharedPtr &_msg,
       size_t _index) const;
@@ -129,22 +154,34 @@ class HypaDataManager : public QObject
   static constexpr double HISTORY_WINDOW_SEC = 30.0;
   static constexpr const char *IMU_TOPIC = "/hypa/imu/data";
   static constexpr const char *IMU_TOPIC_1 = "/hypa/imu/data1";
+  static constexpr const char *MAG_TOPIC = "/hypa/imu/mag";
+  static constexpr const char *MAG_TOPIC_1 = "/hypa/imu/mag1";
   static constexpr const char *JOINT_TOPIC = "/hypa/joint_states";
 
   std::unordered_map<std::string, ImuCache> imu_caches_;
+  std::unordered_map<std::string, MagCache> mag_caches_;
   std::unordered_map<std::string, JointCache> joint_caches_;
   std::vector<std::string> imu_source_order_;
+  std::vector<std::string> mag_source_order_;
   std::vector<std::string> joint_name_order_;
 
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscription_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscription_1_;
   rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr
       joint_state_subscription_;
+  rclcpp::Subscription<sensor_msgs::msg::MagneticField>::SharedPtr
+      mag_subscription_;
+  rclcpp::Subscription<sensor_msgs::msg::MagneticField>::SharedPtr
+      mag_subscription_1_;
 
   // Lightweight runtime metrics (probes)
   mutable std::atomic<uint64_t> imu_msg_count_{0};
   mutable std::atomic<uint64_t> imu_msg_total_ns_{0};
   mutable std::atomic<uint64_t> imu_msg_lock_ns_{0};
+
+  mutable std::atomic<uint64_t> mag_msg_count_{0};
+  mutable std::atomic<uint64_t> mag_msg_total_ns_{0};
+  mutable std::atomic<uint64_t> mag_msg_lock_ns_{0};
 
   mutable std::atomic<uint64_t> joint_msg_count_{0};
   mutable std::atomic<uint64_t> joint_msg_total_ns_{0};

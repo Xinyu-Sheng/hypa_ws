@@ -21,6 +21,8 @@ class HypaDtGuiPlugin : public gz::gui::Plugin
       QObject *imuSelectionModel READ imuSelectionModel NOTIFY imuDataUpdated)
   Q_PROPERTY(QObject *jointSelectionModel READ jointSelectionModel NOTIFY
                  jointDataUpdated)
+  Q_PROPERTY(
+      QObject *magSelectionModel READ magSelectionModel NOTIFY magDataUpdated)
 
   public:
   HypaDtGuiPlugin();
@@ -31,8 +33,10 @@ class HypaDtGuiPlugin : public gz::gui::Plugin
 
   QObject *imuSelectionModel() const;
   QObject *jointSelectionModel() const;
+  QObject *magSelectionModel() const;
 
   Q_INVOKABLE QStringList getImuSourceNames() const;
+  Q_INVOKABLE QStringList getMagSourceNames() const;
   Q_INVOKABLE QStringList getJointNames() const;
   Q_INVOKABLE QString formatSourceSummary(const QString &_kind,
                                           const QString &_source) const;
@@ -53,15 +57,18 @@ class HypaDtGuiPlugin : public gz::gui::Plugin
   Q_SIGNALS:
   void imuDataUpdated();
   void jointDataUpdated();
+  void magDataUpdated();
 
   private Q_SLOTS:
   void onImuDataUpdated();
   void onJointDataUpdated();
+  void onMagDataUpdated();
 
   private:
   std::unique_ptr<HypaDataManager> data_manager_;
   std::unique_ptr<SelectionModel> imu_selection_model_;
   std::unique_ptr<SelectionModel> joint_selection_model_;
+  std::unique_ptr<SelectionModel> mag_selection_model_;
 };
 }  // namespace hypa_dt_gui_plugin
 

@@ -28,6 +28,7 @@ Rectangle {
 
   property var imuModel: Backend.imuSelectionModel
   property var jointModel: Backend.jointSelectionModel
+  property var magModel: Backend.magSelectionModel
 
   Component.onCompleted: {
     Material.theme = Material.Light
@@ -243,6 +244,43 @@ Rectangle {
                 selectionModel: root.imuModel
                 dataProvider: Backend
                 metrics: ["orientation_z"]
+              }
+            }
+
+            // Row 4: Magnetic field (3 columns)
+            GridLayout {
+              Layout.fillWidth: true
+              Layout.leftMargin: 12
+              Layout.rightMargin: 12
+              columns: root.width < 700 ? 1 : 3
+              columnSpacing: 8
+              rowSpacing: 8
+
+              MetricChartCard {
+                Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
+                titleText: "Mag X"
+                chartKind: "mag"
+                selectionModel: root.magModel
+                dataProvider: Backend
+                metrics: ["magnetic_field_x"]
+              }
+
+              MetricChartCard {
+                Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
+                titleText: "Mag Y"
+                chartKind: "mag"
+                selectionModel: root.magModel
+                dataProvider: Backend
+                metrics: ["magnetic_field_y"]
+              }
+
+              MetricChartCard {
+                Layout.preferredWidth: (root.width - 32 - (parent.columnSpacing * (parent.columns - 1))) / parent.columns
+                titleText: "Mag Z"
+                chartKind: "mag"
+                selectionModel: root.magModel
+                dataProvider: Backend
+                metrics: ["magnetic_field_z"]
               }
             }
           }

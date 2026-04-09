@@ -56,12 +56,15 @@ void HypaDtGuiPlugin::LoadConfig(const tinyxml2::XMLElement *_pluginElem)
 
   this->imu_selection_model_ = std::make_unique<SelectionModel>(this);
   this->joint_selection_model_ = std::make_unique<SelectionModel>(this);
+  this->mag_selection_model_ = std::make_unique<SelectionModel>(this);
   this->data_manager_ = std::make_unique<HypaDataManager>(this);
 
   connect(this->data_manager_.get(), &HypaDataManager::imuDataUpdated, this,
           &HypaDtGuiPlugin::onImuDataUpdated, Qt::QueuedConnection);
   connect(this->data_manager_.get(), &HypaDataManager::jointDataUpdated, this,
           &HypaDtGuiPlugin::onJointDataUpdated, Qt::QueuedConnection);
+  connect(this->data_manager_.get(), &HypaDataManager::magDataUpdated, this,
+          &HypaDtGuiPlugin::onMagDataUpdated, Qt::QueuedConnection);
 
   if (!this->data_manager_->initialize())
   {
@@ -71,6 +74,7 @@ void HypaDtGuiPlugin::LoadConfig(const tinyxml2::XMLElement *_pluginElem)
 
   this->onImuDataUpdated();
   this->onJointDataUpdated();
+  this->onMagDataUpdated();
 }
 
 std::string HypaDtGuiPlugin::Title() const
@@ -88,6 +92,12 @@ QObject *HypaDtGuiPlugin::jointSelectionModel() const
 {
   HYPA_DT_DEBUG_LOG() << "[HypaDtGuiPlugin] jointSelectionModel accessed";
   return this->joint_selection_model_.get();
+}
+
+QObject *HypaDtGuiPlugin::magSelectionModel() const
+{
+  HYPA_DT_DEBUG_LOG() << "[HypaDtGuiPlugin] magSelectionModel accessed";
+  return this->mag_selection_model_.get();
 }
 
 void HypaDtGuiPlugin::onImuDataUpdated()
@@ -129,6 +139,25 @@ void HypaDtGuiPlugin::onJointDataUpdated()
   emit jointDataUpdated();
 }
 
+void HypaDtGuiPlugin::onMagDataUpdated()
+{
+  if (!this->data_manager_ || !this->mag_selection_model_)
+    return;
+
+  const QStringList mag_names = this->data_manager_->getMagSourceNames();
+  HYPA_DT_DEBUG_LOG() << "[HypaDtGuiPlugin] onMagDataUpdated: mag_names size="
+                      << mag_names.size() << mag_names;
+  this->mag_selection_model_->syncNames(mag_names, true);
+
+  for (const auto &name : mag_names)
+  {
+    this->mag_selection_model_->updateLatestText(
+        name, this->data_manager_->formatSourceSummary("mag", name));
+  }
+
+  emit magDataUpdated();
+}
+
 QStringList HypaDtGuiPlugin::getImuSourceNames() const
 {
   HYPA_DT_DEBUG_LOG() << "[HypaDtGuiPlugin] getImuSourceNames() called";
@@ -142,6 +171,14 @@ QStringList HypaDtGuiPlugin::getJointNames() const
   HYPA_DT_DEBUG_LOG() << "[HypaDtGuiPlugin] getJointNames() called";
   if (this->data_manager_)
     return this->data_manager_->getJointNames();
+  return QStringList();
+}
+
+QStringList HypaDtGuiPlugin::getMagSourceNames() const
+{
+  HYPA_DT_DEBUG_LOG() << "[HypaDtGuiPlugin] getMagSourceNames() called";
+  if (this->data_manager_)
+    return this->data_manager_->getMagSourceNames();
   return QStringList();
 }
 
