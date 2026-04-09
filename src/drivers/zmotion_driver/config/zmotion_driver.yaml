@@ -12,30 +12,9 @@
       enable_axis_on_activate: true #on_activate 时是否自动使能轴
       log_file: "/tmp/zmotion_driver_log.csv" # 实际文件名会自动追加时间戳，避免覆盖
 
-    control:
-      velocity_topic: "cmd/winch_axes" # std_msgs/msg/Float64MultiArray
-      z_axis_topic: "cmd/z_axis" # std_msgs/msg/Float64
-      mimic_group1_topic: "cmd/mimic_group1" # std_msgs/msg/Float64
-      mimic_group2_topic: "cmd/mimic_group2" # std_msgs/msg/Float64
-
-      brake_topic: "cmd/brake" # std_msgs/msg/Bool
-
-      # 是“哪些逻辑轴接收哪种控制话题”的分组，按逻辑轴编号来写，服务上面的topic（决定的是“哪些逻辑轴归到哪类控制”，不是每个topic的数组多大：代码里强制 velocity 组必须正好 4 个逻辑轴，mimic 组各 2 个，轴级数组必须 9 个）
-      velocity_logical_indices: [0, 1, 2, 3]
-      z_axis_logical_index: 4
-      mimic_group1_logical_indices: [5, 6]
-      mimic_group2_logical_indices: [7, 8]
-
-    feedback:
-      # 记录相关参数
-      record_commands_csv_enabled: true
-      record_commands_csv_file: "/tmp/zmotion_commands.csv" # 实际文件名会自动追加时间戳，避免覆盖
-      record_joints_csv_enabled: true
-      record_joints_csv_file: "/tmp/zmotion_joint_states.csv" # 实际文件名会自动追加时间戳，避免覆盖
-
     axis:
       # 数组中填写数字表示 EtherCAT / 硬件接线的下标/顺序，值表示对应的逻辑轴编号
-      logical_indices: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+      logical_indices: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
 
       # 以下数组都与 logical_indices 保持同一顺序
 
@@ -44,23 +23,29 @@
         - "joint_1"
         - "joint_2"
         - "joint_3"
-        - "joint_z"
+        - "joint_4"
         - "joint_5"
         - "joint_6"
         - "joint_7"
         - "joint_8"
+        - "joint_9"
+        - "joint_10"
+        - "joint_11"
 
-      # 前 4 轴默认速度模式，第 5 轴不确定， mimic 组默认位置模式
+      # 控制模式
       control_modes:
         - "velocity"
         - "velocity"
         - "velocity"
         - "velocity"
-        - "velocity" # z_axis
-        - "position"
-        - "position"
-        - "position"
-        - "position"
+        - "velocity"
+        - "velocity"
+        - "velocity"
+        - "velocity"
+        - "velocity"
+        - "velocity"
+        - "velocity"
+        - "velocity"
 
       # 位置模式支持 absolute / relative
       position_modes:
@@ -73,9 +58,12 @@
         - "absolute"
         - "absolute"
         - "absolute"
+        - "absolute"
+        - "absolute"
+        - "absolute"
 
       # 绝对位置零点补偿（发布反馈时会减去补偿，发送绝对命令时会加上补偿）
-      zero_offsets: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+      zero_offsets: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
       units:
         [
           1150938.32,
@@ -87,10 +75,15 @@
           1.0,
           1.0,
           1.0,
+          1.0,
+          1.0,
+          1.0,
         ]
-      speeds: [10.0, 10.0, 10.0, 10.0, 0.1, 0.1, 0.1, 0.1, 0.1]
-      accels: [10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0]
-      decels: [10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0]
+      speeds: [10.0, 10.0, 10.0, 10.0, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+      accels:
+        [10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0]
+      decels:
+        [10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0]
 
       joint_state_topic: "joint_states" # sensor_msgs/msg/JointState
       mimic_position_topics:
@@ -102,11 +95,32 @@
         - "feedback/axis1/position" # std_msgs/msg/Float64
         - "feedback/axis2/position" # std_msgs/msg/Float64
         - "feedback/axis3/position" # std_msgs/msg/Float64
-        - "feedback/axis_z/position" # std_msgs/msg/Float64
         - "axis5_placeholder" # placeholder, not used when configured as mimic
         - "axis6_placeholder" # placeholder, not used when configured as mimic
         - "axis7_placeholder" # placeholder, not used when configured as mimic
         - "axis8_placeholder" # placeholder, not used when configured as mimic
+        - "axis9_placeholder" # placeholder, not used when configured as mimic
+        - "axis10_placeholder" # placeholder, not used when configured as mimic
+        - "axis11_placeholder" # placeholder, not used when configured as mimic
+
+    control:
+      velocity_topic: "cmd/winch_axes" # std_msgs/msg/Float64MultiArray
+      mimic_group1_topic: "cmd/mimic_group1" # std_msgs/msg/Float64
+      mimic_group2_topic: "cmd/mimic_group2" # std_msgs/msg/Float64
+
+      brake_topic: "cmd/brake" # std_msgs/msg/Bool
+
+      #基于逻辑下标
+      velocity_logical_indices: [0, 1, 2, 3]
+      mimic_group1_logical_indices: [4, 5, 6, 7]
+      mimic_group2_logical_indices: [8, 9, 10, 11]
+
+    feedback:
+      # 记录相关参数
+      record_commands_csv_enabled: true
+      record_commands_csv_file: "/tmp/zmotion_commands.csv" # 实际文件名会自动追加时间戳，避免覆盖
+      record_joints_csv_enabled: true
+      record_joints_csv_file: "/tmp/zmotion_joint_states.csv" # 实际文件名会自动追加时间戳，避免覆盖
 
     io:
       # 按需填写输入口编号与状态 topic；为空时不启用 IO 轮询
@@ -128,7 +142,7 @@
         local_axis_id: 0 #用不到，本地脉冲轴
         local_axis_num: 0 #用不到，本地脉冲轴
         drive_axis_start: 0
-        drive_axis_num: -1 # 最终设置为 13，开发阶段先不限制数量
+        drive_axis_num: -1 # 开发阶段先不限制数量，正式需要设置为12
         drive_io_start: 256 #用不到，这参数是给驱动器上IO
         drive_io_space: 16 #用不到，这参数是给驱动器上IO
         drive_enable: 0 #不在Ethercat启动阶段启用轴
@@ -140,7 +154,7 @@
         red_spare_slot: 0 #不用
 
         # 可按驱动类型覆盖
-        drive_pdo_mode: [5, 5, 5, 5, 5, 5, 5, 5, 5]
+        drive_pdo_mode: [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]
         # node_io_id: [] #用不到，这参数是给IO从站
         # node_aio_id: [] #用不到，这参数是给IO从站
 

@@ -31,7 +31,7 @@ namespace zmotion_driver
 namespace
 {
 
-constexpr std::size_t kAxisCount = 9;
+constexpr std::size_t kAxisCount = 12;
 
 std::vector<int> ConvertToIntVector(const std::vector<int64_t> &_input)
 {
@@ -328,9 +328,6 @@ class ZMotionDriverNode::Impl
     this->velocity_topic =
         this->node->get_parameter("control.velocity_topic").as_string();
 
-    this->z_axis_topic =
-        this->node->get_parameter("control.z_axis_topic").as_string();
-
     this->mimic_group_topics[0] =
         this->node->get_parameter("control.mimic_group1_topic").as_string();
 
@@ -509,16 +506,6 @@ class ZMotionDriverNode::Impl
                      this->velocity_logical_axes[i]);
         return false;
       }
-    }
-
-    this->single_logical_axis =
-        this->node->get_parameter("control.z_axis_logical_index").as_int();
-    if (this->logical_to_axis_index.count(this->single_logical_axis) == 0U)
-    {
-      RCLCPP_ERROR(this->logger,
-                   "single axis not found in axis.logical_indices: %d",
-                   this->single_logical_axis);
-      return false;
     }
 
     {
@@ -1090,11 +1077,6 @@ class ZMotionDriverNode::Impl
             [this](const std_msgs::msg::Float64MultiArray::SharedPtr _msg)
             { this->OnVelocityCommand(_msg); });
 
-    this->z_axis_sub = this->node->create_subscription<std_msgs::msg::Float64>(
-        this->z_axis_topic, rclcpp::SystemDefaultsQoS(),
-        [this](const std_msgs::msg::Float64::SharedPtr _msg)
-        { this->OnSingleAxisCommand(_msg); });
-
     this->mimic_group_subs[0] =
         this->node->create_subscription<std_msgs::msg::Float64>(
             this->mimic_group_topics[0], rclcpp::SystemDefaultsQoS(),
@@ -1129,7 +1111,6 @@ class ZMotionDriverNode::Impl
     this->io_timer.reset();
 
     this->velocity_sub.reset();
-    this->z_axis_sub.reset();
     this->mimic_group_subs[0].reset();
     this->mimic_group_subs[1].reset();
     this->brake_sub.reset();
@@ -1772,40 +1753,6 @@ class ZMotionDriverNode::Impl
     this->DispatchCommand(cmd);
   }
 
-  void OnSingleAxisCommand(const std_msgs::msg::Float64::SharedPtr &_msg)
-  {
-    if (_msg == nullptr)
-    {
-      return;
-    }
-
-    auto it = this->logical_to_axis_index.find(this->single_logical_axis);
-    if (it == this->logical_to_axis_index.end())
-    {
-      return;
-    }
-
-    const AxisConfig &axis = this->axes[it->second];
-    PendingCommand cmd;
-    cmd.logical_axes = std::vector<int>{this->single_logical_axis};
-    cmd.values = std::vector<double>{_msg->data};
-
-    if (axis.control_mode == AxisControlMode::kVelocity)
-    {
-      cmd.type = PendingType::kVelocity;
-    }
-    else if (axis.position_mode == AxisPositionMode::kAbsolute)
-    {
-      cmd.type = PendingType::kMoveAbsolute;
-    }
-    else
-    {
-      cmd.type = PendingType::kMoveRelative;
-    }
-
-    this->DispatchCommand(cmd);
-  }
-
   void OnMimicCommand(const int _group,
                       const std_msgs::msg::Float64::SharedPtr &_msg)
   {
@@ -2015,7 +1962,6 @@ class ZMotionDriverNode::Impl
   bool enable_axis_on_activate = true;
 
   std::string velocity_topic;
-  std::string z_axis_topic;
   std::string mimic_group_topics[2];
   std::string brake_topic;
   std::string joint_state_topic;
@@ -2024,7 +1970,6 @@ class ZMotionDriverNode::Impl
   std::vector<AxisConfig> axes;
   std::unordered_map<int, std::size_t> logical_to_axis_index;
   std::vector<int> velocity_logical_axes;
-  int single_logical_axis = -1;
   std::vector<int> mimic_groups[2];
   std::set<int> mimic_member_logical_axes;
 
@@ -2070,7 +2015,6 @@ class ZMotionDriverNode::Impl
 
   rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr
       velocity_sub;
-  rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr z_axis_sub;
   rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr mimic_group_subs[2];
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr brake_sub;
 
