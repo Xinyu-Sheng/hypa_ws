@@ -9,6 +9,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <rclcpp/rclcpp.hpp>
+
 #include "zmcaux.h"
 #include "zmotion.h"
 
@@ -575,6 +577,9 @@ CallResult ZMotionSdkWrapper::InitEthercat(const EcatConfig &_config)
       return node_result;
     }
 
+    RCLCPP_INFO(rclcpp::get_logger("zmotion_driver.sdk"),
+                "InitEthercat: detected ECAT nodes=%d", node_count);
+
     if ((cfg.EcatNodeNum >= 0) && (node_count != cfg.EcatNodeNum))
     {
       return CallResult::Failure(kWrongNodeNum, "ecat node count mismatch",
@@ -596,6 +601,9 @@ CallResult ZMotionSdkWrapper::InitEthercat(const EcatConfig &_config)
       }
       sum_axis += node_axis;
     }
+
+    RCLCPP_INFO(rclcpp::get_logger("zmotion_driver.sdk"),
+                "InitEthercat: total drive axes=%d", sum_axis);
 
     if (sum_axis != cfg.DriveAxisNum)
     {
