@@ -13,8 +13,8 @@
       log_file: "/tmp/zmotion_driver_log.csv" # 实际文件名会自动追加时间戳，避免覆盖
 
     control:
-      velocity_topic: "cmd/velocity_axes" # std_msgs/msg/Float64MultiArray
-      single_axis_topic: "cmd/single_axis" # std_msgs/msg/Float64
+      velocity_topic: "cmd/winch_axes" # std_msgs/msg/Float64MultiArray
+      z_axis_topic: "cmd/z_axis" # std_msgs/msg/Float64
       mimic_group1_topic: "cmd/mimic_group1" # std_msgs/msg/Float64
       mimic_group2_topic: "cmd/mimic_group2" # std_msgs/msg/Float64
 
@@ -22,7 +22,7 @@
 
       # 是“哪些逻辑轴接收哪种控制话题”的分组，按逻辑轴编号来写，服务上面的topic（决定的是“哪些逻辑轴归到哪类控制”，不是每个topic的数组多大：代码里强制 velocity 组必须正好 4 个逻辑轴，mimic 组各 2 个，轴级数组必须 9 个）
       velocity_logical_indices: [0, 1, 2, 3]
-      single_axis_logical_index: 4
+      z_axis_logical_index: 4
       mimic_group1_logical_indices: [5, 6]
       mimic_group2_logical_indices: [7, 8]
 
@@ -44,7 +44,7 @@
         - "joint_1"
         - "joint_2"
         - "joint_3"
-        - "joint_single"
+        - "joint_z"
         - "joint_5"
         - "joint_6"
         - "joint_7"
@@ -56,7 +56,7 @@
         - "velocity"
         - "velocity"
         - "velocity"
-        - "velocity" # single_axis
+        - "velocity" # z_axis
         - "position"
         - "position"
         - "position"
@@ -88,9 +88,9 @@
           1.0,
           1.0,
         ]
-      speeds: [50.0, 50.0, 50.0, 50.0, 0.1, 0.1, 0.1, 0.1, 0.1]
-      accels: [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
-      decels: [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+      speeds: [10.0, 10.0, 10.0, 10.0, 0.1, 0.1, 0.1, 0.1, 0.1]
+      accels: [10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0]
+      decels: [10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0]
 
       joint_state_topic: "joint_states" # sensor_msgs/msg/JointState
       mimic_position_topics:
@@ -102,7 +102,7 @@
         - "feedback/axis1/position" # std_msgs/msg/Float64
         - "feedback/axis2/position" # std_msgs/msg/Float64
         - "feedback/axis3/position" # std_msgs/msg/Float64
-        - "feedback/axis_single/position" # std_msgs/msg/Float64
+        - "feedback/axis_z/position" # std_msgs/msg/Float64
         - "axis5_placeholder" # placeholder, not used when configured as mimic
         - "axis6_placeholder" # placeholder, not used when configured as mimic
         - "axis7_placeholder" # placeholder, not used when configured as mimic
@@ -128,13 +128,13 @@
         local_axis_id: 0 #用不到，本地脉冲轴
         local_axis_num: 0 #用不到，本地脉冲轴
         drive_axis_start: 0
-        drive_axis_num: -1
+        drive_axis_num: -1 # 最终设置为 13，开发阶段先不限制数量
         drive_io_start: 256 #用不到，这参数是给驱动器上IO
         drive_io_space: 16 #用不到，这参数是给驱动器上IO
         drive_enable: 0 #不在Ethercat启动阶段启用轴
 
         # -1 表示不强制校验节点数量
-        ecat_node_num: -1
+        ecat_node_num: -1 #默认-1,用不到
         sys_clock_mode: 1 #启用
         bus_red_switch: 0 #启不
         red_spare_slot: 0 #不用

@@ -4,8 +4,8 @@
 #include <atomic>
 #include <chrono>
 #include <cmath>
-#include <ctime>
 #include <cstring>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -109,16 +109,16 @@ std::string MakeTimestampSuffix()
   std::tm local_tm{};
   if (localtime_r(&now_c, &local_tm) == nullptr)
   {
-    return std::to_string(duration_cast<microseconds>(now.time_since_epoch())
-                              .count());
+    return std::to_string(
+        duration_cast<microseconds>(now.time_since_epoch()).count());
   }
 
   char time_buffer[32] = {};
   if (std::strftime(time_buffer, sizeof(time_buffer), "%Y%m%d_%H%M%S",
                     &local_tm) == 0)
   {
-    return std::to_string(duration_cast<microseconds>(now.time_since_epoch())
-                              .count());
+    return std::to_string(
+        duration_cast<microseconds>(now.time_since_epoch()).count());
   }
 
   const auto micros_since_epoch =
@@ -149,10 +149,9 @@ std::string MakeTimestampedPath(const std::string &_base_path,
   const std::string stem = base_path.stem().string();
   const std::string extension = base_path.extension().string();
 
-  const std::string stamped_name = extension.empty()
-                                       ? stem + "_" + _timestamp_suffix
-                                       : stem + "_" + _timestamp_suffix +
-                                             extension;
+  const std::string stamped_name =
+      extension.empty() ? stem + "_" + _timestamp_suffix
+                        : stem + "_" + _timestamp_suffix + extension;
   return (parent_path / stamped_name).string();
 }
 
@@ -329,8 +328,8 @@ class ZMotionDriverNode::Impl
     this->velocity_topic =
         this->node->get_parameter("control.velocity_topic").as_string();
 
-    this->single_axis_topic =
-        this->node->get_parameter("control.single_axis_topic").as_string();
+    this->z_axis_topic =
+        this->node->get_parameter("control.z_axis_topic").as_string();
 
     this->mimic_group_topics[0] =
         this->node->get_parameter("control.mimic_group1_topic").as_string();
@@ -360,18 +359,18 @@ class ZMotionDriverNode::Impl
 
     const std::string output_timestamp = MakeTimestampSuffix();
 
-    this->log_file_path = MakeUniquePath(MakeTimestampedPath(
-      this->log_file_path, output_timestamp));
-    this->record_joints_csv_file = MakeUniquePath(MakeTimestampedPath(
-      this->record_joints_csv_file, output_timestamp));
-    this->record_commands_csv_file = MakeUniquePath(MakeTimestampedPath(
-      this->record_commands_csv_file, output_timestamp));
+    this->log_file_path = MakeUniquePath(
+        MakeTimestampedPath(this->log_file_path, output_timestamp));
+    this->record_joints_csv_file = MakeUniquePath(
+        MakeTimestampedPath(this->record_joints_csv_file, output_timestamp));
+    this->record_commands_csv_file = MakeUniquePath(
+        MakeTimestampedPath(this->record_commands_csv_file, output_timestamp));
 
-    RCLCPP_INFO(this->logger,
-                "timestamped output paths resolved: log=%s, joints=%s, commands=%s",
-                this->log_file_path.c_str(),
-                this->record_joints_csv_file.c_str(),
-                this->record_commands_csv_file.c_str());
+    RCLCPP_INFO(
+        this->logger,
+        "timestamped output paths resolved: log=%s, joints=%s, commands=%s",
+        this->log_file_path.c_str(), this->record_joints_csv_file.c_str(),
+        this->record_commands_csv_file.c_str());
 
     std::vector<int64_t> logical_indices;
     (void)this->node->get_parameter("axis.logical_indices", logical_indices);
@@ -513,7 +512,7 @@ class ZMotionDriverNode::Impl
     }
 
     this->single_logical_axis =
-        this->node->get_parameter("control.single_axis_logical_index").as_int();
+        this->node->get_parameter("control.z_axis_logical_index").as_int();
     if (this->logical_to_axis_index.count(this->single_logical_axis) == 0U)
     {
       RCLCPP_ERROR(this->logger,
@@ -670,14 +669,15 @@ class ZMotionDriverNode::Impl
       this->io_inputs.push_back(io);
     }
 
-      // read IO logging control parameters
-      this->io_log_on_change = this->node->get_parameter("io.log_on_change").as_bool();
-      this->io_debounce_ms = this->node->get_parameter("io.debounce_ms").as_int();
+    // read IO logging control parameters
+    this->io_log_on_change =
+        this->node->get_parameter("io.log_on_change").as_bool();
+    this->io_debounce_ms = this->node->get_parameter("io.debounce_ms").as_int();
 
-      // initialize previous values cache for edge detection (-1 == unknown)
-      this->previous_io_values.assign(this->io_inputs.size(), -1);
-      // initialize per-IO last-change timestamps (ms since epoch)
-      this->last_io_change_ms.assign(this->io_inputs.size(), 0);
+    // initialize previous values cache for edge detection (-1 == unknown)
+    this->previous_io_values.assign(this->io_inputs.size(), -1);
+    // initialize per-IO last-change timestamps (ms since epoch)
+    this->last_io_change_ms.assign(this->io_inputs.size(), 0);
 
     this->ecat_config.init.InitStructFlag = 0;
 
@@ -1090,11 +1090,10 @@ class ZMotionDriverNode::Impl
             [this](const std_msgs::msg::Float64MultiArray::SharedPtr _msg)
             { this->OnVelocityCommand(_msg); });
 
-    this->single_axis_sub =
-        this->node->create_subscription<std_msgs::msg::Float64>(
-            this->single_axis_topic, rclcpp::SystemDefaultsQoS(),
-            [this](const std_msgs::msg::Float64::SharedPtr _msg)
-            { this->OnSingleAxisCommand(_msg); });
+    this->z_axis_sub = this->node->create_subscription<std_msgs::msg::Float64>(
+        this->z_axis_topic, rclcpp::SystemDefaultsQoS(),
+        [this](const std_msgs::msg::Float64::SharedPtr _msg)
+        { this->OnSingleAxisCommand(_msg); });
 
     this->mimic_group_subs[0] =
         this->node->create_subscription<std_msgs::msg::Float64>(
@@ -1130,7 +1129,7 @@ class ZMotionDriverNode::Impl
     this->io_timer.reset();
 
     this->velocity_sub.reset();
-    this->single_axis_sub.reset();
+    this->z_axis_sub.reset();
     this->mimic_group_subs[0].reset();
     this->mimic_group_subs[1].reset();
     this->brake_sub.reset();
@@ -1540,7 +1539,8 @@ class ZMotionDriverNode::Impl
     std::vector<bool> changed_flags(this->io_inputs.size(), false);
 
     // current time in milliseconds for debounce checks
-    const int64_t now_ms = static_cast<int64_t>(this->node->now().nanoseconds() / 1000000LL);
+    const int64_t now_ms =
+        static_cast<int64_t>(this->node->now().nanoseconds() / 1000000LL);
 
     for (std::size_t i = 0; i < this->io_inputs.size(); ++i)
     {
@@ -1579,7 +1579,8 @@ class ZMotionDriverNode::Impl
         {
           last_ms = this->last_io_change_ms[i];
         }
-        if (this->io_debounce_ms <= 0 || (now_ms - last_ms) >= this->io_debounce_ms)
+        if (this->io_debounce_ms <= 0 ||
+            (now_ms - last_ms) >= this->io_debounce_ms)
         {
           changed_flags[i] = true;
           if (i < this->last_io_change_ms.size())
@@ -1602,9 +1603,9 @@ class ZMotionDriverNode::Impl
     {
       if (this->io_log_on_change)
       {
-        const bool any_changed = std::any_of(changed_flags.begin(),
-                                            changed_flags.end(),
-                                            [](bool v) { return v; });
+        const bool any_changed =
+            std::any_of(changed_flags.begin(), changed_flags.end(),
+                        [](bool v) { return v; });
         if (any_changed)
         {
           this->WriteLogLocked("io", "io_values=" + JoinInts(io_values));
@@ -2014,7 +2015,7 @@ class ZMotionDriverNode::Impl
   bool enable_axis_on_activate = true;
 
   std::string velocity_topic;
-  std::string single_axis_topic;
+  std::string z_axis_topic;
   std::string mimic_group_topics[2];
   std::string brake_topic;
   std::string joint_state_topic;
@@ -2069,7 +2070,7 @@ class ZMotionDriverNode::Impl
 
   rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr
       velocity_sub;
-  rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr single_axis_sub;
+  rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr z_axis_sub;
   rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr mimic_group_subs[2];
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr brake_sub;
 
@@ -2094,7 +2095,8 @@ ZMotionDriverNode::on_configure(const rclcpp_lifecycle::State &_state)
   {
     return CallbackReturn::FAILURE;
   }
-  // 打开 controller 的 log 文件。参数加载阶段已自动追加时间戳，这里仍保持追加模式。
+  // 打开 controller 的 log
+  // 文件。参数加载阶段已自动追加时间戳，这里仍保持追加模式。
   if (!this->pimpl_->OpenLogFile())
   {
     return CallbackReturn::FAILURE;
