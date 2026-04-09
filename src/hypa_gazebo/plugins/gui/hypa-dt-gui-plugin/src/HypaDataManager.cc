@@ -175,6 +175,18 @@ QStringList HypaDataManager::getImuSourceNames() const
   return result;
 }
 
+QStringList HypaDataManager::getMagSourceNames() const
+{
+  std::lock_guard<std::mutex> lock(this->mutex_);
+  QStringList result;
+  HYPA_DT_DEBUG_LOG() << "[HypaDataManager] getMagSourceNames called";
+  for (const auto &name : this->mag_source_order_)
+  {
+    result.push_back(QString::fromStdString(name));
+  }
+  return result;
+}
+
 QStringList HypaDataManager::getJointNames() const
 {
   std::lock_guard<std::mutex> lock(this->mutex_);
