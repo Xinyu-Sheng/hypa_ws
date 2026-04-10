@@ -3,6 +3,8 @@ import serial
 import struct
 import numpy as np
 import rclpy
+import subprocess
+import time
 from enum import Enum
 from rclpy.node import Node
 from sensor_msgs.msg import Imu, MagneticField
@@ -31,6 +33,10 @@ class imuDriverNode(Node):
         self.declare_parameter("modbusID", 0x50)
         self.declare_parameter("mag_topic", "imu/mag")
         self.declare_parameter("publish_mag", True)
+        # watchdog 与 lifecycle 控制参数（最小侵入）
+        self.declare_parameter("imu_watchdog_timeout", 1.0)  # 秒, 0 或负值禁用
+        self.declare_parameter("deactivate_zmotion_on_fault", True)
+        self.declare_parameter("zmotion_driver_node_name", "zmotion_driver")
 
         self.namespace_param = self.get_parameter("namespace").value
         self.port = self.get_parameter("port").value
@@ -42,12 +48,32 @@ class imuDriverNode(Node):
 
         self.protocol = protocolType[protocolStr]
 
-        # 串口
-        self.serialPort = serial.Serial(
-            self.port, self.baudrate, timeout=0.001, write_timeout=0
+        # watchdog 状态与时间戳（纳秒）
+        self.imu_watchdog_timeout = float(
+            self.get_parameter("imu_watchdog_timeout").value
         )
+        self.deactivate_zmotion_on_fault = bool(
+            self.get_parameter("deactivate_zmotion_on_fault").value
+        )
+        self.zmotion_driver_node_name = self.get_parameter(
+            "zmotion_driver_node_name"
+        ).value
 
-        self.get_logger().info(f"Serial opened: {self.port} @ {self.baudrate}")
+        self.last_success_ts = self.get_clock().now().nanoseconds
+        self._fault_reported = False
+
+        # 串口
+        try:
+            self.serialPort = serial.Serial(
+                self.port, self.baudrate, timeout=0.001, write_timeout=0
+            )
+            self.get_logger().info(f"Serial opened: {self.port} @ {self.baudrate}")
+        except Exception as e:
+            self.serialPort = None
+            self.get_logger().warning(
+                f"Could not open serial port {self.port}: {e}. Running without serial input."
+            )
+
         self.get_logger().info(f"Configured with namespace={self.namespace_param}")
 
         self.modbusAddrList = [0x34, 0x37, 0x3A, 0x3D]
@@ -81,12 +107,20 @@ class imuDriverNode(Node):
         # 定时器
         self.create_timer(0.001, self.timerCallback)
         self.create_timer(0.1, self.printMsg)  # 终端打印
+        # watchdog 定时器（如果启用）
+        if self.imu_watchdog_timeout > 0:
+            # 检查频率不需要太高，500ms 足够
+            self.create_timer(0.5, self.watchdogCallback)
 
     # ==========================================================
     # 主循环
     # ==========================================================
     def timerCallback(self):
-        if self.protocol in (protocolType.RS485_STD, protocolType.RS485_HIGH):
+        # 仅当串口可用时执行 RS485 发送/超时逻辑
+        if self.serialPort is not None and self.protocol in (
+            protocolType.RS485_STD,
+            protocolType.RS485_HIGH,
+        ):
             now = self.get_clock().now().nanoseconds
 
             # 若没有等待响应，则发送新命令
@@ -98,7 +132,11 @@ class imuDriverNode(Node):
                 else:
                     cmd = self.buildModbusReadCmd(addr, 3)
 
-                self.serialPort.write(cmd)
+                try:
+                    self.serialPort.write(cmd)
+                except Exception:
+                    # 写失败则忽略，等待下次重试
+                    pass
 
                 self.waitingResponse = True
                 self.lastSendTime = now
@@ -116,10 +154,18 @@ class imuDriverNode(Node):
     # 串口读取
     # ==========================================================
     def readSerial(self):
+        # 如果串口不可用则直接返回
+        if self.serialPort is None:
+            return
+
         byteCount = self.serialPort.in_waiting
         if byteCount > 0:
-            data = self.serialPort.read(byteCount)
-            self.rxBuffer.extend(data)
+            try:
+                data = self.serialPort.read(byteCount)
+                self.rxBuffer.extend(data)
+            except Exception:
+                # 读取失败则忽略
+                pass
 
     # ==========================================================
     # buffer解析
@@ -425,6 +471,12 @@ class imuDriverNode(Node):
         imuRpyMsg.yaw = math.degrees(yaw)
 
         self.imuRpyPublisher.publish(imuRpyMsg)
+        # 更新时间戳，表示最近一次成功发布 IMU 数据（用于 watchdog）
+        try:
+            self.last_success_ts = self.get_clock().now().nanoseconds
+        except Exception:
+            # 兜底：使用系统时间（纳秒）
+            self.last_success_ts = int(time.time() * 1e9)
 
     # ==========================================================
     # 工具函数
@@ -491,6 +543,64 @@ class imuDriverNode(Node):
             f"Mag:   x={self.mag[0]:+12.3f} | y={self.mag[1]:+12.3f} | z={self.mag[2]:+12.3f}"
         )
         print("\033[H\033[J", end="")  # 清屏
+
+    # ==========================================================
+    # Watchdog 与 lifecycle 触发
+    # ==========================================================
+    def _call_deactivate_and_log(self, target):
+        try:
+            cmd = ["ros2", "lifecycle", "set", target, "deactivate"]
+            print(f"Calling lifecycle CLI: {' '.join(cmd)}", flush=True)
+            proc = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=15,
+            )
+            out = proc.stdout.strip()
+            err = proc.stderr.strip()
+            if out:
+                print(f"ros2 lifecycle stdout: {out}", flush=True)
+            if proc.returncode != 0:
+                print(f"ros2 lifecycle failed: {err}", flush=True)
+        except Exception as e:
+            print(f"Exception calling ros2 lifecycle: {e}", flush=True)
+
+    def watchdogCallback(self):
+        # 已经报告过则忽略
+        if getattr(self, "_fault_reported", False):
+            return
+
+        now = self.get_clock().now().nanoseconds
+        elapsed_ns = now - getattr(self, "last_success_ts", now)
+        if elapsed_ns > int(self.imu_watchdog_timeout * 1e9):
+            # 触发故障处理
+            self.get_logger().error(
+                f"IMU watchdog triggered: no valid IMU publish for {self.imu_watchdog_timeout}s"
+            )
+            self._fault_reported = True
+
+            if self.deactivate_zmotion_on_fault:
+                ns = (
+                    str(self.namespace_param).strip("/") if self.namespace_param else ""
+                )
+                if ns:
+                    target = f"/{ns}/{self.zmotion_driver_node_name}"
+                else:
+                    target = self.zmotion_driver_node_name
+
+                # 同步调用 lifecycle CLI，避免在 rclpy.shutdown() 后使用 ROS logger 的 race
+                try:
+                    self._call_deactivate_and_log(target)
+                except Exception as e:
+                    print(f"Exception in lifecycle call: {e}", flush=True)
+
+            # 请求 ROS 事件循环退出，从而让进程优雅终止
+            try:
+                rclpy.shutdown()
+            except Exception:
+                pass
 
     def shutdown(self):
         if self.serialPort and self.serialPort.is_open:
