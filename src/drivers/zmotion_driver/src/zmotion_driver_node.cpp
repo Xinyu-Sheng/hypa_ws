@@ -198,26 +198,6 @@ std::string MakeUniquePath(const std::string &_base_path)
   return base_path.string();
 }
 
-bool ParseControlMode(const std::string &_mode, AxisControlMode *_result)
-{
-  if (_result == nullptr)
-  {
-    return false;
-  }
-
-  if ((_mode == "velocity") || (_mode == "vel"))
-  {
-    *_result = AxisControlMode::kVelocity;
-    return true;
-  }
-  if ((_mode == "position") || (_mode == "pos"))
-  {
-    *_result = AxisControlMode::kPosition;
-    return true;
-  }
-  return false;
-}
-
 bool ParsePositionMode(const std::string &_mode, AxisPositionMode *_result)
 {
   if (_result == nullptr)
@@ -375,14 +355,89 @@ class ZMotionDriverNode::Impl
     std::vector<std::string> joint_names;
     (void)this->node->get_parameter("axis.joint_names", joint_names);
 
-    std::vector<std::string> control_modes;
-    (void)this->node->get_parameter("axis.control_modes", control_modes);
-
     std::vector<std::string> position_modes;
     (void)this->node->get_parameter("axis.position_modes", position_modes);
 
     std::vector<double> zero_offsets;
     (void)this->node->get_parameter("axis.zero_offsets", zero_offsets);
+
+    std::vector<int64_t> vel_param;
+    (void)this->node->get_parameter("control.velocity_logical_indices",
+                                    vel_param);
+    this->velocity_logical_axes = ConvertToIntVector(vel_param);
+
+    std::vector<int64_t> mg1;
+    (void)this->node->get_parameter("control.mimic_group1_logical_indices",
+                                    mg1);
+    this->mimic_groups[0] = ConvertToIntVector(mg1);
+
+    std::vector<int64_t> mg2;
+    (void)this->node->get_parameter("control.mimic_group2_logical_indices",
+                                    mg2);
+    this->mimic_groups[1] = ConvertToIntVector(mg2);
+
+    std::set<int> velocity_set(this->velocity_logical_axes.begin(),
+                               this->velocity_logical_axes.end());
+    std::set<int> mimic_set1(this->mimic_groups[0].begin(),
+                             this->mimic_groups[0].end());
+    std::set<int> mimic_set2(this->mimic_groups[1].begin(),
+                             this->mimic_groups[1].end());
+    std::set<int> mimic_set = mimic_set1;
+    mimic_set.insert(mimic_set2.begin(), mimic_set2.end());
+
+    if (this->velocity_logical_axes.empty())
+    {
+      RCLCPP_ERROR(this->logger,
+                   "control.velocity_logical_indices must be configured");
+      return false;
+    }
+    if (velocity_set.size() != this->velocity_logical_axes.size())
+    {
+      RCLCPP_ERROR(this->logger,
+                   "control.velocity_logical_indices contains duplicate axes");
+      return false;
+    }
+    if (this->mimic_groups[0].size() != 4U)
+    {
+      RCLCPP_ERROR(this->logger,
+                   "control.mimic_group1_logical_indices must contain 4 axes");
+      return false;
+    }
+    if (mimic_set1.size() != this->mimic_groups[0].size())
+    {
+      RCLCPP_ERROR(
+          this->logger,
+          "control.mimic_group1_logical_indices contains duplicate axes");
+      return false;
+    }
+    if (this->mimic_groups[1].size() != 4U)
+    {
+      RCLCPP_ERROR(this->logger,
+                   "control.mimic_group2_logical_indices must contain 4 axes");
+      return false;
+    }
+    if (mimic_set2.size() != this->mimic_groups[1].size())
+    {
+      RCLCPP_ERROR(
+          this->logger,
+          "control.mimic_group2_logical_indices contains duplicate axes");
+      return false;
+    }
+    if (mimic_set.size() != mimic_set1.size() + mimic_set2.size())
+    {
+      RCLCPP_ERROR(this->logger,
+                   "mimic_group1 and mimic_group2 must not overlap");
+      return false;
+    }
+    for (int idx : this->velocity_logical_axes)
+    {
+      if (mimic_set.count(idx) > 0)
+      {
+        RCLCPP_ERROR(this->logger,
+                     "axis %d appears in both velocity and mimic groups", idx);
+        return false;
+      }
+    }
 
     std::vector<double> units;
     (void)this->node->get_parameter("axis.units", units);
@@ -425,7 +480,6 @@ class ZMotionDriverNode::Impl
 
     if ((logical_indices.size() != kAxisCount) ||
         (joint_names.size() != kAxisCount) ||
-        (control_modes.size() != kAxisCount) ||
         (position_modes.size() != kAxisCount) ||
         (zero_offsets.size() != kAxisCount) || (units.size() != kAxisCount) ||
         (directions.size() != kAxisCount) || (speeds.size() != kAxisCount) ||
@@ -445,14 +499,25 @@ class ZMotionDriverNode::Impl
 
     for (std::size_t i = 0; i < kAxisCount; ++i)
     {
+      const int logical_index = static_cast<int>(logical_indices[i]);
       AxisControlMode control_mode = AxisControlMode::kPosition;
       AxisPositionMode position_mode = AxisPositionMode::kAbsolute;
-      if (!ParseControlMode(control_modes[i], &control_mode))
+      if (velocity_set.count(logical_index) > 0)
       {
-        RCLCPP_ERROR(this->logger, "invalid axis.control_modes[%zu]: %s", i,
-                     control_modes[i].c_str());
+        control_mode = AxisControlMode::kVelocity;
+      }
+      else if (mimic_set.count(logical_index) > 0)
+      {
+        control_mode = AxisControlMode::kPosition;
+      }
+      else
+      {
+        RCLCPP_ERROR(this->logger,
+                     "logical axis %d must belong to velocity or mimic group",
+                     logical_index);
         return false;
       }
+
       if (!ParsePositionMode(position_modes[i], &position_mode))
       {
         RCLCPP_ERROR(this->logger, "invalid axis.position_modes[%zu]: %s", i,
@@ -493,12 +558,6 @@ class ZMotionDriverNode::Impl
       this->axes.push_back(config);
     }
 
-    {
-      std::vector<int64_t> vel_param;
-      (void)this->node->get_parameter("control.velocity_logical_indices",
-                                      vel_param);
-      this->velocity_logical_axes = ConvertToIntVector(vel_param);
-    }
     if (this->velocity_logical_axes.size() != 4U)
     {
       RCLCPP_ERROR(this->logger,
@@ -522,20 +581,6 @@ class ZMotionDriverNode::Impl
                      this->velocity_logical_axes[i]);
         return false;
       }
-    }
-
-    {
-      std::vector<int64_t> mg1;
-      (void)this->node->get_parameter("control.mimic_group1_logical_indices",
-                                      mg1);
-
-      this->mimic_groups[0] = ConvertToIntVector(mg1);
-    }
-    {
-      std::vector<int64_t> mg2;
-      (void)this->node->get_parameter("control.mimic_group2_logical_indices",
-                                      mg2);
-      this->mimic_groups[1] = ConvertToIntVector(mg2);
     }
 
     this->mimic_member_logical_axes.clear();

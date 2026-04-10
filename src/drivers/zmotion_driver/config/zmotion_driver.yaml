@@ -32,21 +32,6 @@
         - "joint_10"
         - "joint_11"
 
-      # 控制模式（与ethercat初始化无关）
-      control_modes:
-        - "velocity"
-        - "velocity"
-        - "velocity"
-        - "velocity"
-        - "position"
-        - "position"
-        - "position"
-        - "position"
-        - "position"
-        - "position"
-        - "position"
-        - "position"
-
       # 位置模式支持 absolute / relative （与ethercat初始化无关）
       position_modes:
         - "absolute"
@@ -112,7 +97,7 @@
 
       brake_topic: "cmd/brake" # std_msgs/msg/Bool
 
-      #基于逻辑下标
+      # 基于逻辑下标决定速度控制轴和 mimic 位置控制轴
       velocity_logical_indices: [0, 1, 2, 3]
       mimic_group1_logical_indices: [4, 5, 6, 7]
       mimic_group2_logical_indices: [8, 9, 10, 11]
