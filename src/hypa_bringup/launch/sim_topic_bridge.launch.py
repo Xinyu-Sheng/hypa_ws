@@ -42,39 +42,39 @@ def generate_launch_description():
     # Each tuple: (source_topic, target_topic, relay_node_name)
     mappings = [
         (
-            "/feedback/axis0/position",
+            "feedback/axis0/position",
             "/sim/hypa/joint/prismatic_cable_hook_bl/cmd",
             "relay_feedback_axis0",
         ),
         (
-            "/feedback/axis1/position",
+            "feedback/axis1/position",
             "/sim/hypa/joint/prismatic_cable_hook_br/cmd",
             "relay_feedback_axis1",
         ),
         (
-            "/feedback/axis2/position",
+            "feedback/axis2/position",
             "/sim/hypa/joint/prismatic_cable_hook_fl/cmd",
             "relay_feedback_axis2",
         ),
         (
-            "/feedback/axis3/position",
+            "feedback/axis3/position",
             "/sim/hypa/joint/prismatic_cable_hook_fr/cmd",
             "relay_feedback_axis3",
         ),
         (
-            "/feedback/axis4/position",
+            "feedback/axis4/position",
             "/sim/hypa/joint/z_joint/cmd",
             "relay_feedback_axis4",
         ),
         (
-            "/cmd/mimic_group1",
+            "feedback/mimic_group1/position",
             "/sim/hypa/joint/secondary_link_joint/cmd",
-            "relay_cmd_mimic_group1",
+            "relay_feedback_mimic_group1",
         ),
         (
-            "/cmd/mimic_group2",
+            "feedback/mimic_group2/position",
             "/sim/hypa/joint/slide_link_joint/cmd",
-            "relay_cmd_mimic_group2",
+            "relay_feedback_mimic_group2",
         ),
     ]
 
@@ -83,6 +83,7 @@ def generate_launch_description():
             package="topic_tools",
             executable="relay",
             name=name,
+            namespace="hypa",
             output="screen",
             arguments=[src, dst],
             parameters=[{"use_sim_time": use_sim_time}],
