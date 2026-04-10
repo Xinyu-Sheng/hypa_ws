@@ -32,6 +32,7 @@ struct AxisConfig
   double speed = 10.0;
   double accel = 100.0;
   double decel = 100.0;
+  int direction = 1;
   std::string position_topic;
 };
 

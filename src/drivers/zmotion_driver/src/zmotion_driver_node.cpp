@@ -387,6 +387,13 @@ class ZMotionDriverNode::Impl
     std::vector<double> units;
     (void)this->node->get_parameter("axis.units", units);
 
+    std::vector<int64_t> directions;
+    (void)this->node->get_parameter("axis.directions", directions);
+    if (directions.empty())
+    {
+      directions.assign(kAxisCount, 1);
+    }
+
     std::vector<double> speeds;
     (void)this->node->get_parameter("axis.speeds", speeds);
 
@@ -421,8 +428,9 @@ class ZMotionDriverNode::Impl
         (control_modes.size() != kAxisCount) ||
         (position_modes.size() != kAxisCount) ||
         (zero_offsets.size() != kAxisCount) || (units.size() != kAxisCount) ||
-        (speeds.size() != kAxisCount) || (accels.size() != kAxisCount) ||
-        (decels.size() != kAxisCount) || (position_topics.size() != kAxisCount))
+        (directions.size() != kAxisCount) || (speeds.size() != kAxisCount) ||
+        (accels.size() != kAxisCount) || (decels.size() != kAxisCount) ||
+        (position_topics.size() != kAxisCount))
     {
       RCLCPP_ERROR(this->logger, "axis.* arrays must all be length %zu",
                    kAxisCount);
@@ -463,6 +471,14 @@ class ZMotionDriverNode::Impl
       config.speed = speeds[i];
       config.accel = accels[i];
       config.decel = decels[i];
+      config.direction = static_cast<int>(directions[i]);
+      if ((config.direction != 1) && (config.direction != -1))
+      {
+        RCLCPP_ERROR(this->logger,
+                     "invalid axis.directions[%zu]: %d, must be 1 or -1", i,
+                     config.direction);
+        return false;
+      }
       config.position_topic = position_topics[i];
 
       if (logical_seen.count(config.logical_index) > 0U)
@@ -1298,8 +1314,14 @@ class ZMotionDriverNode::Impl
     {
       for (std::size_t i = 0; i < _physical_axes.size(); ++i)
       {
-        CallResult result =
-            this->sdk->CommandVelocity(_physical_axes[i], _cmd.values[i]);
+        auto it = this->logical_to_axis_index.find(_cmd.logical_axes[i]);
+        if (it == this->logical_to_axis_index.end())
+        {
+          return CallResult::Failure(-205, "logical axis not found", false);
+        }
+        const AxisConfig &axis = this->axes[it->second];
+        CallResult result = this->sdk->CommandVelocity(
+            _physical_axes[i], axis.direction * _cmd.values[i]);
         if (!result.ok)
         {
           return result;
@@ -1325,13 +1347,14 @@ class ZMotionDriverNode::Impl
       }
 
       const AxisConfig &axis = this->axes[it->second];
+      const double physical_value = axis.direction * _cmd.values[i];
       if (_cmd.type == PendingType::kMoveAbsolute)
       {
-        axis_values.push_back(_cmd.values[i] + axis.zero_offset);
+        axis_values.push_back(physical_value + axis.zero_offset);
       }
       else
       {
-        axis_values.push_back(_cmd.values[i]);
+        axis_values.push_back(physical_value);
       }
     }
 
@@ -1407,8 +1430,8 @@ class ZMotionDriverNode::Impl
 
       if (mpos_result.ok && speed_result.ok)
       {
-        logical_position = mpos - axis.zero_offset;
-        logical_velocity = mspeed;
+        logical_position = axis.direction * (mpos - axis.zero_offset);
+        logical_velocity = axis.direction * mspeed;
         // update last-known values
         if (i < this->last_known_positions.size())
         {
