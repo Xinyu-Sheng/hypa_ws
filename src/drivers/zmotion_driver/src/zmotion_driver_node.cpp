@@ -31,6 +31,8 @@ namespace zmotion_driver
 namespace
 {
 
+#define IO_LOGICAL_AXIS_OFFSET 4
+
 constexpr std::size_t kAxisCount = 12;
 
 std::vector<int> ConvertToIntVector(const std::vector<int64_t> &_input)
@@ -1760,7 +1762,16 @@ class ZMotionDriverNode::Impl
       }
 
       // Map IO pair to logical axis: integer division by 2 gives 0..3
-      const int logical_axis = cfg.io_id / 2;
+      const int logical_axis = (cfg.io_id / 2) + IO_LOGICAL_AXIS_OFFSET;
+      if ((logical_axis < 0) ||
+          (logical_axis >= static_cast<int>(this->axes.size())))
+      {
+        this->WriteLogLocked("io_action",
+                             "io_" + std::to_string(cfg.io_id) +
+                                 " triggered but logical axis out of range: " +
+                                 std::to_string(logical_axis));
+        return;
+      }
 
       // Determine a sensible velocity magnitude: prefer configured axis speed
       double speed_mag = 0.1;
