@@ -95,6 +95,7 @@
         - "feedback/axis1/position" # std_msgs/msg/Float64
         - "feedback/axis2/position" # std_msgs/msg/Float64
         - "feedback/axis3/position" # std_msgs/msg/Float64
+        - "axis4_placeholder" # placeholder, not used when configured as mimic
         - "axis5_placeholder" # placeholder, not used when configured as mimic
         - "axis6_placeholder" # placeholder, not used when configured as mimic
         - "axis7_placeholder" # placeholder, not used when configured as mimic
