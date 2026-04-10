@@ -2,7 +2,7 @@
 """Launch `topic_tools` relays to bridge local topics to simulation topics.
 
 使用方法：
-  ros2 launch hypa_bringup sim_topic_bridge.launch.py use_sim_time:=true
+  ros2 launch hypa_bringup sim_topic_relay.launch.py use_sim_time:=true
 """
 from launch import LaunchDescription
 from launch_ros.actions import Node
