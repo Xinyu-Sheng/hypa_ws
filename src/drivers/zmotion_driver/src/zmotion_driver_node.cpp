@@ -1806,7 +1806,7 @@ class ZMotionDriverNode::Impl
              (cfg.io_id == 11))
     {
       const int group = (cfg.io_id <= 9) ? 0 : 1;
-      if (this->mimic_groups[group].size() != 2U)
+      if (this->mimic_groups[group].empty())
       {
         this->WriteLogLocked("io_action", "io_" + std::to_string(cfg.io_id) +
                                               " triggered but mimic group " +
@@ -1853,7 +1853,8 @@ class ZMotionDriverNode::Impl
       PendingCommand cmd;
       cmd.type = PendingType::kVelocity;
       cmd.logical_axes = this->mimic_groups[group];
-      cmd.values = std::vector<double>{target_value, target_value};
+      cmd.values =
+          std::vector<double>(this->mimic_groups[group].size(), target_value);
 
       this->WriteLogLocked("io_action",
                            "io_" + std::to_string(cfg.io_id) +
