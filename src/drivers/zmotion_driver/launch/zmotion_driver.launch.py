@@ -1,7 +1,10 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, EmitEvent
+from launch.events import matches_action
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import LifecycleNode
+from launch_ros.events.lifecycle import ChangeState
+import lifecycle_msgs.msg
 from ament_index_python.packages import get_package_share_directory
 
 
@@ -41,11 +44,22 @@ def generate_launch_description():
         ],
     )
 
+    # Request the lifecycle 'configure' transition for this node on startup.
+    # We intentionally do NOT request 'activate' here — driver should remain
+    # in 'inactive' until manually activated.
+    emit_configure = EmitEvent(
+        event=ChangeState(
+            lifecycle_node_matcher=matches_action(driver_node),
+            transition_id=lifecycle_msgs.msg.Transition.TRANSITION_CONFIGURE,
+        )
+    )
+
     return LaunchDescription(
         [
             namespace_arg,
             params_arg,
             use_sim_time_arg,
             driver_node,
+            emit_configure,
         ]
     )
