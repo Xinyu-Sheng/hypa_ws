@@ -20,6 +20,7 @@
 
   <depend>launch</depend>
   <depend>launch_ros</depend>
+  <depend>topic_tools</depend>
   <depend>ros_gz_bridge</depend>
   <depend>ros_gz_sim</depend>
 
