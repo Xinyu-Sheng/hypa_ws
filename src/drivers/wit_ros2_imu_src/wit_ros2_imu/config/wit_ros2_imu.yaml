@@ -6,4 +6,10 @@
     # port: "/dev/imu_usb"
     baudrate: 2000000
     protocol: "CAN_HIGH"
+    # CSV 记录参数
+    record_imu_csv_enabled: false
+    # 合并参数：目录+基名（无需 .csv 后缀），例如 "/tmp/imu_data"
+    record_imu_csv_path: "/tmp/imu_data"
+    record_imu_csv_buffer_size: 100
+    record_imu_csv_flush_interval_s: 1.0
     # modbusID: 80

@@ -5,6 +5,9 @@ import numpy as np
 import rclpy
 import subprocess
 import time
+import threading
+import os
+from datetime import datetime
 from enum import Enum
 from rclpy.node import Node
 from sensor_msgs.msg import Imu, MagneticField
@@ -33,6 +36,12 @@ class imuDriverNode(Node):
         self.declare_parameter("modbusID", 0x50)
         self.declare_parameter("mag_topic", "imu/mag")
         self.declare_parameter("publish_mag", True)
+        # CSV logging 参数（最小侵入）
+        # 使用合并参数 record_imu_csv_path（形如 "/tmp/imu_data"），不再向后兼容旧的 dir/file 参数
+        self.declare_parameter("record_imu_csv_enabled", False)
+        self.declare_parameter("record_imu_csv_path", "/tmp/imu_data")
+        self.declare_parameter("record_imu_csv_buffer_size", 100)
+        self.declare_parameter("record_imu_csv_flush_interval_s", 1.0)
         # watchdog 与 lifecycle 控制参数（最小侵入）
         self.declare_parameter("imu_watchdog_timeout", 1.0)  # 秒, 0 或负值禁用
         self.declare_parameter("deactivate_zmotion_on_fault", True)
@@ -47,6 +56,64 @@ class imuDriverNode(Node):
         self.publish_mag = self.get_parameter("publish_mag").value
 
         self.protocol = protocolType[protocolStr]
+
+        # CSV 记录配置（文件名使用系统本机时间作为后缀）
+        self._csv_enabled = bool(self.get_parameter("record_imu_csv_enabled").value)
+        # 仅使用 record_imu_csv_path 参数（示例："/tmp/imu_data"）；若为空则使用默认 "/tmp/imu_data"
+        csv_path_param = str(self.get_parameter("record_imu_csv_path").value).strip()
+        if csv_path_param:
+            csv_dir = os.path.dirname(csv_path_param)
+            csv_base = os.path.basename(csv_path_param)
+            if csv_dir == "":
+                csv_dir = "/tmp"
+        else:
+            csv_dir = "/tmp"
+            csv_base = "imu_data"
+        name, ext = os.path.splitext(csv_base)
+        self._csv_dir = csv_dir
+        self._csv_basename = name if name else csv_base
+
+        self._csv_buffer_size = int(
+            self.get_parameter("record_imu_csv_buffer_size").value
+        )
+        self._csv_flush_interval_s = float(
+            self.get_parameter("record_imu_csv_flush_interval_s").value
+        )
+
+        # CSV 写入运行时结构
+        self._csv_buffer = []
+        self._csv_lock = threading.Lock()
+        self._csv_event = threading.Event()
+        self._csv_stop_event = threading.Event()
+        self._csv_thread = None
+        self._csv_file = None
+
+        if self._csv_enabled:
+            try:
+                os.makedirs(self._csv_dir, exist_ok=True)
+            except Exception as e:
+                self.get_logger().warning(
+                    f"Could not create CSV dir {self._csv_dir}: {e}"
+                )
+                self._csv_enabled = False
+
+        if self._csv_enabled:
+            try:
+                ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                file_name = f"{self._csv_basename}_{ts}.csv"
+                file_path = os.path.join(self._csv_dir, file_name)
+                self._csv_file = open(file_path, "a", encoding="utf-8")
+                header = "stamp_sec,stamp_nsec,acc_x,acc_y,acc_z,gyro_x,gyro_y,gyro_z,roll_deg,pitch_deg,yaw_deg,mag_x,mag_y,mag_z\n"
+                self._csv_file.write(header)
+                self._csv_file.flush()
+                self._csv_thread = threading.Thread(
+                    target=self._csv_writer_thread, daemon=True
+                )
+                self._csv_thread.start()
+                self.get_logger().info(f"IMU CSV logging enabled -> {file_path}")
+            except Exception as e:
+                self.get_logger().error(f"Failed to open CSV file {file_path}: {e}")
+                self._csv_enabled = False
 
         # watchdog 状态与时间戳（纳秒）
         self.imu_watchdog_timeout = float(
@@ -520,6 +587,31 @@ class imuDriverNode(Node):
         imuRpyMsg.yaw = math.degrees(yaw)
 
         self.imuRpyPublisher.publish(imuRpyMsg)
+        # 将 IMU 数据按行加入 CSV 缓冲（主线程只做构建与入队，写入在后台线程）
+        if getattr(self, "_csv_enabled", False):
+            try:
+                stamp = imuMsg.header.stamp
+                sec = int(stamp.sec)
+                nanosec = int(stamp.nanosec)
+                line = (
+                    f"{sec},{nanosec},{float(ax):.6f},{float(ay):.6f},{float(az):.6f},"
+                    f"{float(gx):.9f},{float(gy):.9f},{float(gz):.9f},"
+                    f"{math.degrees(roll):.6f},{math.degrees(pitch):.6f},{math.degrees(yaw):.6f},"
+                    f"{float(mx):.6f},{float(my):.6f},{float(mz):.6f}\n"
+                )
+                with self._csv_lock:
+                    self._csv_buffer.append(line)
+                    if len(self._csv_buffer) >= self._csv_buffer_size:
+                        # 通知写线程立即写入
+                        try:
+                            self._csv_event.set()
+                        except Exception:
+                            pass
+            except Exception as e:
+                try:
+                    self.get_logger().error(f"CSV buffer error: {e}")
+                except Exception:
+                    print(f"CSV buffer error: {e}")
         # 更新时间戳，表示最近一次成功发布 IMU 数据（用于 watchdog）
         try:
             self.last_success_ts = self.get_clock().now().nanoseconds
@@ -593,6 +685,52 @@ class imuDriverNode(Node):
         )
         print("\033[H\033[J", end="")  # 清屏
 
+    # 后台 CSV 写线程
+    def _csv_writer_thread(self):
+        # 等待事件或定时唤醒，批量写入缓冲
+        try:
+            while not getattr(self, "_csv_stop_event", threading.Event()).is_set():
+                try:
+                    self._csv_event.wait(timeout=self._csv_flush_interval_s)
+                except Exception:
+                    pass
+
+                # 提取缓冲内容
+                lines = None
+                with self._csv_lock:
+                    if self._csv_buffer:
+                        lines = "".join(self._csv_buffer)
+                        self._csv_buffer.clear()
+                    # 清除事件以便下一次等待
+                    try:
+                        self._csv_event.clear()
+                    except Exception:
+                        pass
+
+                if lines:
+                    try:
+                        if self._csv_file:
+                            self._csv_file.write(lines)
+                            self._csv_file.flush()
+                    except Exception as e:
+                        try:
+                            self.get_logger().error(f"CSV write failed: {e}")
+                        except Exception:
+                            print(f"CSV write failed: {e}")
+                        # 出错则禁用后续记录
+                        self._csv_enabled = False
+                        break
+        finally:
+            # 退出前尝试 flush 剩余数据
+            try:
+                with self._csv_lock:
+                    if getattr(self, "_csv_buffer", None) and self._csv_file:
+                        self._csv_file.write("".join(self._csv_buffer))
+                        self._csv_buffer.clear()
+                        self._csv_file.flush()
+            except Exception:
+                pass
+
     # ==========================================================
     # Watchdog 与 lifecycle 触发
     # ==========================================================
@@ -655,6 +793,33 @@ class imuDriverNode(Node):
         if self.serialPort and self.serialPort.is_open:
             self.serialPort.close()
             self.get_logger().info("Serial port closed")
+        # 停止 CSV 写线程并 flush/关闭文件
+        if getattr(self, "_csv_thread", None):
+            try:
+                self._csv_stop_event.set()
+                try:
+                    self._csv_event.set()
+                except Exception:
+                    pass
+                # 等待写线程退出
+                try:
+                    self._csv_thread.join(timeout=2.0)
+                except Exception:
+                    pass
+                if getattr(self, "_csv_file", None):
+                    try:
+                        self._csv_file.close()
+                    except Exception:
+                        pass
+                try:
+                    self.get_logger().info("CSV writer stopped and file closed")
+                except Exception:
+                    pass
+            except Exception as e:
+                try:
+                    self.get_logger().error(f"Error shutting down CSV writer: {e}")
+                except Exception:
+                    print(f"Error shutting down CSV writer: {e}")
 
 
 def main():
