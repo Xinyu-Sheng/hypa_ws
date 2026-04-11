@@ -68,8 +68,6 @@ class ZMotionSdkWrapper
   CallResult GetDriveTorque(int _axis, double *_value) const;
   CallResult GetAxisStatus(int _axis, int *_value) const;
   CallResult GetInput(int _io_id, int *_value) const;
-  CallResult GetInputs(int _start_io, int _end_io,
-                       std::vector<int> *_values) const;
   CallResult GetRemainBuffer(int _axis, int *_value) const;
 
   private:

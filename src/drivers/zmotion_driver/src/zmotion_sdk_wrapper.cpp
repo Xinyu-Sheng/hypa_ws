@@ -1083,36 +1083,6 @@ CallResult ZMotionSdkWrapper::GetInput(const int _io_id, int *_value) const
   return CallResult::Success();
 }
 
-CallResult ZMotionSdkWrapper::GetInputs(const int _start_io, const int _end_io,
-                                        std::vector<int> *_values) const
-{
-  if (_values == nullptr)
-  {
-    return CallResult::Failure(-134, "GetInputs output pointer is null", false);
-  }
-  if (_start_io > _end_io)
-  {
-    return CallResult::Failure(-134, "GetInputs start_io greater than end_io",
-                               false);
-  }
-
-  const int count = _end_io - _start_io + 1;
-  _values->assign(count, 0);
-  std::vector<int32> temp(count, 0);
-  const int32 code = ZAux_Direct_GetInMulti(this->pimpl_->handle, _start_io,
-                                            _end_io, temp.data());
-  if (code != kErrOk)
-  {
-    return WrapCode(code, "ZAux_Direct_GetInMulti failed");
-  }
-
-  for (int i = 0; i < count; ++i)
-  {
-    (*_values)[i] = static_cast<int>(temp[i]);
-  }
-  return CallResult::Success();
-}
-
 CallResult ZMotionSdkWrapper::GetRemainBuffer(const int _axis,
                                               int *_value) const
 {
