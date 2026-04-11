@@ -1583,37 +1583,6 @@ class ZMotionDriverNode::Impl
       return;
     }
 
-    if (this->io_inputs.empty())
-    {
-      return;
-    }
-
-    const int start_io = this->io_inputs.front().io_id;
-    int min_io = start_io;
-    int max_io = start_io;
-    for (std::size_t i = 1; i < this->io_inputs.size(); ++i)
-    {
-      min_io = std::min(min_io, this->io_inputs[i].io_id);
-      max_io = std::max(max_io, this->io_inputs[i].io_id);
-    }
-
-    std::vector<int> raw_io_values;
-    CallResult raw_result =
-        this->sdk->GetInputs(min_io, max_io, &raw_io_values);
-    if (!raw_result.ok)
-    {
-      this->WriteLogLocked("io_err",
-                           "batch read io failed: " + raw_result.message);
-      return;
-    }
-    if (static_cast<int>(raw_io_values.size()) != (max_io - min_io + 1))
-    {
-      this->WriteLogLocked("io_err",
-                           "batch read io returned unexpected value count: " +
-                               std::to_string(raw_io_values.size()));
-      return;
-    }
-
     std::vector<int> io_values;
     io_values.reserve(this->io_inputs.size());
 
@@ -1626,8 +1595,16 @@ class ZMotionDriverNode::Impl
 
     for (std::size_t i = 0; i < this->io_inputs.size(); ++i)
     {
-      const int io_id = this->io_inputs[i].io_id;
-      const int value = raw_io_values[io_id - min_io];
+      int value = 0;
+      CallResult result = this->sdk->GetInput(this->io_inputs[i].io_id, &value);
+      if (!result.ok)
+      {
+        this->WriteLogLocked(
+            "io_err",
+            "read io failed id=" + std::to_string(this->io_inputs[i].io_id));
+        io_values.push_back(value);
+        continue;
+      }
 
       // capture previous value (may be -1 == unknown)
       int prev = -1;
