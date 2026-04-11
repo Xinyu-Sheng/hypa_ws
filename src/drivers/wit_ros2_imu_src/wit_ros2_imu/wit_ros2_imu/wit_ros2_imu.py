@@ -158,14 +158,63 @@ class imuDriverNode(Node):
         if self.serialPort is None:
             return
 
-        byteCount = self.serialPort.in_waiting
+        # 访问 in_waiting 可能在底层发生 IO 错误（例如拔线），因此单独捕获
+        try:
+            byteCount = self.serialPort.in_waiting
+        except Exception as e:
+            # 串口底层错误（如设备被拔出），记录并触发 zmotion_driver 停用（仅一次）
+            self.get_logger().error(f"Serial port read availability error: {e}")
+            if (
+                not getattr(self, "_fault_reported", False)
+                and self.deactivate_zmotion_on_fault
+            ):
+                ns = (
+                    str(self.namespace_param).strip("/") if self.namespace_param else ""
+                )
+                if ns:
+                    target = f"/{ns}/{self.zmotion_driver_node_name}"
+                else:
+                    target = self.zmotion_driver_node_name
+                try:
+                    self._fault_reported = True
+                    self._call_deactivate_and_log(target)
+                except Exception as ex:
+                    self.get_logger().error(f"Exception calling lifecycle CLI: {ex}")
+
+            # 请求 ROS 事件循环退出，保持与 watchdog 一致的优雅终止行为
+            try:
+                rclpy.shutdown()
+            except Exception:
+                pass
+            return
+
         if byteCount > 0:
             try:
                 data = self.serialPort.read(byteCount)
                 self.rxBuffer.extend(data)
-            except Exception:
-                # 读取失败则忽略
-                pass
+            except Exception as e:
+                # 读取失败则记录并在必要时触发停用
+                self.get_logger().warning(f"Serial read failed: {e}")
+                if (
+                    not getattr(self, "_fault_reported", False)
+                    and self.deactivate_zmotion_on_fault
+                ):
+                    ns = (
+                        str(self.namespace_param).strip("/")
+                        if self.namespace_param
+                        else ""
+                    )
+                    if ns:
+                        target = f"/{ns}/{self.zmotion_driver_node_name}"
+                    else:
+                        target = self.zmotion_driver_node_name
+                    try:
+                        self._fault_reported = True
+                        self._call_deactivate_and_log(target)
+                    except Exception as ex:
+                        self.get_logger().error(
+                            f"Exception calling lifecycle CLI: {ex}"
+                        )
 
     # ==========================================================
     # buffer解析
