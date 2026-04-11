@@ -795,6 +795,24 @@ CallResult ZMotionSdkWrapper::ConfigureAxis(const int _axis,
     return WrapCode(decel_code, "ZAux_Direct_SetDecel failed");
   }
 
+  CallResult fastdecel_result = this->SetFastDec(_axis, _decel);
+  if (!fastdecel_result.ok)
+  {
+    return fastdecel_result;
+  }
+
+  return CallResult::Success();
+}
+
+CallResult ZMotionSdkWrapper::SetFastDec(const int _axis,
+                                         const double _fast_decel)
+{
+  const int32 fastdecel_code = ZAux_Direct_SetFastDec(
+      this->pimpl_->handle, _axis, static_cast<float>(_fast_decel));
+  if (fastdecel_code != kErrOk)
+  {
+    return WrapCode(fastdecel_code, "ZAux_Direct_SetFastDec failed");
+  }
   return CallResult::Success();
 }
 

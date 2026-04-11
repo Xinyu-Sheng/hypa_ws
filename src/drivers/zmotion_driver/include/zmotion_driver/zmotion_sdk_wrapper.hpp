@@ -49,6 +49,7 @@ class ZMotionSdkWrapper
 
   CallResult ConfigureAxis(int _axis, double _units, double _speed,
                            double _accel, double _decel);
+  CallResult SetFastDec(int _axis, double _fast_decel);
   CallResult SetAxisEnable(int _axis, bool _enable);
 
   CallResult CommandVelocity(int _axis, double _velocity,
