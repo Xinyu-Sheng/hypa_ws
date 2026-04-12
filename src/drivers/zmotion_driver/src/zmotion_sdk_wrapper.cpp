@@ -1104,4 +1104,20 @@ CallResult ZMotionSdkWrapper::GetRemainBuffer(const int _axis,
   return CallResult::Success();
 }
 
+// Minimal SDO
+CallResult ZMotionSdkWrapper::SDOReadAxis(int _axis, uint32_t _index,
+                                          uint32_t _subindex, uint32_t _type,
+                                          int32_t *_out) const
+{
+  if (!this->pimpl_->connected || (this->pimpl_->handle == nullptr))
+  {
+    return CallResult::Failure(-100, "controller not connected", false);
+  }
+
+  const int32_t code = ZAux_BusCmd_SDOReadAxis(this->pimpl_->handle,
+                                               static_cast<uint32_t>(_axis),
+                                               _index, _subindex, _type, _out);
+  return WrapCode(code, "ZAux_BusCmd_SDOReadAxis failed");
+}
+
 }  // namespace zmotion_driver

@@ -1085,6 +1085,44 @@ class ZMotionDriverNode::Impl
       return false;
     }
 
+    // Minimal-invasive: read drive SDO fields 0x6091:01/02 and 0x6092:01/02 for
+    // each axis
+    RCLCPP_INFO(this->logger,
+                "Reading drive SDO fields 0x6091/0x6092 for each axis");
+    for (std::size_t _i = 0; _i < this->axes.size(); ++_i)
+    {
+      const AxisConfig &ax = this->axes[_i];
+      const int phys = ax.physical_axis;
+
+      int32_t v6091_01 = 0;
+      int32_t v6091_02 = 0;
+      int32_t v6092_01 = 0;
+      int32_t v6092_02 = 0;
+
+      auto r1 = this->sdk->SDOReadAxis(phys, 0x6091, 0x01, 7, &v6091_01);
+      auto r2 = this->sdk->SDOReadAxis(phys, 0x6091, 0x02, 7, &v6091_02);
+      auto r3 = this->sdk->SDOReadAxis(phys, 0x6092, 0x01, 7, &v6092_01);
+      auto r4 = this->sdk->SDOReadAxis(phys, 0x6092, 0x02, 7, &v6092_02);
+
+      if (r1.ok && r2.ok && r3.ok && r4.ok)
+      {
+        uint32_t u1 = static_cast<uint32_t>(v6091_01);
+        uint32_t u2 = static_cast<uint32_t>(v6091_02);
+        uint32_t u3 = static_cast<uint32_t>(v6092_01);
+        uint32_t u4 = static_cast<uint32_t>(v6092_02);
+        RCLCPP_INFO(
+            this->logger,
+            "axis %d: 0x6091:01=%u 0x6091:02=%u 0x6092:01=%u 0x6092:02=%u",
+            phys, u1, u2, u3, u4);
+      }
+      else
+      {
+        RCLCPP_WARN(this->logger, "axis %d: SDO read incomplete: %s %s %s %s",
+                    phys, r1.message.c_str(), r2.message.c_str(),
+                    r3.message.c_str(), r4.message.c_str());
+      }
+    }
+
     for (std::size_t i = 0; i < this->axes.size(); ++i)
     {
       const AxisConfig &axis = this->axes[i];

@@ -70,6 +70,11 @@ class ZMotionSdkWrapper
   CallResult GetInput(int _io_id, int *_value) const;
   CallResult GetRemainBuffer(int _axis, int *_value) const;
 
+  // Minimal SDO read wrapper for axis-level SDOs (reads drive object
+  // dictionary)
+  CallResult SDOReadAxis(int _axis, uint32_t _index, uint32_t _subindex,
+                         uint32_t _type, int32_t *_out) const;
+
   private:
   class Impl;
   std::unique_ptr<Impl> pimpl_;
