@@ -1515,7 +1515,6 @@ class ZMotionDriverNode::Impl
             << static_cast<unsigned int>(axis_status);
         const std::string message = oss.str();
         this->WriteLogLocked("feedback_err", message);
-        RCLCPP_ERROR(this->logger, "%s", message.c_str());
       }
 
       if (mpos_result.ok && speed_result.ok)
