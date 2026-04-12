@@ -31,7 +31,7 @@ namespace zmotion_driver
 namespace
 {
 
-#define IO_LOGICAL_AXIS_OFFSET 4
+#define IO_LOGICAL_AXIS_OFFSET 0
 
 constexpr std::size_t kAxisCount = 12;
 constexpr int kAxisStatusCriticalMask = 0x4 | 0x8 | 0x10 | 0x20 | 0x100 |
@@ -1497,8 +1497,8 @@ class ZMotionDriverNode::Impl
       {
         std::ostringstream oss;
         oss << "axis status critical logical_axis=" << axis.logical_index
-            << " physical_axis=" << axis.physical_axis
-            << " status=0x" << std::uppercase << std::hex
+            << " physical_axis=" << axis.physical_axis << " status=0x"
+            << std::uppercase << std::hex
             << static_cast<unsigned int>(axis_status);
         this->TriggerEmergencyStopLocked(oss.str());
       }
@@ -1506,8 +1506,8 @@ class ZMotionDriverNode::Impl
       {
         std::ostringstream oss;
         oss << "axis status noncritical logical_axis=" << axis.logical_index
-            << " physical_axis=" << axis.physical_axis
-            << " status=0x" << std::uppercase << std::hex
+            << " physical_axis=" << axis.physical_axis << " status=0x"
+            << std::uppercase << std::hex
             << static_cast<unsigned int>(axis_status);
         const std::string message = oss.str();
         this->WriteLogLocked("feedback_err", message);
