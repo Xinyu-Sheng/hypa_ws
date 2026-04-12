@@ -33,7 +33,7 @@ namespace
 
 // Define this macro to use the new IO polling behavior at compile time.
 // Default is legacy behavior. Uncomment or add in build flags to switch.
-// #define ZMOTION_DRIVER_USE_NEW_POLL_IO_INPUTS
+#define ZMOTION_DRIVER_USE_NEW_POLL_IO_INPUTS
 
 #define IO_LOGICAL_AXIS_OFFSET 0
 
