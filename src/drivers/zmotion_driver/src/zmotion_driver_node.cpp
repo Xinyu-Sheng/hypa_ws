@@ -34,6 +34,9 @@ namespace
 #define IO_LOGICAL_AXIS_OFFSET 4
 
 constexpr std::size_t kAxisCount = 12;
+constexpr int kAxisStatusCriticalMask = 0x4 | 0x8 | 0x10 | 0x20 | 0x100 |
+                                        0x200 | 0x400 | 0x4000 | 0x40000 |
+                                        0x100000 | 0x200000 | 0x400000;
 
 std::vector<int> ConvertToIntVector(const std::vector<int64_t> &_input)
 {
@@ -1471,9 +1474,45 @@ class ZMotionDriverNode::Impl
           this->sdk->GetMspeed(axis.physical_axis, &mspeed);
       CallResult effort_result =
           this->sdk->GetDriveTorque(axis.physical_axis, &effort);
+      int axis_status = 0;
+      CallResult axis_status_result =
+          this->sdk->GetAxisStatus(axis.physical_axis, &axis_status);
 
       double logical_position = std::numeric_limits<double>::quiet_NaN();
       double logical_velocity = std::numeric_limits<double>::quiet_NaN();
+
+      if (!axis_status_result.ok)
+      {
+        std::ostringstream oss;
+        oss << "read axis status failed logical_axis=" << axis.logical_index
+            << " physical_axis=" << axis.physical_axis
+            << " code=" << axis_status_result.code
+            << " message=" << axis_status_result.message;
+        const std::string message = oss.str();
+        this->WriteLogLocked("feedback_err", message);
+        RCLCPP_ERROR(this->logger, "%s", message.c_str());
+      }
+      else if (!this->emergency_stop &&
+               ((axis_status & kAxisStatusCriticalMask) != 0))
+      {
+        std::ostringstream oss;
+        oss << "axis status critical logical_axis=" << axis.logical_index
+            << " physical_axis=" << axis.physical_axis
+            << " status=0x" << std::uppercase << std::hex
+            << static_cast<unsigned int>(axis_status);
+        this->TriggerEmergencyStopLocked(oss.str());
+      }
+      else if (!this->emergency_stop && (axis_status != 0))
+      {
+        std::ostringstream oss;
+        oss << "axis status noncritical logical_axis=" << axis.logical_index
+            << " physical_axis=" << axis.physical_axis
+            << " status=0x" << std::uppercase << std::hex
+            << static_cast<unsigned int>(axis_status);
+        const std::string message = oss.str();
+        this->WriteLogLocked("feedback_err", message);
+        RCLCPP_ERROR(this->logger, "%s", message.c_str());
+      }
 
       if (mpos_result.ok && speed_result.ok)
       {
