@@ -923,7 +923,7 @@ class ZMotionDriverNode::Impl
 
   void CloseJointStateFile()
   {
-    std::lock_guard<std::mutex> lock(this->joint_state_stream_mutex);
+    std::lock_guard<std::mutex> lock(this->joint_state_log_mutex);
     if (this->joint_state_stream.is_open())
     {
       this->joint_state_stream.flush();
@@ -937,7 +937,7 @@ class ZMotionDriverNode::Impl
     {
       return;
     }
-    std::lock_guard<std::mutex> lock(this->joint_state_stream_mutex);
+    std::lock_guard<std::mutex> lock(this->joint_state_log_mutex);
     if (!this->joint_state_stream.is_open())
     {
       return;
@@ -984,7 +984,7 @@ class ZMotionDriverNode::Impl
                   e.what());
     }
 
-    std::lock_guard<std::mutex> lock(this->command_stream_mutex);
+    std::lock_guard<std::mutex> lock(this->command_log_mutex);
     this->command_stream.open(this->record_commands_csv_file,
                               std::ios::out | std::ios::app);
     if (!this->command_stream.is_open())
@@ -1004,7 +1004,7 @@ class ZMotionDriverNode::Impl
 
   void CloseCommandFile()
   {
-    std::lock_guard<std::mutex> lock(this->command_stream_mutex);
+    std::lock_guard<std::mutex> lock(this->command_log_mutex);
     if (this->command_stream.is_open())
     {
       this->command_stream.flush();
@@ -1020,7 +1020,7 @@ class ZMotionDriverNode::Impl
       return;
     }
 
-    std::lock_guard<std::mutex> lock(this->command_stream_mutex);
+    std::lock_guard<std::mutex> lock(this->command_log_mutex);
     if (!this->command_stream.is_open())
     {
       return;
@@ -2090,6 +2090,7 @@ class ZMotionDriverNode::Impl
 
   std::unique_ptr<ZMotionSdkWrapper> sdk;
 
+  // 保护的是“整个节点运行状态与 SDK 访问的一致性区域”
   std::mutex mutex;
 
   std::string controller_ip;
@@ -2134,12 +2135,12 @@ class ZMotionDriverNode::Impl
   // Command CSV logging (for control research)
   std::atomic<uint64_t> cmd_seq{0};
   std::ofstream command_stream;
-  std::mutex command_stream_mutex;
+  std::mutex command_log_mutex;
   bool record_commands_csv_enabled = false;
   std::string record_commands_csv_file;
 
   std::ofstream joint_state_stream;
-  std::mutex joint_state_stream_mutex;
+  std::mutex joint_state_log_mutex;
   bool record_joints_csv_enabled = false;
   std::string record_joints_csv_file;
 
