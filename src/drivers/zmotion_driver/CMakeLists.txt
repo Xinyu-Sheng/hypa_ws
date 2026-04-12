@@ -75,10 +75,26 @@ set_target_properties(${PROJECT_NAME}_node PROPERTIES
     INSTALL_RPATH "\$ORIGIN"
 )
 
+add_executable(${PROJECT_NAME}_mimic_swing_test_node
+    tests/zmotion_driver_mimic_swing_test_node.cpp
+)
+
+target_compile_features(${PROJECT_NAME}_mimic_swing_test_node PUBLIC cxx_std_17)
+target_compile_definitions(${PROJECT_NAME}_mimic_swing_test_node PRIVATE
+    ZMOTION_TEST_MIMIC_GROUP=1
+)
+
+ament_target_dependencies(${PROJECT_NAME}_mimic_swing_test_node
+    rclcpp
+    sensor_msgs
+    std_msgs
+)
+
 install(
     TARGETS
     ${PROJECT_NAME}_core
     ${PROJECT_NAME}_node
+    ${PROJECT_NAME}_mimic_swing_test_node
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
     RUNTIME DESTINATION lib/${PROJECT_NAME}
