@@ -27,7 +27,7 @@ Rectangle {
   property var dataProvider
   property var metrics: []
   property int dataRevision: 0
-  property real yScale: 1.0
+  property real yScale: 2.0
   property bool autoYRange: true
   property real yMin: NaN
   property real yMax: NaN
