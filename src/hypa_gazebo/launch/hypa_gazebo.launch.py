@@ -29,7 +29,8 @@ def generate_launch_description():
                 " -v 4 ",
                 " -r --gui-config ",
                 os.path.join(pkg_project_gazebo, "config", "hypa.config"),
-            ]
+            ],
+            "launch-prefix": "nice -n 10",
         }.items(),
     )
 
