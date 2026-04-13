@@ -13,31 +13,31 @@ def generate_launch_description():
 
     # Each tuple: (source_topic, target_topic, relay_node_name)
     mappings = [
-        (
-            "feedback/axis0/position",
-            "/sim/hypa/joint/prismatic_cable_hook_bl/cmd",
-            "relay_feedback_axis0",
-        ),
-        (
-            "feedback/axis1/position",
-            "/sim/hypa/joint/prismatic_cable_hook_br/cmd",
-            "relay_feedback_axis1",
-        ),
-        (
-            "feedback/axis2/position",
-            "/sim/hypa/joint/prismatic_cable_hook_fl/cmd",
-            "relay_feedback_axis2",
-        ),
-        (
-            "feedback/axis3/position",
-            "/sim/hypa/joint/prismatic_cable_hook_fr/cmd",
-            "relay_feedback_axis3",
-        ),
-        (
-            "feedback/axis4/position",
-            "/sim/hypa/joint/z_joint/cmd",
-            "relay_feedback_axis4",
-        ),
+        # (
+        #     "feedback/axis0/position",
+        #     "/sim/hypa/joint/prismatic_cable_hook_bl/cmd",
+        #     "relay_feedback_axis0",
+        # ),
+        # (
+        #     "feedback/axis1/position",
+        #     "/sim/hypa/joint/prismatic_cable_hook_br/cmd",
+        #     "relay_feedback_axis1",
+        # ),
+        # (
+        #     "feedback/axis2/position",
+        #     "/sim/hypa/joint/prismatic_cable_hook_fl/cmd",
+        #     "relay_feedback_axis2",
+        # ),
+        # (
+        #     "feedback/axis3/position",
+        #     "/sim/hypa/joint/prismatic_cable_hook_fr/cmd",
+        #     "relay_feedback_axis3",
+        # ),
+        # (
+        #     "feedback/axis4/position",
+        #     "/sim/hypa/joint/z_joint/cmd",
+        #     "relay_feedback_axis4",
+        # ),
         (
             "feedback/mimic_group1/position",
             "/sim/hypa/joint/secondary_link_joint/cmd",
