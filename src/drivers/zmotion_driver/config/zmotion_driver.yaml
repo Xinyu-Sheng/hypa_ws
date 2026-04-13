@@ -89,7 +89,7 @@
           293601280.00,
         ]
 
-      directions: [1, -1, -1, 1, 1, 1, 1, -1, -1, -1, 1, -1] # set -1 for inverted PHYSICAL axes
+      directions: [1, -1, -1, 1, -1, -1, -1, 1, 1, 1, -1, 1] # set -1 for inverted PHYSICAL axes
       speeds:
         [0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03]
       accels:
