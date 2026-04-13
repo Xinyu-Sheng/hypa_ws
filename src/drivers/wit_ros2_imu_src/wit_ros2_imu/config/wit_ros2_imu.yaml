@@ -7,7 +7,7 @@
     baudrate: 2000000
     protocol: "CAN_HIGH"
     # CSV 记录参数
-    record_imu_csv_enabled: false
+    record_imu_csv_enabled: true
     # 合并参数：目录+基名（无需 .csv 后缀），例如 "/tmp/imu_data"
     record_imu_csv_path: "/tmp/imu_data"
     record_imu_csv_buffer_size: 100
