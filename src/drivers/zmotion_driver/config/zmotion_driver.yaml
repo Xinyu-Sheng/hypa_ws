@@ -13,11 +13,11 @@
       log_file: "/tmp/zmotion_driver_log.csv" # 实际文件名会自动追加时间戳，避免覆盖
 
     axis:
-      # 数组中填写数字表示 EtherCAT / 硬件接线的下标/顺序，值表示对应的逻辑轴编号
-      # logical_indices: [0, 2, 3, 1, 9, 8, 4, 5, 11, 10, 6, 7]
-      logical_indices: [0, 3, 1, 2, 6, 7, 10, 11, 5, 4, 9, 8]
+      # [逻辑轴索引] 逻辑轴顺序配置：第 i 项就是逻辑轴 i
+      # [逻辑->物理映射] logical_indices[i] = 逻辑轴 i 对应的 EtherCAT / 物理轴号
+      logical_indices: [0, 2, 3, 1, 9, 8, 4, 5, 11, 10, 6, 7]
 
-      # 以下数组都与 logical_indices 保持同一顺序
+      # [逻辑轴索引] 以下数组均按逻辑轴顺序（第 i 项对应逻辑轴 i）
 
       joint_names:
         - "joint_0"
@@ -52,9 +52,9 @@
       zero_offsets:
         [
           -80.1322,
-          120.773,
           -111.434,
           -91.6249,
+          120.773,
           0.0,
           0.0,
           0.0,
@@ -90,7 +90,7 @@
           293601280.00,
         ]
 
-      directions: [1, -1, -1, 1, -1, -1, -1, 1, 1, 1, -1, 1] # set -1 for inverted PHYSICAL axes
+      directions: [1, -1, 1, -1, 1, 1, -1, -1, 1, -1, -1, 1] # [逻辑轴索引] 第 i 项作用于逻辑轴 i；值含义: 1=同向, -1=物理轴方向取反
       speeds:
         [0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03]
       accels:
@@ -100,22 +100,22 @@
 
       joint_state_topic: "joint_states" # sensor_msgs/msg/JointState
       mimic_position_topics:
-        - "feedback/mimic_group1/position" # std_msgs/msg/Float64
-        - "feedback/mimic_group2/position" # std_msgs/msg/Float64
-      # mimic 组轴不单独发布位置，使用 feedback.mimic_position_topics
+        - "feedback/mimic_group1/position" # [组索引] 第0项对应 mimic_group1, std_msgs/msg/Float64
+        - "feedback/mimic_group2/position" # [组索引] 第1项对应 mimic_group2, std_msgs/msg/Float64
+      # 注意：mimic_position_topics 是组级数组，不是逻辑轴数组
       position_topics:
-        - "feedback/axis0/position" # std_msgs/msg/Float64
-        - "feedback/axis1/position" # std_msgs/msg/Float64
-        - "feedback/axis2/position" # std_msgs/msg/Float64
-        - "feedback/axis3/position" # std_msgs/msg/Float64
-        - "axis4_placeholder" # placeholder, not used when configured as mimic
-        - "axis5_placeholder" # placeholder, not used when configured as mimic
-        - "axis6_placeholder" # placeholder, not used when configured as mimic
-        - "axis7_placeholder" # placeholder, not used when configured as mimic
-        - "axis8_placeholder" # placeholder, not used when configured as mimic
-        - "axis9_placeholder" # placeholder, not used when configured as mimic
-        - "axis10_placeholder" # placeholder, not used when configured as mimic
-        - "axis11_placeholder" # placeholder, not used when configured as mimic
+        - "feedback/axis0/position" # [逻辑轴索引] 逻辑轴0, std_msgs/msg/Float64
+        - "feedback/axis1/position" # [逻辑轴索引] 逻辑轴1, std_msgs/msg/Float64
+        - "feedback/axis2/position" # [逻辑轴索引] 逻辑轴2, std_msgs/msg/Float64
+        - "feedback/axis3/position" # [逻辑轴索引] 逻辑轴3, std_msgs/msg/Float64
+        - "axis4_placeholder" # [逻辑轴索引] 逻辑轴4占位, mimic场景下不单独发布
+        - "axis5_placeholder" # [逻辑轴索引] 逻辑轴5占位, mimic场景下不单独发布
+        - "axis6_placeholder" # [逻辑轴索引] 逻辑轴6占位, mimic场景下不单独发布
+        - "axis7_placeholder" # [逻辑轴索引] 逻辑轴7占位, mimic场景下不单独发布
+        - "axis8_placeholder" # [逻辑轴索引] 逻辑轴8占位, mimic场景下不单独发布
+        - "axis9_placeholder" # [逻辑轴索引] 逻辑轴9占位, mimic场景下不单独发布
+        - "axis10_placeholder" # [逻辑轴索引] 逻辑轴10占位, mimic场景下不单独发布
+        - "axis11_placeholder" # [逻辑轴索引] 逻辑轴11占位, mimic场景下不单独发布
 
     control:
       velocity_topic: "cmd/winch_axes" # std_msgs/msg/Float64MultiArray
@@ -124,7 +124,7 @@
 
       brake_topic: "cmd/brake" # std_msgs/msg/Bool
 
-      # 基于逻辑下标决定速度控制轴和 mimic 位置控制轴
+      # [逻辑轴编号列表] 以下均填写逻辑轴号，不是物理轴号
       velocity_logical_indices: [0, 1, 2, 3]
       mimic_group1_logical_indices: [4, 5, 6, 7]
       mimic_group2_logical_indices: [8, 9, 10, 11]

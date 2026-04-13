@@ -15,7 +15,6 @@
 #include <set>
 #include <sstream>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
@@ -502,13 +501,54 @@ class ZMotionDriverNode::Impl
 
     this->axes.clear();
     this->axes.reserve(kAxisCount);
-    this->logical_to_axis_index.clear();
 
-    std::set<int> logical_seen;
+    std::set<int> physical_seen;
+
+    for (std::size_t i = 0; i < this->velocity_logical_axes.size(); ++i)
+    {
+      if ((this->velocity_logical_axes[i] < 0) ||
+          (this->velocity_logical_axes[i] >= static_cast<int>(kAxisCount)))
+      {
+        RCLCPP_ERROR(this->logger,
+                     "velocity logical axis out of range: %d",
+                     this->velocity_logical_axes[i]);
+        return false;
+      }
+    }
+
+    for (int group = 0; group < 2; ++group)
+    {
+      for (std::size_t i = 0; i < this->mimic_groups[group].size(); ++i)
+      {
+        const int logical_axis = this->mimic_groups[group][i];
+        if ((logical_axis < 0) || (logical_axis >= static_cast<int>(kAxisCount)))
+        {
+          RCLCPP_ERROR(this->logger,
+                       "mimic group %d logical axis out of range: %d", group,
+                       logical_axis);
+          return false;
+        }
+      }
+    }
 
     for (std::size_t i = 0; i < kAxisCount; ++i)
     {
-      const int logical_index = static_cast<int>(logical_indices[i]);
+      const int logical_index = static_cast<int>(i);
+      const int physical_axis = static_cast<int>(logical_indices[i]);
+      if ((physical_axis < 0) || (physical_axis >= static_cast<int>(kAxisCount)))
+      {
+        RCLCPP_ERROR(this->logger,
+                     "axis.logical_indices[%zu] physical axis out of range: %d",
+                     i, physical_axis);
+        return false;
+      }
+      if (physical_seen.count(physical_axis) > 0U)
+      {
+        RCLCPP_ERROR(this->logger, "duplicated physical axis index: %d",
+                     physical_axis);
+        return false;
+      }
+
       AxisControlMode control_mode = AxisControlMode::kPosition;
       AxisPositionMode position_mode = AxisPositionMode::kAbsolute;
       if (velocity_set.count(logical_index) > 0)
@@ -535,8 +575,8 @@ class ZMotionDriverNode::Impl
       }
 
       AxisConfig config;
-      config.logical_index = static_cast<int>(logical_indices[i]);
-      config.physical_axis = static_cast<int>(i);
+      config.logical_index = logical_index;
+      config.physical_axis = physical_axis;
       config.joint_name = joint_names[i];
       config.control_mode = control_mode;
       config.position_mode = position_mode;
@@ -554,16 +594,7 @@ class ZMotionDriverNode::Impl
         return false;
       }
       config.position_topic = position_topics[i];
-
-      if (logical_seen.count(config.logical_index) > 0U)
-      {
-        RCLCPP_ERROR(this->logger, "duplicated logical axis index: %d",
-                     config.logical_index);
-        return false;
-      }
-
-      logical_seen.insert(config.logical_index);
-      this->logical_to_axis_index[config.logical_index] = i;
+      physical_seen.insert(config.physical_axis);
       this->axes.push_back(config);
     }
 
@@ -575,16 +606,8 @@ class ZMotionDriverNode::Impl
     }
     for (std::size_t i = 0; i < this->velocity_logical_axes.size(); ++i)
     {
-      auto it =
-          this->logical_to_axis_index.find(this->velocity_logical_axes[i]);
-      if (it == this->logical_to_axis_index.end())
-      {
-        RCLCPP_ERROR(this->logger,
-                     "velocity axis not found in axis.logical_indices: %d",
-                     this->velocity_logical_axes[i]);
-        return false;
-      }
-      if (this->axes[it->second].control_mode != AxisControlMode::kVelocity)
+      if (this->axes[static_cast<std::size_t>(this->velocity_logical_axes[i])]
+              .control_mode != AxisControlMode::kVelocity)
       {
         RCLCPP_ERROR(this->logger, "velocity axis %d mode must be velocity",
                      this->velocity_logical_axes[i]);
@@ -607,16 +630,8 @@ class ZMotionDriverNode::Impl
       for (std::size_t i = 0; i < this->mimic_groups[group].size(); ++i)
       {
         const int logical_axis = this->mimic_groups[group][i];
-        auto it = this->logical_to_axis_index.find(logical_axis);
-        if (it == this->logical_to_axis_index.end())
-        {
-          RCLCPP_ERROR(this->logger,
-                       "mimic group axis %d not found in axis.logical_indices",
-                       logical_axis);
-          return false;
-        }
-
-        const AxisConfig &axis = this->axes[it->second];
+        const AxisConfig &axis =
+            this->axes[static_cast<std::size_t>(logical_axis)];
         if (axis.control_mode != AxisControlMode::kPosition)
         {
           RCLCPP_ERROR(this->logger,
@@ -641,6 +656,18 @@ class ZMotionDriverNode::Impl
         this->mimic_member_logical_axes.insert(logical_axis);
       }
     }
+
+    std::ostringstream mapping_oss;
+    mapping_oss << "axis index mode=logical; logical->physical=";
+    for (std::size_t i = 0; i < this->axes.size(); ++i)
+    {
+      if (i > 0)
+      {
+        mapping_oss << ",";
+      }
+      mapping_oss << i << "->" << this->axes[i].physical_axis;
+    }
+    RCLCPP_INFO(this->logger, "%s", mapping_oss.str().c_str());
 
     std::vector<int64_t> io_ids;
     (void)this->node->get_parameter("io.input_ids", io_ids);
@@ -1365,12 +1392,14 @@ class ZMotionDriverNode::Impl
     _physical_axes->reserve(_logical_axes.size());
     for (std::size_t i = 0; i < _logical_axes.size(); ++i)
     {
-      auto it = this->logical_to_axis_index.find(_logical_axes[i]);
-      if (it == this->logical_to_axis_index.end())
+      const int logical_axis = _logical_axes[i];
+      if ((logical_axis < 0) ||
+          (logical_axis >= static_cast<int>(this->axes.size())))
       {
         return false;
       }
-      _physical_axes->push_back(this->axes[it->second].physical_axis);
+      _physical_axes->push_back(
+          this->axes[static_cast<std::size_t>(logical_axis)].physical_axis);
     }
     return true;
   }
@@ -1406,12 +1435,14 @@ class ZMotionDriverNode::Impl
     {
       for (std::size_t i = 0; i < _physical_axes.size(); ++i)
       {
-        auto it = this->logical_to_axis_index.find(_cmd.logical_axes[i]);
-        if (it == this->logical_to_axis_index.end())
+        const int logical_axis = _cmd.logical_axes[i];
+        if ((logical_axis < 0) ||
+            (logical_axis >= static_cast<int>(this->axes.size())))
         {
           return CallResult::Failure(-205, "logical axis not found", false);
         }
-        const AxisConfig &axis = this->axes[it->second];
+        const AxisConfig &axis =
+            this->axes[static_cast<std::size_t>(logical_axis)];
         CallResult result = this->sdk->CommandVelocity(
             _physical_axes[i], axis.direction * _cmd.values[i]);
         if (!result.ok)
@@ -1432,13 +1463,14 @@ class ZMotionDriverNode::Impl
     for (std::size_t i = 0; i < _cmd.values.size(); ++i)
     {
       const int logical_axis = _cmd.logical_axes[i];
-      auto it = this->logical_to_axis_index.find(logical_axis);
-      if (it == this->logical_to_axis_index.end())
+      if ((logical_axis < 0) ||
+          (logical_axis >= static_cast<int>(this->axes.size())))
       {
         return CallResult::Failure(-205, "logical axis not found", false);
       }
 
-      const AxisConfig &axis = this->axes[it->second];
+      const AxisConfig &axis =
+          this->axes[static_cast<std::size_t>(logical_axis)];
       const double physical_value = axis.direction * _cmd.values[i];
       if (_cmd.type == PendingType::kMoveAbsolute)
       {
@@ -1640,14 +1672,14 @@ class ZMotionDriverNode::Impl
       }
 
       const int logical_axis = this->mimic_groups[group][0];
-      auto it = this->logical_to_axis_index.find(logical_axis);
-      if (it == this->logical_to_axis_index.end())
+      if ((logical_axis < 0) ||
+          (logical_axis >= static_cast<int>(logical_positions.size())))
       {
         continue;
       }
 
       std_msgs::msg::Float64 position_msg;
-      position_msg.data = logical_positions[it->second];
+      position_msg.data = logical_positions[static_cast<std::size_t>(logical_axis)];
       this->mimic_position_pubs[group]->publish(position_msg);
     }
 
@@ -1946,10 +1978,9 @@ class ZMotionDriverNode::Impl
       velocities.reserve(logical_axes.size());
 
       double speed_mag = 0.1;
-      auto it = this->logical_to_axis_index.find(0);
-      if (it != this->logical_to_axis_index.end())
+      if (!this->axes.empty())
       {
-        speed_mag = this->axes[it->second].speed;
+        speed_mag = this->axes[0].speed;
       }
 
       double target_vel = 0.0;
@@ -1998,8 +2029,8 @@ class ZMotionDriverNode::Impl
       }
 
       const int logical_axis = this->mimic_groups[group][0];
-      auto it = this->logical_to_axis_index.find(logical_axis);
-      if (it == this->logical_to_axis_index.end())
+      if ((logical_axis < 0) ||
+          (logical_axis >= static_cast<int>(this->axes.size())))
       {
         this->WriteLogLocked(
             "io_action",
@@ -2009,10 +2040,7 @@ class ZMotionDriverNode::Impl
       }
 
       double speed_mag = 0.1;
-      if (it != this->logical_to_axis_index.end())
-      {
-        speed_mag = this->axes[it->second].speed;
-      }
+      speed_mag = this->axes[static_cast<std::size_t>(logical_axis)].speed;
 
       double target_value = 0.0;
       if ((cfg.io_id % 2) == 0)
@@ -2149,10 +2177,10 @@ class ZMotionDriverNode::Impl
 
       // Determine a sensible velocity magnitude: prefer configured axis speed
       double speed_mag = 0.1;
-      auto it = this->logical_to_axis_index.find(logical_axis);
-      if (it != this->logical_to_axis_index.end())
+      if ((logical_axis >= 0) &&
+          (logical_axis < static_cast<int>(this->axes.size())))
       {
-        speed_mag = this->axes[it->second].speed;
+        speed_mag = this->axes[static_cast<std::size_t>(logical_axis)].speed;
       }
 
       double target_vel = 0.0;
@@ -2198,8 +2226,8 @@ class ZMotionDriverNode::Impl
       }
 
       const int logical_axis = this->mimic_groups[group][0];
-      auto it = this->logical_to_axis_index.find(logical_axis);
-      if (it == this->logical_to_axis_index.end())
+      if ((logical_axis < 0) ||
+          (logical_axis >= static_cast<int>(this->axes.size())))
       {
         this->WriteLogLocked(
             "io_action",
@@ -2209,10 +2237,7 @@ class ZMotionDriverNode::Impl
       }
 
       double speed_mag = 0.1;
-      if (it != this->logical_to_axis_index.end())
-      {
-        speed_mag = this->axes[it->second].speed;
-      }
+      speed_mag = this->axes[static_cast<std::size_t>(logical_axis)].speed;
 
       double target_value = 0.0;
       if ((cfg.io_id % 2) == 0)
@@ -2281,13 +2306,13 @@ class ZMotionDriverNode::Impl
     }
 
     const int logical_axis = this->mimic_groups[_group][0];
-    auto it = this->logical_to_axis_index.find(logical_axis);
-    if (it == this->logical_to_axis_index.end())
+    if ((logical_axis < 0) ||
+        (logical_axis >= static_cast<int>(this->axes.size())))
     {
       return;
     }
 
-    const AxisConfig &axis = this->axes[it->second];
+    const AxisConfig &axis = this->axes[static_cast<std::size_t>(logical_axis)];
 
     PendingCommand cmd;
     cmd.logical_axes = this->mimic_groups[_group];
@@ -2484,7 +2509,6 @@ class ZMotionDriverNode::Impl
   std::string mimic_position_topics[2];
 
   std::vector<AxisConfig> axes;
-  std::unordered_map<int, std::size_t> logical_to_axis_index;
   std::vector<int> velocity_logical_axes;
   std::vector<int> mimic_groups[2];
   std::set<int> mimic_member_logical_axes;
