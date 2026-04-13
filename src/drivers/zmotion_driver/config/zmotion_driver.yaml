@@ -14,7 +14,8 @@
 
     axis:
       # 数组中填写数字表示 EtherCAT / 硬件接线的下标/顺序，值表示对应的逻辑轴编号
-      logical_indices: [0, 2, 3, 1, 9, 8, 4, 5, 11, 10, 6, 7]
+      # logical_indices: [0, 2, 3, 1, 9, 8, 4, 5, 11, 10, 6, 7]
+      logical_indices: [0, 3, 1, 2, 6, 7, 10, 11, 5, 4, 9, 8]
 
       # 以下数组都与 logical_indices 保持同一顺序
 
