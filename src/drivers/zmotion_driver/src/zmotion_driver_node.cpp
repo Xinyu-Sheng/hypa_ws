@@ -33,6 +33,7 @@ namespace
 // Define this macro to use the new IO polling behavior at compile time.
 // Default is legacy behavior. Uncomment or add in build flags to switch.
 #define ZMOTION_DRIVER_USE_NEW_POLL_IO_INPUTS
+#define ZMOTION_DRIVER_USE_NEW_POLL_IO_INPUTS_2
 
 #define IO_LOGICAL_AXIS_OFFSET 0
 
@@ -509,8 +510,7 @@ class ZMotionDriverNode::Impl
       if ((this->velocity_logical_axes[i] < 0) ||
           (this->velocity_logical_axes[i] >= static_cast<int>(kAxisCount)))
       {
-        RCLCPP_ERROR(this->logger,
-                     "velocity logical axis out of range: %d",
+        RCLCPP_ERROR(this->logger, "velocity logical axis out of range: %d",
                      this->velocity_logical_axes[i]);
         return false;
       }
@@ -521,7 +521,8 @@ class ZMotionDriverNode::Impl
       for (std::size_t i = 0; i < this->mimic_groups[group].size(); ++i)
       {
         const int logical_axis = this->mimic_groups[group][i];
-        if ((logical_axis < 0) || (logical_axis >= static_cast<int>(kAxisCount)))
+        if ((logical_axis < 0) ||
+            (logical_axis >= static_cast<int>(kAxisCount)))
         {
           RCLCPP_ERROR(this->logger,
                        "mimic group %d logical axis out of range: %d", group,
@@ -535,7 +536,8 @@ class ZMotionDriverNode::Impl
     {
       const int logical_index = static_cast<int>(i);
       const int physical_axis = static_cast<int>(logical_indices[i]);
-      if ((physical_axis < 0) || (physical_axis >= static_cast<int>(kAxisCount)))
+      if ((physical_axis < 0) ||
+          (physical_axis >= static_cast<int>(kAxisCount)))
       {
         RCLCPP_ERROR(this->logger,
                      "axis.logical_indices[%zu] physical axis out of range: %d",
@@ -1679,7 +1681,8 @@ class ZMotionDriverNode::Impl
       }
 
       std_msgs::msg::Float64 position_msg;
-      position_msg.data = logical_positions[static_cast<std::size_t>(logical_axis)];
+      position_msg.data =
+          logical_positions[static_cast<std::size_t>(logical_axis)];
       this->mimic_position_pubs[group]->publish(position_msg);
     }
 
@@ -1879,11 +1882,308 @@ class ZMotionDriverNode::Impl
 
   void PollIoInputs()
   {
-#if defined(ZMOTION_DRIVER_USE_NEW_POLL_IO_INPUTS)
+#if defined(ZMOTION_DRIVER_USE_NEW_POLL_IO_INPUTS_2)
+    this->PollIoInputsNew2();
+#elif defined(ZMOTION_DRIVER_USE_NEW_POLL_IO_INPUTS)
     this->PollIoInputsNew();
 #else
     this->PollIoInputsLegacy();
 #endif
+  }
+
+  void PollIoInputsNew2()
+  {
+    std::lock_guard<std::mutex> lock(this->mutex);
+    if (!this->configured)
+    {
+      return;
+    }
+
+    std::vector<int> io_values;
+    io_values.reserve(this->io_inputs.size());
+
+    // Track which IOs changed this poll (after debounce)
+    std::vector<bool> changed_flags(this->io_inputs.size(), false);
+
+    // current time in milliseconds for debounce checks
+    const int64_t now_ms =
+        static_cast<int64_t>(this->node->now().nanoseconds() / 1000000LL);
+
+    for (std::size_t i = 0; i < this->io_inputs.size(); ++i)
+    {
+      int value = 0;
+      CallResult result = this->sdk->GetInput(this->io_inputs[i].io_id, &value);
+      if (!result.ok)
+      {
+        this->WriteLogLocked(
+            "io_err",
+            "read io failed id=" + std::to_string(this->io_inputs[i].io_id));
+        io_values.push_back(value);
+        continue;
+      }
+
+      // capture previous value (may be -1 == unknown)
+      int prev = -1;
+      if (i < this->previous_io_values.size())
+      {
+        prev = this->previous_io_values[i];
+      }
+
+      // publish state and dispatch configured trigger action (synchronous,
+      // locked). Dispatch uses previous_io_values as currently stored,
+      // so call before we update previous_io_values.
+      this->DispatchIoTriggerNew2Locked(i, value);
+
+      // detect change (only if previous known)
+      const bool prev_known = (prev != -1);
+      const bool changed = prev_known && (prev != value);
+
+      if (changed && this->io_log_on_change)
+      {
+        // debounce check
+        int64_t last_ms = 0;
+        if (i < this->last_io_change_ms.size())
+        {
+          last_ms = this->last_io_change_ms[i];
+        }
+        if (this->io_debounce_ms <= 0 ||
+            (now_ms - last_ms) >= this->io_debounce_ms)
+        {
+          changed_flags[i] = true;
+          if (i < this->last_io_change_ms.size())
+          {
+            this->last_io_change_ms[i] = now_ms;
+          }
+        }
+      }
+
+      // update previous value for next poll
+      if (i < this->previous_io_values.size())
+      {
+        this->previous_io_values[i] = value;
+      }
+
+      io_values.push_back(value);
+    }
+
+    if (!io_values.empty())
+    {
+      if (this->io_log_on_change)
+      {
+        const bool any_changed =
+            std::any_of(changed_flags.begin(), changed_flags.end(),
+                        [](bool v) { return v; });
+        if (any_changed)
+        {
+          this->WriteLogLocked("io", "io_values=" + JoinInts(io_values));
+        }
+      }
+      else
+      {
+        // legacy behavior: log every poll
+        this->WriteLogLocked("io", "io_values=" + JoinInts(io_values));
+      }
+    }
+  }
+
+  void DispatchIoTriggerNew2Locked(std::size_t index, int current_value)
+  {
+    if (index >= this->io_inputs.size())
+    {
+      return;
+    }
+
+    const IoInputConfig &cfg = this->io_inputs[index];
+
+    // Always publish state to the state topic if available
+    if ((index < this->io_state_pubs.size()) &&
+        (this->io_state_pubs[index] != nullptr) &&
+        this->io_state_pubs[index]->is_activated())
+    {
+      std_msgs::msg::Bool msg;
+      msg.data = (current_value != 0);
+      this->io_state_pubs[index]->publish(msg);
+    }
+
+    int prev = -1;
+    if (index < this->previous_io_values.size())
+    {
+      prev = this->previous_io_values[index];
+    }
+    const bool prev_known = (prev != -1);
+    const bool changed = prev_known && (prev != current_value);
+    const bool rising = prev_known && (prev == 0 && current_value != 0);
+    const bool falling = prev_known && (prev != 0 && current_value == 0);
+    const bool high = (current_value != 0);
+    const bool low = !high;
+
+    this->WriteLogLocked(
+        "io_trigger", "io_id=" + std::to_string(cfg.io_id) + " mode=" +
+                          std::to_string(static_cast<int>(cfg.trigger_mode)) +
+                          " prev=" + std::to_string(prev) +
+                          " cur=" + std::to_string(current_value));
+
+    // Maintain compatibility: explicit emergency_stop_on_high still forces an
+    // emergency stop
+    if (cfg.emergency_stop_on_high && high && !this->emergency_stop)
+    {
+      this->TriggerEmergencyStopLocked("io_" + std::to_string(cfg.io_id));
+      return;
+    }
+
+    bool should_trigger = false;
+    switch (cfg.trigger_mode)
+    {
+      case IoTriggerMode::kNone:
+        should_trigger = false;
+        break;
+      case IoTriggerMode::kLevelHigh:
+        should_trigger = high;
+        break;
+      case IoTriggerMode::kLevelLow:
+        should_trigger = low;
+        break;
+      case IoTriggerMode::kRisingEdge:
+        should_trigger = rising;
+        break;
+      case IoTriggerMode::kFallingEdge:
+        should_trigger = falling;
+        break;
+      case IoTriggerMode::kBothEdges:
+        should_trigger = changed;
+        break;
+      default:
+        should_trigger = false;
+        break;
+    }
+
+    if (!should_trigger)
+    {
+      return;
+    }
+
+    if ((cfg.io_id >= 0) && (cfg.io_id <= 5))
+    {
+      if (!this->configured || !this->active || this->emergency_stop)
+      {
+        this->WriteLogLocked(
+            "io_action",
+            "io_" + std::to_string(cfg.io_id) +
+                " triggered but node not active/configured or in emergency");
+        return;
+      }
+
+      std::vector<int> logical_axes{0, 1, 2, 3};
+      std::vector<double> values(4, 0.0);
+
+      double speed_mag = 0.1;
+      if (!this->axes.empty())
+      {
+        speed_mag = this->axes[0].speed;
+      }
+
+      // IO 0..5 mapping for four logical axes (0..3)
+      if (high)
+      {
+        switch (cfg.io_id)
+        {
+          case 0:
+            values = {speed_mag, speed_mag, speed_mag, speed_mag};
+            break;
+          case 1:
+            values = {-speed_mag, -speed_mag, -speed_mag, -speed_mag};
+            break;
+          case 2:
+            values = {speed_mag, speed_mag, -speed_mag, -speed_mag};
+            break;
+          case 3:
+            values = {-speed_mag, -speed_mag, speed_mag, speed_mag};
+            break;
+          case 4:
+            values = {speed_mag, -speed_mag, -speed_mag, speed_mag};
+            break;
+          case 5:
+            values = {-speed_mag, speed_mag, speed_mag, -speed_mag};
+            break;
+          default:
+            break;
+        }
+      }
+
+      this->WriteLogLocked("io_action", "io_" + std::to_string(cfg.io_id) +
+                                            " triggered: axes0-3 velocity=" +
+                                            JoinDoubles(values));
+
+      PendingCommand cmd;
+      cmd.type = PendingType::kVelocity;
+      cmd.logical_axes = std::move(logical_axes);
+      cmd.values = std::move(values);
+      this->DispatchCommandLocked(cmd);
+      return;
+    }
+    else if ((cfg.io_id == 8) || (cfg.io_id == 9) || (cfg.io_id == 10) ||
+             (cfg.io_id == 11))
+    {
+      const int group = (cfg.io_id <= 9) ? 0 : 1;
+      if (this->mimic_groups[group].empty())
+      {
+        this->WriteLogLocked("io_action", "io_" + std::to_string(cfg.io_id) +
+                                              " triggered but mimic group " +
+                                              std::to_string(group) +
+                                              " is not configured");
+        return;
+      }
+      if (!this->configured || !this->active || this->emergency_stop)
+      {
+        this->WriteLogLocked(
+            "io_action",
+            "io_" + std::to_string(cfg.io_id) +
+                " triggered but node not active/configured or in emergency");
+        return;
+      }
+
+      const int logical_axis = this->mimic_groups[group][0];
+      if ((logical_axis < 0) ||
+          (logical_axis >= static_cast<int>(this->axes.size())))
+      {
+        this->WriteLogLocked(
+            "io_action",
+            "io_" + std::to_string(cfg.io_id) +
+                " triggered but mimic group logical axis not found");
+        return;
+      }
+
+      double speed_mag = 0.1;
+      speed_mag = this->axes[static_cast<std::size_t>(logical_axis)].speed;
+
+      double target_value = 0.0;
+      if ((cfg.io_id % 2) == 0)
+      {
+        target_value = (high ? speed_mag : 0.0);
+      }
+      else
+      {
+        target_value = (high ? -speed_mag : 0.0);
+      }
+
+      PendingCommand cmd;
+      cmd.type = PendingType::kVelocity;
+      cmd.logical_axes = this->mimic_groups[group];
+      cmd.values =
+          std::vector<double>(this->mimic_groups[group].size(), target_value);
+
+      this->WriteLogLocked("io_action",
+                           "io_" + std::to_string(cfg.io_id) +
+                               " triggered: mimic_group" +
+                               std::to_string(group + 1) +
+                               " velocity=" + std::to_string(target_value));
+      this->DispatchCommandLocked(cmd);
+      return;
+    }
+
+    this->WriteLogLocked("io_action",
+                         "io_" + std::to_string(cfg.io_id) +
+                             " triggered: no control action for this IO");
   }
 
   void DispatchIoTriggerNewLocked(std::size_t index, int current_value)
