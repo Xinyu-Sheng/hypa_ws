@@ -3,9 +3,9 @@
 #include <cmath>
 #include <functional>
 #include <memory>
+#include <random>
 #include <string>
 #include <vector>
-#include <random>
 
 #include <builtin_interfaces/msg/time.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -15,6 +15,7 @@
 namespace
 {
 constexpr double kPi = 3.14159265358979323846;
+constexpr size_t kJointCount = 14;
 
 builtin_interfaces::msg::Time makeStamp(double _time_sec)
 {
@@ -167,7 +168,7 @@ class HypaDtGuiPluginTestNode : public rclcpp::Node
     imu_rear_params_.ou_mu_linacc_z = 9.81;
 
     // joints
-    joint_params_.resize(4);
+    joint_params_.resize(kJointCount);
     std::uniform_real_distribution<double> joint_amp(0.2, 0.6);
     std::uniform_real_distribution<double> joint_freq(0.3, 1.2);
     for (size_t i = 0; i < joint_params_.size(); ++i)
@@ -197,10 +198,12 @@ class HypaDtGuiPluginTestNode : public rclcpp::Node
     {
       imu_front_ori_state_[i] = 0.01 * initn(rng_);
       imu_front_angvel_state_[i] = 0.01 * initn(rng_);
-      imu_front_linacc_state_[i] = (i == 2) ? 9.81 + 0.1 * initn(rng_) : 0.01 * initn(rng_);
+      imu_front_linacc_state_[i] =
+          (i == 2) ? 9.81 + 0.1 * initn(rng_) : 0.01 * initn(rng_);
       imu_rear_ori_state_[i] = 0.01 * initn(rng_);
       imu_rear_angvel_state_[i] = 0.01 * initn(rng_);
-      imu_rear_linacc_state_[i] = (i == 2) ? 9.81 + 0.1 * initn(rng_) : 0.01 * initn(rng_);
+      imu_rear_linacc_state_[i] =
+          (i == 2) ? 9.81 + 0.1 * initn(rng_) : 0.01 * initn(rng_);
     }
 
     this->last_time_ = this->now().seconds();
@@ -271,12 +274,13 @@ class HypaDtGuiPluginTestNode : public rclcpp::Node
   std::vector<JointState> joint_states_;
   double last_time_ = 0.0;
 
-  // Generate IMU message using node-local independent random params and OU states
-  sensor_msgs::msg::Imu makeImuMessageNode(const std::string &_frame_id,
-                                          const ImuParams &_p,
-                                          const std::array<double, 3> &_ori_state,
-                                          const std::array<double, 3> &_angvel_state,
-                                          const std::array<double, 3> &_linacc_state)
+  // Generate IMU message using node-local independent random params and OU
+  // states
+  sensor_msgs::msg::Imu makeImuMessageNode(
+      const std::string &_frame_id, const ImuParams &_p,
+      const std::array<double, 3> &_ori_state,
+      const std::array<double, 3> &_angvel_state,
+      const std::array<double, 3> &_linacc_state)
   {
     sensor_msgs::msg::Imu message;
     // header stamp will be set by caller
@@ -308,8 +312,10 @@ class HypaDtGuiPluginTestNode : public rclcpp::Node
     for (size_t i = 0; i < 9; ++i)
     {
       message.orientation_covariance[i] = (i % 4 == 0) ? cov_jitter(rng_) : 0.0;
-      message.angular_velocity_covariance[i] = (i % 4 == 0) ? cov_jitter(rng_) * 2.0 : 0.0;
-      message.linear_acceleration_covariance[i] = (i % 4 == 0) ? cov_jitter(rng_) * 3.0 : 0.0;
+      message.angular_velocity_covariance[i] =
+          (i % 4 == 0) ? cov_jitter(rng_) * 2.0 : 0.0;
+      message.linear_acceleration_covariance[i] =
+          (i % 4 == 0) ? cov_jitter(rng_) * 3.0 : 0.0;
     }
 
     return message;
@@ -319,7 +325,11 @@ class HypaDtGuiPluginTestNode : public rclcpp::Node
   {
     sensor_msgs::msg::JointState message;
     message.header.stamp = makeStamp(_time_sec);
-    message.name = {"joint_1", "joint_2", "joint_3", "joint_4"};
+    message.name.reserve(kJointCount);
+    for (size_t i = 0; i < kJointCount; ++i)
+    {
+      message.name.push_back("joint_" + std::to_string(i + 1));
+    }
     message.position.resize(message.name.size());
     message.velocity.resize(message.name.size());
     message.effort.resize(message.name.size());
@@ -343,30 +353,35 @@ class HypaDtGuiPluginTestNode : public rclcpp::Node
   // Update OU states for IMUs and joints using dt
   void updateStates(double dt)
   {
-    if (dt <= 0.0) return;
+    if (dt <= 0.0)
+      return;
     std::normal_distribution<double> norm(0.0, 1.0);
 
     auto ou_step = [&](double &x, double theta, double mu, double sigma)
-    {
-      x += theta * (mu - x) * dt + sigma * std::sqrt(dt) * norm(rng_);
-    };
+    { x += theta * (mu - x) * dt + sigma * std::sqrt(dt) * norm(rng_); };
 
     // IMU front
     for (int i = 0; i < 3; ++i)
     {
-      ou_step(imu_front_ori_state_[i], imu_front_params_.ou_theta, imu_front_params_.ou_mu_ori, imu_front_params_.ou_sigma);
-      ou_step(imu_front_angvel_state_[i], imu_front_params_.ou_theta, imu_front_params_.ou_mu_angvel, imu_front_params_.ou_sigma);
+      ou_step(imu_front_ori_state_[i], imu_front_params_.ou_theta,
+              imu_front_params_.ou_mu_ori, imu_front_params_.ou_sigma);
+      ou_step(imu_front_angvel_state_[i], imu_front_params_.ou_theta,
+              imu_front_params_.ou_mu_angvel, imu_front_params_.ou_sigma);
       double mu_la = (i == 2) ? imu_front_params_.ou_mu_linacc_z : 0.0;
-      ou_step(imu_front_linacc_state_[i], imu_front_params_.ou_theta, mu_la, imu_front_params_.ou_sigma);
+      ou_step(imu_front_linacc_state_[i], imu_front_params_.ou_theta, mu_la,
+              imu_front_params_.ou_sigma);
     }
 
     // IMU rear
     for (int i = 0; i < 3; ++i)
     {
-      ou_step(imu_rear_ori_state_[i], imu_rear_params_.ou_theta, imu_rear_params_.ou_mu_ori, imu_rear_params_.ou_sigma);
-      ou_step(imu_rear_angvel_state_[i], imu_rear_params_.ou_theta, imu_rear_params_.ou_mu_angvel, imu_rear_params_.ou_sigma);
+      ou_step(imu_rear_ori_state_[i], imu_rear_params_.ou_theta,
+              imu_rear_params_.ou_mu_ori, imu_rear_params_.ou_sigma);
+      ou_step(imu_rear_angvel_state_[i], imu_rear_params_.ou_theta,
+              imu_rear_params_.ou_mu_angvel, imu_rear_params_.ou_sigma);
       double mu_la = (i == 2) ? imu_rear_params_.ou_mu_linacc_z : 0.0;
-      ou_step(imu_rear_linacc_state_[i], imu_rear_params_.ou_theta, mu_la, imu_rear_params_.ou_sigma);
+      ou_step(imu_rear_linacc_state_[i], imu_rear_params_.ou_theta, mu_la,
+              imu_rear_params_.ou_sigma);
     }
 
     // joints
@@ -389,9 +404,13 @@ class HypaDtGuiPluginTestNode : public rclcpp::Node
     // update OU states
     updateStates(dt);
 
-    auto imu_front = makeImuMessageNode("imu_front", this->imu_front_params_, imu_front_ori_state_, imu_front_angvel_state_, imu_front_linacc_state_);
+    auto imu_front = makeImuMessageNode(
+        "imu_front", this->imu_front_params_, imu_front_ori_state_,
+        imu_front_angvel_state_, imu_front_linacc_state_);
     imu_front.header.stamp = makeStamp(now_sec - this->start_time_);
-    auto imu_rear = makeImuMessageNode("imu_rear", this->imu_rear_params_, imu_rear_ori_state_, imu_rear_angvel_state_, imu_rear_linacc_state_);
+    auto imu_rear = makeImuMessageNode(
+        "imu_rear", this->imu_rear_params_, imu_rear_ori_state_,
+        imu_rear_angvel_state_, imu_rear_linacc_state_);
     imu_rear.header.stamp = makeStamp(now_sec - this->start_time_);
     auto joint_state = makeJointStateMessageNode(now_sec - this->start_time_);
 
