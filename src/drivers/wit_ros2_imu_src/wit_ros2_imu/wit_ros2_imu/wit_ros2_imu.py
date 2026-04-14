@@ -103,7 +103,7 @@ class imuDriverNode(Node):
                 file_name = f"{self._csv_basename}_{ts}.csv"
                 file_path = os.path.join(self._csv_dir, file_name)
                 self._csv_file = open(file_path, "a", encoding="utf-8")
-                header = "stamp_sec,stamp_nsec,acc_x,acc_y,acc_z,gyro_x,gyro_y,gyro_z,roll_deg,pitch_deg,yaw_deg,mag_x,mag_y,mag_z\n"
+                header = "stamp_ns,acc_x,acc_y,acc_z,gyro_x,gyro_y,gyro_z,roll_deg,pitch_deg,yaw_deg,mag_x,mag_y,mag_z\n"
                 self._csv_file.write(header)
                 self._csv_file.flush()
                 self._csv_thread = threading.Thread(
@@ -591,10 +591,9 @@ class imuDriverNode(Node):
         if getattr(self, "_csv_enabled", False):
             try:
                 stamp = imuMsg.header.stamp
-                sec = int(stamp.sec)
-                nanosec = int(stamp.nanosec)
+                stamp_ns = int(stamp.sec) * 1000000000 + int(stamp.nanosec)
                 line = (
-                    f"{sec},{nanosec},{float(ax):.6f},{float(ay):.6f},{float(az):.6f},"
+                    f"{stamp_ns},{float(ax):.6f},{float(ay):.6f},{float(az):.6f},"
                     f"{float(gx):.9f},{float(gy):.9f},{float(gz):.9f},"
                     f"{math.degrees(roll):.6f},{math.degrees(pitch):.6f},{math.degrees(yaw):.6f},"
                     f"{float(mx):.6f},{float(my):.6f},{float(mz):.6f}\n"
