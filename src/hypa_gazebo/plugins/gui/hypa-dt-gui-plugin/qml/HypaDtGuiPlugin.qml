@@ -96,28 +96,37 @@ Rectangle {
               border.width: 1
               clip: true
 
-              Flow {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
+              Flickable {
+                anchors.fill: parent
                 anchors.leftMargin: 8
                 anchors.rightMargin: 8
-                spacing: 6
+                clip: true
+                contentWidth: imuCheckboxRow.implicitWidth
+                contentHeight: height
+                flickableDirection: Flickable.HorizontalFlick
+                boundsBehavior: Flickable.StopAtBounds
+                interactive: contentWidth > width
 
-                Repeater {
-                  model: root.imuModel
-                  delegate: CheckBox {
-                    text: name
-                    checked: selected
-                    font.pixelSize: 11
-                    hoverEnabled: true
-                    ToolTip.visible: hovered
-                    ToolTip.text: latestText
-                    topPadding: 0
-                    bottomPadding: 0
-                    indicator.height: 14
-                    indicator.width: 14
-                    onClicked: root.imuModel.setSelected(name, checked)
+                Row {
+                  id: imuCheckboxRow
+                  anchors.verticalCenter: parent.verticalCenter
+                  spacing: 6
+
+                  Repeater {
+                    model: root.imuModel
+                    delegate: CheckBox {
+                      text: name
+                      checked: selected
+                      font.pixelSize: 11
+                      hoverEnabled: true
+                      ToolTip.visible: hovered
+                      ToolTip.text: latestText
+                      topPadding: 0
+                      bottomPadding: 0
+                      indicator.height: 14
+                      indicator.width: 14
+                      onClicked: root.imuModel.setSelected(name, checked)
+                    }
                   }
                 }
               }
@@ -343,28 +352,37 @@ Rectangle {
               border.width: 1
               clip: true
 
-              Flow {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
+              Flickable {
+                anchors.fill: parent
                 anchors.leftMargin: 8
                 anchors.rightMargin: 8
-                spacing: 6
+                clip: true
+                contentWidth: jointCheckboxRow.implicitWidth
+                contentHeight: height
+                flickableDirection: Flickable.HorizontalFlick
+                boundsBehavior: Flickable.StopAtBounds
+                interactive: contentWidth > width
 
-                Repeater {
-                  model: root.jointModel
-                  delegate: CheckBox {
-                    text: name
-                    checked: selected
-                    font.pixelSize: 11
-                    hoverEnabled: true
-                    ToolTip.visible: hovered
-                    ToolTip.text: latestText
-                    topPadding: 0
-                    bottomPadding: 0
-                    indicator.height: 14
-                    indicator.width: 14
-                    onClicked: root.jointModel.setSelected(name, checked)
+                Row {
+                  id: jointCheckboxRow
+                  anchors.verticalCenter: parent.verticalCenter
+                  spacing: 6
+
+                  Repeater {
+                    model: root.jointModel
+                    delegate: CheckBox {
+                      text: name
+                      checked: selected
+                      font.pixelSize: 11
+                      hoverEnabled: true
+                      ToolTip.visible: hovered
+                      ToolTip.text: latestText
+                      topPadding: 0
+                      bottomPadding: 0
+                      indicator.height: 14
+                      indicator.width: 14
+                      onClicked: root.jointModel.setSelected(name, checked)
+                    }
                   }
                 }
               }
