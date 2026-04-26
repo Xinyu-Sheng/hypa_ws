@@ -46,6 +46,7 @@ class ZMotionSdkWrapper
   bool IsConnected() const;
 
   CallResult InitEthercat(const EcatConfig &_config);
+  CallResult ShutdownEthercat(const int _slot_id);
 
   CallResult ConfigureAxis(int _axis, double _units, double _speed,
                            double _accel, double _decel);

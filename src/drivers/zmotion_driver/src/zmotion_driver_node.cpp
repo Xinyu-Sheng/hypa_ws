@@ -1274,6 +1274,10 @@ class ZMotionDriverNode::Impl
         {
           (void)this->sdk->SetAxisEnable(this->axes[i].physical_axis, false);
         }
+
+        // 关闭 WDOG（看门狗）并停止 EtherCAT 总线，确保下次启动时总线状态正确
+        (void)this->sdk->ShutdownEthercat(this->ecat_config.slot_id);
+
         (void)this->sdk->Disconnect();
       }
       this->WriteLogLocked("lifecycle", "teardown");

@@ -213,7 +213,7 @@ class ZMotionSdkWrapper::Impl
   {
     // 停止槽位
     (void)this->Execute("SLOT_STOP(" + std::to_string(_slot_id) + ")", nullptr);
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     // 冗余设置（仅在启用冗余时写入）
     if ((_bus_red_switch == 1) && (_slot_id != _red_spare_slot))
@@ -968,6 +968,38 @@ CallResult ZMotionSdkWrapper::StopAll()
     this->pimpl_->moving_axes_direction.clear();
   }
   return result;
+}
+
+CallResult ZMotionSdkWrapper::ShutdownEthercat(const int _slot_id)
+{
+  if (!this->pimpl_->connected)
+  {
+    return CallResult::Success();
+  }
+
+  (void)this->StopAll();
+
+  // 关闭 WDOG（看门狗）以停止所有轴的总使能
+  CallResult wdog_result = this->pimpl_->Execute("WDOG=0", nullptr);
+  if (!wdog_result.ok)
+  {
+    RCLCPP_WARN(rclcpp::get_logger("zmotion_driver.sdk"), "WDOG=0 failed: %s",
+                wdog_result.message.c_str());
+  }
+
+  // 停止 EtherCAT 总线
+  CallResult stop_result = this->pimpl_->Execute(
+      "SLOT_STOP(" + std::to_string(_slot_id) + ")", nullptr);
+  if (!stop_result.ok)
+  {
+    RCLCPP_WARN(rclcpp::get_logger("zmotion_driver.sdk"),
+                "SLOT_STOP failed: %s", stop_result.message.c_str());
+  }
+
+  // 等待总线完全停止
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+  return CallResult::Success();
 }
 
 CallResult ZMotionSdkWrapper::GetMpos(const int _axis, double *_value) const
