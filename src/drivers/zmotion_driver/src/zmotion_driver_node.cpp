@@ -1097,7 +1097,8 @@ class ZMotionDriverNode::Impl
     std::lock_guard<std::mutex> lock(this->mutex);
 
     this->emergency_stop = false;
-    CallResult connect_result = this->sdk->Connect(this->controller_ip);
+    CallResult connect_result =
+        this->sdk->Connect(this->controller_ip, this->ecat_config.timeout_ms);
     if (!connect_result.ok)
     {
       RCLCPP_ERROR(this->logger, "connect failed: %s",

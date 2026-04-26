@@ -41,7 +41,7 @@ class ZMotionSdkWrapper
   ZMotionSdkWrapper(const ZMotionSdkWrapper &) = delete;
   ZMotionSdkWrapper &operator=(const ZMotionSdkWrapper &) = delete;
 
-  CallResult Connect(const std::string &_ip);
+  CallResult Connect(const std::string &_ip, const int _timeout_ms = 1000);
   CallResult Disconnect();
   bool IsConnected() const;
 

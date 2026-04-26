@@ -373,7 +373,8 @@ ZMotionSdkWrapper::~ZMotionSdkWrapper()
   (void)this->Disconnect();
 }
 
-CallResult ZMotionSdkWrapper::Connect(const std::string &_ip)
+CallResult ZMotionSdkWrapper::Connect(const std::string &_ip,
+                                      const int _timeout_ms)
 {
   if (this->pimpl_->connected)
   {
@@ -397,7 +398,7 @@ CallResult ZMotionSdkWrapper::Connect(const std::string &_ip)
 
   this->pimpl_->handle = handle;
   this->pimpl_->connected = true;
-  (void)ZAux_SetTimeOut(this->pimpl_->handle, 1000);
+  (void)ZAux_SetTimeOut(this->pimpl_->handle, _timeout_ms);
 
   return CallResult::Success();
 }
