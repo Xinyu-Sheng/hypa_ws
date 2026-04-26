@@ -971,7 +971,9 @@ CallResult ZMotionSdkWrapper::StopAll()
   return result;
 }
 
-CallResult ZMotionSdkWrapper::ShutdownEthercat(const int _slot_id)
+CallResult ZMotionSdkWrapper::ShutdownEthercat(const int _slot_id,
+                                               const int _drive_axis_start,
+                                               const int _drive_axis_num)
 {
   if (!this->pimpl_->connected)
   {
@@ -979,6 +981,83 @@ CallResult ZMotionSdkWrapper::ShutdownEthercat(const int _slot_id)
   }
 
   (void)this->StopAll();
+
+  // CiA402 标准去使能流程：对所有 EtherCAT 驱动轴执行
+  // 1) 写入 0x0007 到 6040h (Switch On Disabled)
+  // 2) 等待 6041h 状态字退出 Operation Enabled (bit2=0)
+  // 3) 写入 0x0080 到 6040h (Fault Reset)
+  // 4) 确认 6041h 无故障 (bit3=0)
+  constexpr int kCiaStatusWordIndex = 0x6041;
+  constexpr int kCiaStatusWordSub = 0;
+  constexpr int kCiaStatusWordType = 2;       // UINT16
+  constexpr uint16_t kOpEnabledBit = 0x0004;  // bit2: Operation Enabled
+  constexpr uint16_t kFaultBit = 0x0008;      // bit3: Fault
+  constexpr int kStatusWaitRetries = 50;
+  constexpr int kStatusWaitIntervalMs = 20;
+
+  for (int axis = _drive_axis_start;
+       axis < (_drive_axis_start + _drive_axis_num); ++axis)
+  {
+    // 步骤 1: 写入控制字 0x0007 (Switch On Disabled)
+    CallResult ctrl_result = this->pimpl_->Execute(
+        "DRIVE_CONTROLWORD(" + std::to_string(axis) + ")=7", nullptr);
+    if (!ctrl_result.ok)
+    {
+      RCLCPP_WARN(rclcpp::get_logger("zmotion_driver.sdk"),
+                  "ShutdownEthercat: DRIVE_CONTROLWORD(%d)=7 failed: %s", axis,
+                  ctrl_result.message.c_str());
+    }
+
+    // 步骤 2: 等待 6041h 退出 Operation Enabled
+    bool op_enabled = true;
+    for (int retry = 0; retry < kStatusWaitRetries; ++retry)
+    {
+      int32_t status = 0;
+      CallResult read_result =
+          this->SDOReadAxis(axis, kCiaStatusWordIndex, kCiaStatusWordSub,
+                            kCiaStatusWordType, &status);
+      if (read_result.ok &&
+          (static_cast<uint16_t>(status) & kOpEnabledBit) == 0)
+      {
+        op_enabled = false;
+        break;
+      }
+      std::this_thread::sleep_for(
+          std::chrono::milliseconds(kStatusWaitIntervalMs));
+    }
+    if (op_enabled)
+    {
+      RCLCPP_WARN(rclcpp::get_logger("zmotion_driver.sdk"),
+                  "ShutdownEthercat: axis %d still in Operation Enabled after "
+                  "timeout",
+                  axis);
+    }
+
+    // 步骤 3: 写入控制字 0x0080 (Fault Reset)
+    CallResult fault_result = this->pimpl_->Execute(
+        "DRIVE_CONTROLWORD(" + std::to_string(axis) + ")=128", nullptr);
+    if (!fault_result.ok)
+    {
+      RCLCPP_WARN(rclcpp::get_logger("zmotion_driver.sdk"),
+                  "ShutdownEthercat: DRIVE_CONTROLWORD(%d)=128 failed: %s",
+                  axis, fault_result.message.c_str());
+    }
+
+    // 步骤 4: 确认 6041h 无故障
+    {
+      int32_t status = 0;
+      CallResult read_result =
+          this->SDOReadAxis(axis, kCiaStatusWordIndex, kCiaStatusWordSub,
+                            kCiaStatusWordType, &status);
+      if (read_result.ok && (static_cast<uint16_t>(status) & kFaultBit) != 0)
+      {
+        RCLCPP_WARN(rclcpp::get_logger("zmotion_driver.sdk"),
+                    "ShutdownEthercat: axis %d still has fault after reset "
+                    "(status=0x%04X)",
+                    axis, static_cast<uint16_t>(status));
+      }
+    }
+  }
 
   // 关闭 WDOG（看门狗）以停止所有轴的总使能
   CallResult wdog_result = this->pimpl_->Execute("WDOG=0", nullptr);

@@ -1277,7 +1277,9 @@ class ZMotionDriverNode::Impl
         }
 
         // 关闭 WDOG（看门狗）并停止 EtherCAT 总线，确保下次启动时总线状态正确
-        (void)this->sdk->ShutdownEthercat(this->ecat_config.slot_id);
+        (void)this->sdk->ShutdownEthercat(this->ecat_config.slot_id,
+                                          this->ecat_config.init.DriveAxisStart,
+                                          this->ecat_config.init.DriveAxisNum);
 
         (void)this->sdk->Disconnect();
       }
