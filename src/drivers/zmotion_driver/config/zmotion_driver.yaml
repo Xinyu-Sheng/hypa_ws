@@ -10,7 +10,7 @@
       io_period_ms: 10
       min_remain_buffer: 20 # 安全阈值：硬件 remain buffer 小于或等于该值时直接触发 emergency_stop
       enable_axis_on_activate: true #on_activate 时是否自动使能轴
-      log_file: "/tmp/zmotion_driver_log.csv" # 实际文件名会自动追加时间戳，避免覆盖
+      log_file: "./log/zmotion_driver_log.csv" # 实际文件名会自动追加时间戳，避免覆盖
 
     axis:
       # [逻辑轴索引] 逻辑轴顺序配置：第 i 项就是逻辑轴 i
@@ -157,9 +157,9 @@
     feedback:
       # 记录相关参数
       record_commands_csv_enabled: true
-      record_commands_csv_file: "/tmp/zmotion_commands.csv" # 实际文件名会自动追加时间戳，避免覆盖
+      record_commands_csv_file: "./log/zmotion_commands.csv" # 实际文件名会自动追加时间戳，避免覆盖
       record_joints_csv_enabled: true
-      record_joints_csv_file: "/tmp/zmotion_joint_states.csv" # 实际文件名会自动追加时间戳，避免覆盖
+      record_joints_csv_file: "./log/zmotion_joint_states.csv" # 实际文件名会自动追加时间戳，避免覆盖
 
     io:
       # 按需填写输入口编号与状态 topic；为空时不启用 IO 轮询
