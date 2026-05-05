@@ -521,28 +521,28 @@
         filename="gz-sim-detachable-joint-system"
         name="gz::sim::systems::DetachableJoint">
         <parent_link>cable_ring_2_fl</parent_link>
-        <child_model>slide_main_link</child_model>
+        <child_model>hypa_frame_model</child_model>
         <child_link>main_link_hook_fl</child_link>
       </plugin>
       <plugin
         filename="gz-sim-detachable-joint-system"
         name="gz::sim::systems::DetachableJoint">
         <parent_link>cable_ring_2_fr</parent_link>
-        <child_model>slide_main_link</child_model>
+        <child_model>hypa_frame_model</child_model>
         <child_link>main_link_hook_fr</child_link>
       </plugin>
       <plugin
         filename="gz-sim-detachable-joint-system"
         name="gz::sim::systems::DetachableJoint">
         <parent_link>cable_ring_2_bl</parent_link>
-        <child_model>slide_main_link</child_model>
+        <child_model>hypa_frame_model</child_model>
         <child_link>main_link_hook_bl</child_link>
       </plugin>
       <plugin
         filename="gz-sim-detachable-joint-system"
         name="gz::sim::systems::DetachableJoint">
         <parent_link>cable_ring_2_br</parent_link>
-        <child_model>slide_main_link</child_model>
+        <child_model>hypa_frame_model</child_model>
         <child_link>main_link_hook_br</child_link>
       </plugin>
 
@@ -673,7 +673,7 @@
     </model>
 
     <!-- 四绳索被吊装系统（下部分） -->
-    <model name="slide_main_link" canonical_link="main_link">
+    <model name="hypa_frame_model" canonical_link="main_link">
       <pose relative_to="hypa">0 0 0 0 0 0</pose>
       <link name='main_link'>
         <pose>0 0 -4.2000000000000002 0 0 0</pose>

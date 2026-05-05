@@ -5,13 +5,13 @@
       <real_time_factor>1</real_time_factor>
       <real_time_update_rate>1000</real_time_update_rate>
     </physics>
-    <plugin name='gz::sim::systems::Physics' filename='gz-sim-physics-system'/>
-    <plugin name='gz::sim::systems::UserCommands' filename='gz-sim-user-commands-system'/>
-    <plugin name='gz::sim::systems::SceneBroadcaster' filename='gz-sim-scene-broadcaster-system'/>
-    <plugin name='gz::sim::systems::Contact' filename='gz-sim-contact-system'/>
+    <plugin name='gz::sim::systems::Physics' filename='gz-sim-physics-system' />
+    <plugin name='gz::sim::systems::UserCommands' filename='gz-sim-user-commands-system' />
+    <plugin name='gz::sim::systems::SceneBroadcaster' filename='gz-sim-scene-broadcaster-system' />
+    <plugin name='gz::sim::systems::Contact' filename='gz-sim-contact-system' />
     <gravity>0 0 -9.8000000000000007</gravity>
     <magnetic_field>5.5644999999999998e-06 2.2875799999999999e-05 -4.2388400000000002e-05</magnetic_field>
-    <atmosphere type='adiabatic'/>
+    <atmosphere type='adiabatic' />
     <scene>
       <ambient>0.400000006 0.400000006 0.400000006 1</ambient>
       <background>0.699999988 0.699999988 0.699999988 1</background>
@@ -23,14 +23,16 @@
         <collision name='collision'>
           <geometry>
             <mesh>
-              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/tower crane/2/files/meshes/tower_crane.dae</uri>
+              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/tower
+                crane/2/files/meshes/tower_crane.dae</uri>
             </mesh>
           </geometry>
         </collision>
         <visual name='visual'>
           <geometry>
             <mesh>
-              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/tower crane/2/files/meshes/tower_crane.dae</uri>
+              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/tower
+                crane/2/files/meshes/tower_crane.dae</uri>
             </mesh>
           </geometry>
         </visual>
@@ -59,7 +61,8 @@
           <pose>0 0 0 0 0 0</pose>
           <geometry>
             <mesh>
-              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/cave straight type a/10/files/meshes/straight.dae</uri>
+              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/cave straight type
+                a/10/files/meshes/straight.dae</uri>
               <scale>5 5 5</scale>
             </mesh>
           </geometry>
@@ -67,7 +70,8 @@
         <visual name='CaveWall_visual'>
           <geometry>
             <mesh>
-              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/cave straight type a/10/files/meshes/straight.dae</uri>
+              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/cave straight type
+                a/10/files/meshes/straight.dae</uri>
               <scale>5 5 5</scale>
               <submesh>
                 <name>CaveWall</name>
@@ -80,9 +84,12 @@
             <specular>1 1 1 1</specular>
             <pbr>
               <metal>
-                <albedo_map>https://fuel.gazebosim.org/1.0/openrobotics/models/cave straight type a/10/files/materials/textures/CaveWall_Albedo.jpg</albedo_map>
-                <normal_map>https://fuel.gazebosim.org/1.0/openrobotics/models/cave straight type a/10/files/materials/textures/CaveWall_Normal.jpg</normal_map>
-                <roughness_map>https://fuel.gazebosim.org/1.0/openrobotics/models/cave straight type a/10/files/materials/textures/CaveWall_Roughness.jpg</roughness_map>
+                <albedo_map>https://fuel.gazebosim.org/1.0/openrobotics/models/cave straight type
+                  a/10/files/materials/textures/CaveWall_Albedo.jpg</albedo_map>
+                <normal_map>https://fuel.gazebosim.org/1.0/openrobotics/models/cave straight type
+                  a/10/files/materials/textures/CaveWall_Normal.jpg</normal_map>
+                <roughness_map>https://fuel.gazebosim.org/1.0/openrobotics/models/cave straight type
+                  a/10/files/materials/textures/CaveWall_Roughness.jpg</roughness_map>
               </metal>
             </pbr>
             <script>
@@ -117,7 +124,8 @@
           <pose>0 0 0 0 0 0</pose>
           <geometry>
             <mesh>
-              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/cave cap type a/6/files/meshes/cap.dae</uri>
+              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/cave cap type
+                a/6/files/meshes/cap.dae</uri>
               <scale>10 10 10</scale>
             </mesh>
           </geometry>
@@ -125,7 +133,8 @@
         <visual name='cave_cap_type_a_visual'>
           <geometry>
             <mesh>
-              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/cave cap type a/6/files/meshes/cap.dae</uri>
+              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/cave cap type
+                a/6/files/meshes/cap.dae</uri>
               <scale>10 10 10</scale>
             </mesh>
           </geometry>
@@ -134,9 +143,12 @@
             <specular>1 1 1 1</specular>
             <pbr>
               <metal>
-                <albedo_map>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/Cave Straight Type A/tip/files/materials/textures/CaveWall_Albedo.jpg</albedo_map>
-                <normal_map>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/Cave Straight Type A/tip/files/materials/textures/CaveWall_Normal.jpg</normal_map>
-                <roughness_map>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/Cave Straight Type A/tip/files/materials/textures/CaveWall_Roughness.jpg</roughness_map>
+                <albedo_map>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/Cave Straight
+                  Type A/tip/files/materials/textures/CaveWall_Albedo.jpg</albedo_map>
+                <normal_map>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/Cave Straight
+                  Type A/tip/files/materials/textures/CaveWall_Normal.jpg</normal_map>
+                <roughness_map>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/Cave
+                  Straight Type A/tip/files/materials/textures/CaveWall_Roughness.jpg</roughness_map>
               </metal>
             </pbr>
             <script>
@@ -170,14 +182,14 @@
         <collision name='collision'>
           <geometry>
             <mesh>
-              <uri>file:///home/xinyu/Projects/HKU/hypa_ws/src/hypa_gazebo/worlds/demos/model://hypa_description/models/hypa/meshes/stl/truck_crane.stl</uri>
+              <uri>model://hypa_description/models/hypa/meshes/stl/truck_crane.stl</uri>
             </mesh>
           </geometry>
         </collision>
         <visual name='visual'>
           <geometry>
             <mesh>
-              <uri>file:///home/xinyu/Projects/HKU/hypa_ws/src/hypa_gazebo/worlds/demos/model://hypa_description/models/hypa/meshes/stl/truck_crane.stl</uri>
+              <uri>model://hypa_description/models/hypa/meshes/stl/truck_crane.stl</uri>
             </mesh>
           </geometry>
           <material>
@@ -204,144 +216,12 @@
       <pose>-6.8601498603820801 22.157199859619141 0.18589162826538086 0 0 -1.8981400293995316</pose>
       <self_collide>false</self_collide>
     </model>
-    <model name='cave_starting_area'>
-      <static>true</static>
-      <link name='base_link'>
-        <pose>1.9925042913371271e-06 -1.9925005503296234e-06 0 0 0 1.5707998339584539</pose>
-        <collision name='collision'>
-          <pose>0 0 0 0 0 0</pose>
-          <geometry>
-            <mesh>
-              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/cave starting area/6/files/meshes/cavestartingarea.dae</uri>
-              <scale>1 1 1</scale>
-            </mesh>
-          </geometry>
-        </collision>
-        <visual name='Grass_visual'>
-          <geometry>
-            <mesh>
-              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/cave starting area/6/files/meshes/cavestartingarea.dae</uri>
-              <scale>3 3 3</scale>
-              <submesh>
-                <name>Grass</name>
-                <center>false</center>
-              </submesh>
-            </mesh>
-          </geometry>
-          <material>
-            <diffuse>1 1 1 1</diffuse>
-            <specular>1 1 1 1</specular>
-            <pbr>
-              <metal>
-                <albedo_map>https://fuel.gazebosim.org/1.0/openrobotics/models/cave starting area/6/files/materials/textures/Grass_Albedo.jpg</albedo_map>
-                <normal_map>https://fuel.gazebosim.org/1.0/openrobotics/models/cave starting area/6/files/materials/textures/Grass_Normal.jpg</normal_map>
-                <roughness_map>https://fuel.gazebosim.org/1.0/openrobotics/models/cave starting area/6/files/materials/textures/Grass_Roughness.jpg</roughness_map>
-              </metal>
-            </pbr>
-            <script>
-              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/cave starting area/6/files/materials/scripts/</uri>
-              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/cave starting area/6/files/materials/textures/</uri>
-              <name>CaveTile/Grass_Diffuse</name>
-            </script>
-          </material>
-        </visual>
-        <visual name='StriatedRock_visual'>
-          <geometry>
-            <mesh>
-              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/cave starting area/6/files/meshes/cavestartingarea.dae</uri>
-              <submesh>
-                <name>StriatedRock</name>
-                <center>false</center>
-              </submesh>
-              <scale>3 3 3</scale>
-            </mesh>
-          </geometry>
-          <material>
-            <diffuse>1 1 1 1</diffuse>
-            <specular>1 1 1 1</specular>
-            <pbr>
-              <metal>
-                <albedo_map>https://fuel.gazebosim.org/1.0/openrobotics/models/cave starting area/6/files/materials/textures/StriatedRock_Albedo.png</albedo_map>
-                <normal_map>https://fuel.gazebosim.org/1.0/openrobotics/models/cave starting area/6/files/materials/textures/StriatedRock_Normal.png</normal_map>
-                <roughness_map>https://fuel.gazebosim.org/1.0/openrobotics/models/cave starting area/6/files/materials/textures/StriatedRock_Roughness.png</roughness_map>
-              </metal>
-            </pbr>
-            <script>
-              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/cave starting area/6/files/materials/scripts/</uri>
-              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/cave starting area/6/files/materials/textures/</uri>
-              <name>CaveTile/StriatedRock_Diffuse</name>
-            </script>
-          </material>
-        </visual>
-        <visual name='CaveWall_visual'>
-          <geometry>
-            <mesh>
-              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/cave starting area/6/files/meshes/cavestartingarea.dae</uri>
-              <submesh>
-                <name>CaveWall</name>
-                <center>false</center>
-              </submesh>
-              <scale>3 3 3</scale>
-            </mesh>
-          </geometry>
-          <material>
-            <diffuse>1 1 1 1</diffuse>
-            <specular>1 1 1 1</specular>
-            <pbr>
-              <metal>
-                <albedo_map>https://fuel.gazebosim.org/1.0/openrobotics/models/cave starting area/6/files/materials/textures/CaveWall_Albedo.png</albedo_map>
-                <normal_map>https://fuel.gazebosim.org/1.0/openrobotics/models/cave starting area/6/files/materials/textures/CaveWall_Normal.png</normal_map>
-                <roughness_map>https://fuel.gazebosim.org/1.0/openrobotics/models/cave starting area/6/files/materials/textures/CaveWall_Roughness.png</roughness_map>
-              </metal>
-            </pbr>
-            <script>
-              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/cave starting area/6/files/materials/scripts/</uri>
-              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/cave starting area/6/files/materials/textures/</uri>
-              <name>CaveTile/CaveWall_Diffuse</name>
-            </script>
-          </material>
-        </visual>
-        <inertial>
-          <pose>0 0 0 0 0 0</pose>
-          <mass>1</mass>
-          <inertia>
-            <ixx>1</ixx>
-            <ixy>0</ixy>
-            <ixz>0</ixz>
-            <iyy>1</iyy>
-            <iyz>0</iyz>
-            <izz>1</izz>
-          </inertia>
-        </inertial>
-        <enable_wind>false</enable_wind>
-      </link>
-      <pose>0.00011635981354629621 -31.151481628417969 0 0 0 1.5708000357176291</pose>
-      <self_collide>false</self_collide>
-    </model>
     <light name='sun' type='directional'>
+      <visualize>false</visualize>
       <pose>0 0 10 0 0 0</pose>
       <cast_shadows>true</cast_shadows>
       <intensity>1</intensity>
       <direction>-0.5 0.10000000000000001 -0.90000000000000002</direction>
-      <diffuse>0.800000012 0.800000012 0.800000012 1</diffuse>
-      <specular>0.200000003 0.200000003 0.200000003 1</specular>
-      <attenuation>
-        <range>1000</range>
-        <linear>0.01</linear>
-        <constant>0.90000000000000002</constant>
-        <quadratic>0.001</quadratic>
-      </attenuation>
-      <spot>
-        <inner_angle>0</inner_angle>
-        <outer_angle>0</outer_angle>
-        <falloff>0</falloff>
-      </spot>
-    </light>
-    <light name='directionallight' type='directional'>
-      <pose>0.26979127016980442 42.93774609807042 2 0 0 0</pose>
-      <cast_shadows>true</cast_shadows>
-      <intensity>1</intensity>
-      <direction>0 0 -1</direction>
       <diffuse>0.800000012 0.800000012 0.800000012 1</diffuse>
       <specular>0.200000003 0.200000003 0.200000003 1</specular>
       <attenuation>
