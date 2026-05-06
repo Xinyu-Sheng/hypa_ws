@@ -37,7 +37,7 @@ def generate_launch_description():
         ],
         condition=IfCondition(LaunchConfiguration("rviz")),
         parameters=[
-            {"use_sim_time": True},
+            {"use_sim_time": False},
         ],
     )
 
