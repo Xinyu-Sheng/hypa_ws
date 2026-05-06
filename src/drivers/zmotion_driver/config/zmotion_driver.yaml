@@ -177,32 +177,34 @@
 
     ecat:
       init:
-        # 按约束固定为 0，不走默认初始化结构体路径
-        local_axis_id: 0 #用不到，本地脉冲轴
-        local_axis_num: 0 #用不到，本地脉冲轴
-
+        drive_enable: 0 #不在Ethercat启动阶段启用轴
         # Ethercat轴
         drive_axis_start: 0
-        drive_axis_num: 12
-
-        # Ethercat IO
-        drive_io_start: 256 #用不到，这参数是给驱动器上IO
-        drive_io_space: 16 #用不到，这参数是给驱动器上IO
-        drive_enable: 0 #不在Ethercat启动阶段启用轴
+        drive_axis_num: 12 # 开发阶段先不限制数量，正式需要设置为12
 
         # -1 表示不强制校验节点数量
-        ecat_node_num: -1 # 开发阶段先不限制数量，正式需要设置为12
+        ecat_node_num: 12 # 开发阶段先不限制数量，正式需要设置为12
         sys_clock_mode: 1 # 启用精确同步时钟
-
-        # 不启用冗余（当前配置）
-        bus_red_switch: 0 # 不启用冗余
-        red_spare_slot: 0 # 不使用备用槽位
 
         # 可按驱动类型覆盖
         drive_pdo_mode: [ 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 ]
+
+        # 用不到的参数
+        # 按约束固定为 0，不走默认初始化结构体路径
+        local_axis_id: 0 #用不到本地脉冲轴
+        local_axis_num: 0 #用不到本地脉冲轴
+        # 节点IO设置
         # node_io_id: [] #用不到，这参数是给IO从站
         # node_aio_id: [] #用不到，这参数是给IO从站
 
         # # DC 偏移按节点配置
         # dc_offset_flag: [] #默认这样
         # dc_offset_time: [] #默认这样
+
+        # Ethercat IO
+        drive_io_start: 256 #用不到，这参数是给驱动器上IO
+        drive_io_space: 16 #用不到，这参数是给驱动器上IO
+
+        # 不启用冗余（当前配置）
+        bus_red_switch: 0 # 不启用冗余
+        red_spare_slot: 0 # 不使用备用槽位
