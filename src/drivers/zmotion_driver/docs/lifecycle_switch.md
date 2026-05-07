@@ -25,7 +25,7 @@ ros2 lifecycle set /zmotion_driver configure
 ros2 lifecycle set /zmotion_driver activate
 ```
 
-停止运行时，按下面顺序：
+停止运行时，不要按下面顺序，而应该直接ctrl+c中止：
 
 ```bash
 ros2 lifecycle set /zmotion_driver deactivate
