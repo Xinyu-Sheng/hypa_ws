@@ -112,7 +112,8 @@ class ZMotionSdkWrapper::Impl
   bool connected = false;
   std::unordered_map<int, int> moving_axes_direction;
 
-  // 运动控制那部分并不靠 Execute()；Execute() 只是内部对 ZAux_Execute()
+  // 运动控制那部分并不靠 Execute()；Execute()
+  // 只是内部对 ZAux_Execute()
   // 的统一封装，用于普通命令/查询、获取响应并做错误封装。
   CallResult Execute(const std::string &_command, std::string *_response) const
   {
@@ -514,6 +515,7 @@ CallResult ZMotionSdkWrapper::InitEthercat(const EcatConfig &_config)
 
   // 4) 首次扫描并写入 DC 偏移。
   {
+    RCLCPP_INFO(rclcpp::get_logger("zmotion_driver.sdk"), "SlotScan 1st:");
     CallResult scan_result =
         this->pimpl_->SlotScan(_config.slot_id, _config.timeout_ms,
                                cfg.BusRedSwitch, cfg.RedSpareSlot);
@@ -565,6 +567,7 @@ CallResult ZMotionSdkWrapper::InitEthercat(const EcatConfig &_config)
 
   // 5) 二次扫描。
   {
+    RCLCPP_INFO(rclcpp::get_logger("zmotion_driver.sdk"), "SlotScan 2nd:");
     CallResult scan_result =
         this->pimpl_->SlotScan(_config.slot_id, _config.timeout_ms,
                                cfg.BusRedSwitch, cfg.RedSpareSlot);

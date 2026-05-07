@@ -1116,7 +1116,7 @@ class ZMotionDriverNode::Impl
     }
 
     // Minimal-invasive: read drive SDO fields 0x6091:01/02 and 0x6092:01/02 for
-    // each axis
+    // each axis 机械传动配置参数
     RCLCPP_INFO(this->logger,
                 "Reading drive SDO fields 0x6091/0x6092 for each axis");
     for (std::size_t _i = 0; _i < this->axes.size(); ++_i)
@@ -1153,6 +1153,7 @@ class ZMotionDriverNode::Impl
       }
     }
 
+    // 配置轴
     for (std::size_t i = 0; i < this->axes.size(); ++i)
     {
       const AxisConfig &axis = this->axes[i];
@@ -1271,16 +1272,19 @@ class ZMotionDriverNode::Impl
       if (this->sdk)
       {
         (void)this->sdk->StopAll();
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
         for (std::size_t i = 0; i < this->axes.size(); ++i)
         {
           (void)this->sdk->SetAxisEnable(this->axes[i].physical_axis, false);
         }
 
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
         // 关闭 WDOG（看门狗）并停止 EtherCAT 总线，确保下次启动时总线状态正确
         (void)this->sdk->ShutdownEthercat(this->ecat_config.slot_id,
                                           this->ecat_config.init.DriveAxisStart,
                                           this->ecat_config.init.DriveAxisNum);
-
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
         (void)this->sdk->Disconnect();
       }
       this->WriteLogLocked("lifecycle", "teardown");
