@@ -21,8 +21,13 @@ namespace
 
 constexpr int kAckBufferSize = 2048;
 constexpr int kErrOk = 0;
-constexpr int kErrNoAck = 30000;
+constexpr int kErrNoAck = 30000;  // 无应答
+constexpr int kErrTimeout =
+    20003;  // 超时（可能是 FIFO 缓冲阻塞），PC 端通信层面的超时
+constexpr int kErrMsgResponseTimeout =
+    3402;  // 消息响应超时，Modbus 协议消息层面的超时
 
+// 自定义错误码，均为负数，不与 SDK 错误码冲突
 constexpr int kWrongNodeNum = -1;
 constexpr int kWrongAxisNum = -2;
 constexpr int kNotScanNode = -3;
@@ -31,7 +36,8 @@ constexpr int kEcatStartFailed = -4;
 // 判断是否是可属于“可重试”的错误。
 bool IsRetriableCode(const int _code)
 {
-  return (_code == kErrNoAck) || (_code == 20003) || (_code == 3402);
+  return (_code == kErrNoAck) || (_code == kErrTimeout) ||
+         (_code == kErrMsgResponseTimeout);
 }
 
 // 去除字符串两端的空白字符。
