@@ -182,14 +182,16 @@
         <collision name='collision'>
           <geometry>
             <mesh>
-              <uri>model://hypa_description/models/hypa/meshes/stl/truck_crane.stl</uri>
+              <uri>
+                model://hypa_description/models/hypa/meshes/stl/truck_crane.stl</uri>
             </mesh>
           </geometry>
         </collision>
         <visual name='visual'>
           <geometry>
             <mesh>
-              <uri>model://hypa_description/models/hypa/meshes/stl/truck_crane.stl</uri>
+              <uri>
+                model://hypa_description/models/hypa/meshes/stl/truck_crane.stl</uri>
             </mesh>
           </geometry>
           <material>
@@ -216,8 +218,51 @@
       <pose>-6.8601498603820801 22.157199859619141 0.18589162826538086 0 0 -1.8981400293995316</pose>
       <self_collide>false</self_collide>
     </model>
+    <model name='Office Building'>
+      <static>true</static>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <mesh>
+              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/office
+                building/3/files/meshes/office_building.dae</uri>
+              <scale>1.5 3 1</scale>
+            </mesh>
+
+          </geometry>
+        </collision>
+        <visual name='visual'>
+          <geometry>
+            <mesh>
+              <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/office
+                building/3/files/meshes/office_building.dae</uri>
+              <scale>1.5 3 1</scale>
+            </mesh>
+          </geometry>
+          <material>
+            <diffuse>1 1 1 1</diffuse>
+            <specular>1 1 1 1</specular>
+          </material>
+        </visual>
+        <pose>0 0 0 0 0 0</pose>
+        <inertial>
+          <pose>0 0 0 0 0 0</pose>
+          <mass>1</mass>
+          <inertia>
+            <ixx>1</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1</iyy>
+            <iyz>0</iyz>
+            <izz>1</izz>
+          </inertia>
+        </inertial>
+        <enable_wind>false</enable_wind>
+      </link>
+      <pose>0 59.324935913085938 0 0 0 0</pose>
+      <self_collide>false</self_collide>
+    </model>
     <light name='sun' type='directional'>
-      <visualize>false</visualize>
       <pose>0 0 10 0 0 0</pose>
       <cast_shadows>true</cast_shadows>
       <intensity>1</intensity>
