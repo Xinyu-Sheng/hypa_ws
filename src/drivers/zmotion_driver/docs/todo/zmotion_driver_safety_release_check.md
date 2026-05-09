@@ -67,9 +67,6 @@
 
 1. 日志和 CSV 文件没有大小限制或轮转机制。`controller.log_file`、`feedback.record_joints_csv_file`、`feedback.record_commands_csv_file` 都是按运行时追加写入，且文件名只做了时间戳和唯一化处理，没有单文件大小上限。对长时间运行或频繁重启的系统，这会带来真实的磁盘耗尽风险。
 2. 写文件失败不会抛异常，但也没有被显式检查。`WriteLogLocked()`、`WriteJointStateCsv()`、`WriteCommandCsv()` 都只是执行流式写入和必要的 `flush()`，没有检查 `bad()/fail()`，也没有设置 `exceptions()`。因此磁盘满、权限变化或文件系统错误更可能表现为“静默丢日志/丢 CSV”，而不是程序崩溃。
-3. 速度/位置类输入缺少 `NaN/Inf` 校验。`OnVelocityCommand()` 和 `OnMimicCommand()` 只检查数组长度，没有对数值做 `std::isfinite()` 过滤；这些值会继续进入 `DispatchCommand()`、`ExecuteCommandLocked()` 和 SDK 调用链。对运动控制来说，非有限数值是实际风险输入，不应直接下发。
-4. IO 轮询实现保留了三套并行路径：`PollIoInputsLegacy`、`PollIoInputsNew`、`PollIoInputsNew2`。更重要的是，`src` 里把 `ZMOTION_DRIVER_USE_NEW_POLL_IO_INPUTS` 和 `ZMOTION_DRIVER_USE_NEW_POLL_IO_INPUTS_2` 直接定义死了，源码注释里说的“通过取消注释或 build flags 切换”实际上并不成立。也就是说，这个 IO 路径选择不是一个真正可配置的开关，而是被当前文件硬编码住的。
-5. `ZMC_LinuxLibInit()` 依赖函数内静态布尔值 `linux_lib_inited` 做一次性初始化保护，这个标志本身不是并发安全的。当前调用路径在节点互斥锁下基本是串行的，所以风险偏低，但如果未来把 Connect 迁到并发路径，或者新增并行实例，这里会变成真实竞态点。
 
 ## 相关文件
 

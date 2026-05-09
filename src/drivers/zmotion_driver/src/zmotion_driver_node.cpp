@@ -2289,6 +2289,17 @@ class ZMotionDriverNode::Impl
       return;
     }
 
+    for (std::size_t i = 0; i < _msg->data.size(); ++i)
+    {
+      if (!std::isfinite(_msg->data[i]))
+      {
+        RCLCPP_ERROR(this->logger,
+                     "velocity command contains non-finite value at index %zu",
+                     i);
+        return;
+      }
+    }
+
     PendingCommand cmd;
     cmd.type = PendingType::kVelocity;
     cmd.logical_axes = this->velocity_logical_axes;
@@ -2301,6 +2312,13 @@ class ZMotionDriverNode::Impl
   {
     if ((_msg == nullptr) || (_group < 0) || (_group > 1))
     {
+      return;
+    }
+
+    if (!std::isfinite(_msg->data))
+    {
+      RCLCPP_ERROR(this->logger,
+                   "mimic command contains non-finite value: group=%d", _group);
       return;
     }
 
