@@ -373,6 +373,14 @@ class ZMotionDriverNode::Impl
     std::vector<double> zero_offsets;
     (void)this->node->get_parameter("axis.zero_offsets", zero_offsets);
 
+    std::vector<double> position_limit_min;
+    (void)this->node->get_parameter("axis.position_limit_min",
+                                    position_limit_min);
+
+    std::vector<double> position_limit_max;
+    (void)this->node->get_parameter("axis.position_limit_max",
+                                    position_limit_max);
+
     std::vector<int64_t> vel_param;
     (void)this->node->get_parameter("control.velocity_logical_indices",
                                     vel_param);
@@ -493,10 +501,12 @@ class ZMotionDriverNode::Impl
     if ((logical_indices.size() != kAxisCount) ||
         (joint_names.size() != kAxisCount) ||
         (position_modes.size() != kAxisCount) ||
-        (zero_offsets.size() != kAxisCount) || (units.size() != kAxisCount) ||
-        (directions.size() != kAxisCount) || (speeds.size() != kAxisCount) ||
-        (accels.size() != kAxisCount) || (decels.size() != kAxisCount) ||
-        (position_topics.size() != kAxisCount))
+        (zero_offsets.size() != kAxisCount) ||
+        (position_limit_min.size() != kAxisCount) ||
+        (position_limit_max.size() != kAxisCount) ||
+        (units.size() != kAxisCount) || (directions.size() != kAxisCount) ||
+        (speeds.size() != kAxisCount) || (accels.size() != kAxisCount) ||
+        (decels.size() != kAxisCount) || (position_topics.size() != kAxisCount))
     {
       RCLCPP_ERROR(this->logger, "axis.* arrays must all be length %zu",
                    kAxisCount);
@@ -586,6 +596,8 @@ class ZMotionDriverNode::Impl
       config.control_mode = control_mode;
       config.position_mode = position_mode;
       config.zero_offset = zero_offsets[i];
+      config.position_limit_min = position_limit_min[i];
+      config.position_limit_max = position_limit_max[i];
       config.units = units[i];
       config.speed = speeds[i];
       config.accel = accels[i];
@@ -1386,6 +1398,12 @@ class ZMotionDriverNode::Impl
     {
       this->WriteLogLocked("control_err", exec_result.message);
       this->WriteCommandCsv("err", _cmd, -1, exec_result.message);
+      if (exec_result.code == -207)
+      {
+        RCLCPP_WARN(this->logger, "command rejected: %s",
+                    exec_result.message.c_str());
+        return;
+      }
       RCLCPP_ERROR(this->logger, "execute command failed: %s",
                    exec_result.message.c_str());
       this->TriggerEmergencyStopLocked(exec_result.message);
@@ -1488,6 +1506,20 @@ class ZMotionDriverNode::Impl
 
       const AxisConfig &axis =
           this->axes[static_cast<std::size_t>(logical_axis)];
+      if (_cmd.type == PendingType::kMoveAbsolute)
+      {
+        const double target_position = _cmd.values[i];
+        if ((target_position < axis.position_limit_min) ||
+            (target_position > axis.position_limit_max))
+        {
+          std::ostringstream oss;
+          oss << "target position out of limit logical_axis=" << logical_axis
+              << " target=" << target_position << " limit=["
+              << axis.position_limit_min << ", " << axis.position_limit_max
+              << "]";
+          return CallResult::Failure(-207, oss.str(), false);
+        }
+      }
       const double physical_value = axis.direction * _cmd.values[i];
       if (_cmd.type == PendingType::kMoveAbsolute)
       {
@@ -1618,6 +1650,18 @@ class ZMotionDriverNode::Impl
       {
         logical_position = axis.direction * (mpos - axis.zero_offset);
         logical_velocity = axis.direction * mspeed;
+        if (!this->emergency_stop &&
+            ((logical_position < axis.position_limit_min) ||
+             (logical_position > axis.position_limit_max)))
+        {
+          std::ostringstream oss;
+          oss << "axis position exceeded limit logical_axis="
+              << axis.logical_index << " physical_axis=" << axis.physical_axis
+              << " position=" << logical_position << " limit=["
+              << axis.position_limit_min << ", " << axis.position_limit_max
+              << "]";
+          this->TriggerEmergencyStopLocked(oss.str());
+        }
         // update last-known values
         if (i < this->last_known_positions.size())
         {

@@ -28,6 +28,8 @@ struct AxisConfig
   AxisControlMode control_mode = AxisControlMode::kPosition;
   AxisPositionMode position_mode = AxisPositionMode::kAbsolute;
   double zero_offset = 0.0;
+  double position_limit_min = -1e10;
+  double position_limit_max = 1e10;
   double units = 1.0;
   double speed = 10.0;
   double accel = 100.0;
